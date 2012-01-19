@@ -1,0 +1,52 @@
+/***
+ * Utility macros and functions
+ *
+ * Copyright 2011 Kalle Vahlman, <zuh@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ */
+
+#ifndef SC_UTILS_H
+#define SC_UTILS_H
+
+// ChibiOS includes
+#include "ch.h"
+#include "hal.h"
+
+// Common includes for all source files
+#include <stdint.h>
+
+// Snowcap Control Board V1 defines
+#define USER_LED           GPIOB_LED1
+#define USER_LED_PORT      GPIOB
+#define PWMDX              PWMD3
+
+
+#if defined __GNUC__
+# define UNUSED(x) x __attribute__ ((unused))
+#endif
+
+int sc_atoi(uint8_t *str, int len);
+int sc_itoa(int value, uint8_t *str, int len);
+
+#endif
