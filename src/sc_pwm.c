@@ -31,7 +31,7 @@
 #include "sc_pwm.h"
 
 static PWMConfig pwmcfg = {
-  10000,  // 10 kHz PWM clock frequency
+  1000000,// 1 MHz PWM clock frequency
   200,    // 50 Hz (20.0 ms) initial frequency
   NULL,   // No periodic callback.
   {
@@ -65,7 +65,7 @@ void sc_pwm_init(void)
  */
 void sc_pwm_set_freq(uint16_t freq)
 {
-  pwmChangePeriod(&PWMDX, 10000/freq);
+  pwmChangePeriod(&PWMDX, 1000000/freq);
 }
 
 
