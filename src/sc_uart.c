@@ -458,13 +458,13 @@ static void parse_command_led(void)
 
   switch (receive_buffer[1]) {
   case '0':
-	led_off();
+	sc_led_off();
 	break;
   case '1':
-	led_on();
+	sc_led_on();
 	break;
   case 't':
-	led_toggle();
+	sc_led_toggle();
 	break;
   default:
 	// Invalid value, ignoring command
