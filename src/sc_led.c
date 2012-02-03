@@ -34,7 +34,7 @@
 /*
  * Turn the led on
  */
-void led_on(void)
+void sc_led_on(void)
 {
   palSetPad(USER_LED_PORT, USER_LED);
 }
@@ -44,7 +44,7 @@ void led_on(void)
 /*
  * Turn the led off
  */
-void led_off(void)
+void sc_led_off(void)
 {
   palClearPad(USER_LED_PORT, USER_LED);
 }
@@ -54,7 +54,7 @@ void led_off(void)
 /*
  * Toggle led
  */
-void led_toggle(void)
+void sc_led_toggle(void)
 {
   palTogglePad(USER_LED_PORT, USER_LED);
 }
