@@ -245,8 +245,7 @@ static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 }
 #endif
 
-
-
+static uint8_t str_rssi[16];
 /*
  * Character received while out of the UART_RECEIVE state (UART2, xBee).
  */
@@ -264,21 +263,20 @@ static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 
 	// Send only if have valid strength
 	if (1/*period != -1*/) {
-	  uint8_t str[16];
 	  int str_len;
 
-	  str[0] = 's';
-	  str[1] = ':';
+	  str_rssi[0] = 's';
+	  str_rssi[1] = ':';
 	  if (period == -1) {
-		str[2] = '-';
+		str_rssi[2] = '-';
 		str_len = 1;
 	  } else {
-		str_len = sc_itoa(period, &str[2], 12);
+		str_len = sc_itoa(period, &str_rssi[2], 12);
 	  }
 	  
-	  str[str_len + 2] = '\r';
-	  str[str_len + 3] = '\n';
-	  sc_uart_send_msg(SC_UART_LAST, str, str_len + 4);
+	  str_rssi[str_len + 2] = '\r';
+	  str_rssi[str_len + 3] = '\n';
+	  sc_uart_send_msg(SC_UART_LAST, str_rssi, str_len + 4);
 	}
   }
 
@@ -410,6 +408,7 @@ static void parse_command_pwm_frequency(void)
 }
 
 
+static uint8_t str_duty[10];
 
 /*
  * Parse PWM duty cycle command
@@ -418,7 +417,6 @@ static void parse_command_pwm_duty(void)
 {
   uint8_t pwm;
   uint16_t value;
-  uint8_t str[10];
   int str_len;
 
   // Parse the PWM number as integer
@@ -436,18 +434,18 @@ static void parse_command_pwm_duty(void)
   // Set the duty cycle
   sc_pwm_set_duty(pwm, value);
 
-  str_len = sc_itoa(value, str, 8);
+  str_len = sc_itoa(value, str_duty, 8);
 
   // In error send 'e'
   if (str_len == 0) {
-	str[0] = 'e';
+	str_duty[0] = 'e';
 	str_len = 1;
   } else {
-	str[str_len++] = '\r';
-	str[str_len++] = '\n';
+	str_duty[str_len++] = '\r';
+	str_duty[str_len++] = '\n';
   }
 
-  sc_uart_send_msg(SC_UART_LAST, str, str_len);
+  sc_uart_send_msg(SC_UART_LAST, str_duty, str_len);
 }
 
 

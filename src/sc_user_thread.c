@@ -33,6 +33,7 @@
 
 static msg_t userThread(void *UNUSED(arg));
 
+static uint8_t msg[] = {'t','e','s','t','i','n','g','\r','\n'};
 
 /*
  * Setup a working area with a 32 byte stack for user thread
@@ -40,7 +41,6 @@ static msg_t userThread(void *UNUSED(arg));
 static WORKING_AREA(user_thread, 32);
 static msg_t userThread(void *UNUSED(arg))
 {
-  uint8_t msg[] = {'t','e','s','t','i','n','g','\r','\n'};
 
   // Threads are active until they return, we don't want to
   while (TRUE) {
