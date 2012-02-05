@@ -49,7 +49,7 @@ typedef enum SC_UART {
   SC_UART_2    = 2,
 #endif
 #if STM32_UART_USE_USART3
-  SC_UART_3    = 4,
+  SC_UART_3    = 3,
 #endif
 #if STM32_UART_USE_USART4
   SC_UART_4    = 4,
