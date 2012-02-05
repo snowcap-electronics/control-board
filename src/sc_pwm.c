@@ -68,7 +68,7 @@ void sc_pwm_init(void)
  */
 void sc_pwm_set_freq(uint16_t freq)
 {
-  // pwmChangePeriod(&PWMDX, SC_PWM_CLOCK / freq);
+  pwmChangePeriod(&PWMDX, SC_PWM_CLOCK / freq);
 }
 
 
