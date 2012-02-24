@@ -39,7 +39,8 @@ static ICUConfig icucfg = {
   ICU_INPUT_ACTIVE_HIGH,
   10000,                                    /* 10 kHz ICU clock frequency */
   icu_width_cb,
-  icu_period_cb
+  icu_period_cb,
+  ICU_CHANNEL_1
 };
 
 
@@ -99,7 +100,7 @@ int sc_icu_get_period(int channel)
  */
 static void icu_width_cb(ICUDriver *icup)
 {
-  last_width = icuGetWidthI(icup);
+  last_width = icuGetWidth(icup);
 }
 
 
@@ -109,5 +110,5 @@ static void icu_width_cb(ICUDriver *icup)
  */
 static void icu_period_cb(ICUDriver *icup)
 {
-  last_period = icuGetPeriodI(icup);
+  last_period = icuGetPeriod(icup);
 }
