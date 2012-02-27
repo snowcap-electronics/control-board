@@ -55,7 +55,7 @@ endif
 #
 
 # Define project name here
-PROJECT = chibios-skeleton
+PROJECT = control-board
 
 # Define linker script file here
 LDSCRIPT= $(PORTLD)/STM32F205xB.ld

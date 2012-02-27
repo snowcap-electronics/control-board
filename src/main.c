@@ -1,7 +1,8 @@
 /***
- * Skeleton code for ChibiOS project
+ * Snowcap Control Board v1 firmware
  *
- * Copyright 2011 Kalle Vahlman, <zuh@iki.fi>
+ * Copyright 2011,2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
+ *                     Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
