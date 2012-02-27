@@ -42,4 +42,8 @@
 #define PWMDX              PWMD3
 #endif
 
+#ifndef I2CDX
+#define I2CDX              I2CD3
+#endif
+
 #endif

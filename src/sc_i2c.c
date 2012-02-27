@@ -1,8 +1,7 @@
 /***
- * Snowcap Control Board v1 firmware
+ * I²C functions
  *
- * Copyright 2011,2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
- *                     Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,47 +25,48 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
 
-/* Project includes */
+
 #include "sc_utils.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
 #include "sc_i2c.h"
 
-int main(void) {
-
-    /* Initialize ChibiOS HAL and core */
-    halInit();
-    chSysInit();
-
-    /* Init uarts 1 and 2 (xBee) */
-    sc_uart_init(SC_UART_1);
-    sc_uart_init(SC_UART_2);
-
-    /* Init PWM */
-    sc_pwm_init();
-
-#if HAL_USE_ICU
-    /* Init ICU for reading xBee signal strength */
-    sc_icu_init(1);
-#endif
-
 #if HAL_USE_I2C
-    /* Init I²C bus */
-    sc_i2c_init(0);
-#endif
 
-    /* Init and start a user thread */
-    //sc_user_thread_init();
+/*
+ * I²C driver configuration
+ */
+static I2CConfig i2c_cfg = {
+  OPMODE_I2C,
+  100000, /* Default clock speed */
+  STD_DUTY_CYCLE
+};
 
-    /* This is our main loop */
-    while (TRUE) {
-        chThdSleepMilliseconds(500);
-    }
-    return 0;
+void sc_i2c_init(uint32_t clock_speed)
+{
+  if (clock_speed > 0)
+    i2c_cfg.clock_speed = clock_speed;
+
+  i2cStart(&I2CDX, &i2c_cfg);
 }
+
+void sc_i2c_read(i2caddr_t addr, uint8_t *data, size_t bytes)
+{
+  i2cAcquireBus(&I2CDX);
+
+  i2cMasterReceive(&I2CDX, addr, data, bytes);
+
+  i2cReleaseBus(&I2CDX);
+}
+
+void sc_i2c_transmit(i2caddr_t addr,
+                     uint8_t *tx, size_t tx_bytes,
+                     uint8_t *rx, size_t rx_bytes)
+{
+  i2cAcquireBus(&I2CDX);
+
+  i2cMasterTransmit(&I2CDX, addr, tx, tx_bytes, rx, rx_bytes);
+
+  i2cReleaseBus(&I2CDX);
+}
+
+#endif /* HAL_USE_I2C */

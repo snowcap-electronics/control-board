@@ -86,6 +86,7 @@ CSRC = $(PORTSRC) \
        src/sc_user_thread.c \
        src/sc_icu.c \
        src/sc_cmd.c \
+       src/sc_i2c.c \
        src/main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
