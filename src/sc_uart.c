@@ -39,6 +39,8 @@
 #include "sc_icu.h"
 
 #define MAX_RECV_BUF_LEN      16
+#define MAX_SEND_BUF_LEN      16
+#define MAX_CIRCULAR_BUFS     2
 #define MIN_CMD_LEN           3        // 8 bit command, >=8 bit value, \n
 
 static uint8_t recv_i = 0;
@@ -66,7 +68,17 @@ static void parse_command_pwm_frequency(void);
 static void parse_command_pwm_duty(void);
 static void parse_command_led(void);
 
-
+/*
+ * Circular buffer for sending.
+ * TODO: Could be one per UART but for simplicity and saving memory there's
+ * only one for now.
+ */
+static uint8_t circular_buf[MAX_CIRCULAR_BUFS][MAX_SEND_BUF_LEN];
+static uint8_t circular_len[MAX_CIRCULAR_BUFS];
+static UARTDriver *circular_uart[MAX_CIRCULAR_BUFS];
+static int8_t circular_sending;
+static int8_t circular_free;
+static BinarySemaphore circular_sem;
 
 /*
  * UART driver configuration structure for UART1
@@ -134,6 +146,7 @@ static UARTConfig uart_cfg_3 = {
  */
 void sc_uart_init(SC_UART uart)
 {
+  int i;
 
   switch (uart) {
 #if STM32_UART_USE_USART1
@@ -155,9 +168,18 @@ void sc_uart_init(SC_UART uart)
 	break;
 #endif
   default:
-	// Do nothing
+	// Invalid uart, do nothing
+	// CHECKME: assert?
 	return;
   }
+
+  // Initialize sending side circular buffer state
+  circular_sending = -1;
+  circular_free = 0;
+  for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
+	circular_len[i] = 0;
+  }
+  chBSemInit(&circular_sem, FALSE);
 }
 
 
@@ -172,9 +194,9 @@ void sc_uart_init(SC_UART uart)
 void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 {
   UARTDriver *uartdrv;
+  int i;
+  int circular_current;
 
-  // FIXME: should always use async, no blocking
-  
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
@@ -195,11 +217,54 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 	uartdrv = last_uart;
 	break;
   default:
-	// Do nothing
+	// Invalid uart, do nothing
+	// CHECKME: assert?
 	return;
   }
 
-  uartStartSendI(uartdrv, len, msg);
+  // Check for oversized message
+  if (len > MAX_SEND_BUF_LEN) {
+	// CHECKME: assert?
+	return;
+  }
+
+  // Check for free buffers
+  if (circular_free == -1) {
+	// CHECKME: assert?
+	return;
+  }
+
+  chBSemWaitS(&circular_sem);
+
+  // Copy the message to static circular buffer
+  for (i = 0; i < len; ++i) {
+	circular_buf[circular_free][i] = msg[i];
+  }
+  circular_len[circular_free] = len;
+  circular_uart[circular_free] = uartdrv;
+
+  // Store temporarily the current index
+  circular_current = circular_free;
+
+  // Check for buffer wrapping
+  if (++circular_free == MAX_CIRCULAR_BUFS) {
+	circular_free = 0;
+  }
+
+  // Check for full buffer
+  if (circular_sending != -1 && circular_free == circular_sending) {
+	circular_free = -1;
+  }
+
+  // Check for idle UART
+  if (circular_sending == -1) {
+	circular_sending = circular_current;
+	uartStartSend(circular_uart[circular_current],
+				  circular_len[circular_current],
+				  circular_buf[circular_current]);
+  }
+
+  chBSemSignal(&circular_sem);
 }
 
 
@@ -209,7 +274,34 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
  */
 static void txend1_cb(UNUSED(UARTDriver *uartp))
 {
-  
+  chBSemWaitS(&circular_sem);
+
+  // Mark buffer as empty
+  circular_len[circular_sending] = 0;
+
+  // If no free buffers, mark this one as free
+  if (circular_free == -1) {
+	circular_free = circular_sending;
+  }
+
+  // Advance the currently sending index
+  if (++circular_sending == MAX_CIRCULAR_BUFS) {
+	circular_sending = 0;
+  }
+
+  // Check for buffer to send
+  if (circular_len[circular_sending] > 0) {
+
+	uartStartSendI(circular_uart[circular_sending],
+				   circular_len[circular_sending],
+				   circular_buf[circular_sending]);
+
+  } else {
+	// Nothing to send
+	circular_sending = -1;
+  }
+
+  chBSemSignal(&circular_sem);
 }
 
 
