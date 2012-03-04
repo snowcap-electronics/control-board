@@ -37,14 +37,11 @@
 #include "sc_pwm.h"
 #include "sc_led.h"
 #include "sc_icu.h"
+#include "sc_cmd.h"
 
-#define MAX_RECV_BUF_LEN      16
 #define MAX_SEND_BUF_LEN      16
 #define MAX_CIRCULAR_BUFS     2
-#define MIN_CMD_LEN           3        // 8 bit command, >=8 bit value, \n
 
-static uint8_t recv_i = 0;
-static uint8_t receive_buffer[MAX_RECV_BUF_LEN];
 static UARTDriver *last_uart = NULL;
 
 static void txend1_cb(UARTDriver *uartp);
@@ -61,12 +58,6 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 #endif
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
 static void rxchar(uint16_t c);
-
-static void parse_command(void);
-static void parse_command_pwm(void);
-static void parse_command_pwm_frequency(void);
-static void parse_command_pwm_duty(void);
-static void parse_command_led(void);
 
 /*
  * Circular buffer for sending.
@@ -398,26 +389,8 @@ static void rxchar(uint16_t c)
 {
   // TODO: blink a led (optionally)?
 
-  // Store the received character
-  receive_buffer[recv_i++] = c;
-
-  // Ignore zero length commands
-  if (recv_i == 1 && (c == '\n' || c == '\r')) {
-	recv_i = 0;
-	return;
-  }
-  
-  // Check for full command in the buffer
-  if (c == '\n' || c == '\r') {
-	parse_command();
-	recv_i = 0;
-	return;
-  }
-
-  // Discard all data in buffer if buffer is full and no \n received
-  if (recv_i == MAX_RECV_BUF_LEN) {
-	recv_i = 0;
-  }
+  // Pass data to command module
+  sc_cmd_push_byte((uint8_t)c);
 }
 
 
@@ -429,138 +402,3 @@ static void rxerr_cb(UNUSED(UARTDriver *uartp), UNUSED(uartflags_t e))
 {
   
 }
-
-
-
-/*
- * Parse a received command
- */
-static void parse_command(void)
-{
-  if (recv_i < MIN_CMD_LEN) {
-	// Invalid command, ignoring
-	return;
-  }
-
-  switch (receive_buffer[0]) {
-  case 'p':
-	parse_command_pwm();
-	break;
-  case 'l':
-	parse_command_led();
-	break;
-  default:
-	// Invalid command, ignoring
-	break;
-  }	
-}
-
-
-
-/*
- * Parse PWM command
- */
-static void parse_command_pwm(void)
-{
-
-  switch (receive_buffer[1]) {
-  case 'f':
-	parse_command_pwm_frequency();
-	break;
-  case '1':
-  case '2':
-  case '3':
-  case '4':
-  case '5':
-  case '6':
-  case '7':
-  case '8':
-	parse_command_pwm_duty();
-	break;
-  default:
-	// Invalid PWM command, ignoring
-	return;
-  }
-}
-
-
-
-/*
- * Parse PWM frequency command
- */
-static void parse_command_pwm_frequency(void)
-{
-  uint16_t freq;
-
-  // Parse the frequency value
-  freq = (uint16_t)(sc_atoi(&receive_buffer[2], recv_i - 2));
-
-  // Set the frequency
-  sc_pwm_set_freq(freq);
-}
-
-
-static uint8_t str_duty[10];
-
-/*
- * Parse PWM duty cycle command
- */
-static void parse_command_pwm_duty(void)
-{
-  uint8_t pwm;
-  uint16_t value;
-  int str_len;
-
-  // Parse the PWM number as integer
-  pwm = receive_buffer[1] - '0';
-
-  // Check for stop command
-  if (receive_buffer[2] == 's') {
-	sc_pwm_stop(pwm);
-	return;
-  }
-
-  // Parse the PWM value
-  value = (uint16_t)(sc_atoi(&receive_buffer[2], recv_i - 2));
-
-  // Set the duty cycle
-  sc_pwm_set_duty(pwm, value);
-
-  str_len = sc_itoa(value, str_duty, 8);
-
-  // In error send 'e'
-  if (str_len == 0) {
-	str_duty[0] = 'e';
-	str_len = 1;
-  } else {
-	str_duty[str_len++] = '\r';
-	str_duty[str_len++] = '\n';
-  }
-
-  sc_uart_send_msg(SC_UART_LAST, str_duty, str_len);
-}
-
-
-
-/*
- * Parse led command
- */
-static void parse_command_led(void)
-{
-
-  switch (receive_buffer[1]) {
-  case '0':
-	sc_led_off();
-	break;
-  case '1':
-	sc_led_on();
-	break;
-  case 't':
-	sc_led_toggle();
-	break;
-  default:
-	// Invalid value, ignoring command
-	return;
-  }
-}
-
