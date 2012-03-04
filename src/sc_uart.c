@@ -328,41 +328,13 @@ static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 }
 #endif
 
-static uint8_t str_rssi[16];
 /*
  * Character received while out of the UART_RECEIVE state (UART2, xBee).
  */
 #if STM32_UART_USE_USART2
 static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 {
-  int period;
-
   last_uart = uartp;
-
-  // Send xBee signal strength after every full command
-  if (1/*c == '\n'*/) {
-
-	period = sc_icu_get_period(1 /* xBee RSSI with jumper wire */);
-
-	// Send only if have valid strength
-	if (1/*period != -1*/) {
-	  int str_len;
-
-	  str_rssi[0] = 's';
-	  str_rssi[1] = ':';
-	  if (period == -1) {
-		str_rssi[2] = '-';
-		str_len = 1;
-	  } else {
-		str_len = sc_itoa(period, &str_rssi[2], 12);
-	  }
-	  
-	  str_rssi[str_len + 2] = '\r';
-	  str_rssi[str_len + 3] = '\n';
-	  sc_uart_send_msg(SC_UART_LAST, str_rssi, str_len + 4);
-	}
-  }
-
   rxchar(c);
 }
 #endif
