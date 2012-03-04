@@ -32,15 +32,10 @@
 // ChibiOS includes
 #include "ch.h"
 #include "hal.h"
+#include "sc_conf.h"
 
 // Common includes for all source files
 #include <stdint.h>
-
-// Snowcap Control Board V1 defines
-#define USER_LED           GPIOB_LED1
-#define USER_LED_PORT      GPIOB
-#define PWMDX              PWMD3
-
 
 #if defined __GNUC__
 # define UNUSED(x) x __attribute__ ((unused))
