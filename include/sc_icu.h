@@ -31,8 +31,12 @@
 
 #include <sc_utils.h>
 
+#if HAL_USE_ICU
+
 void sc_icu_init(int channel);
 int sc_icu_get_width(int channel);
 int sc_icu_get_period(int channel);
 
-#endif
+#endif /* HAL_USE_ICU */
+
+#endif /* SC_ICU_H */

@@ -27,6 +27,9 @@
  */
 
 #include "sc_utils.h"
+
+#if HAL_USE_ICU
+
 #include "sc_icu.h"
 
 static int last_width = -1;
@@ -112,3 +115,5 @@ static void icu_period_cb(ICUDriver *icup)
 {
   last_period = icuGetPeriod(icup);
 }
+
+#endif /* HAL_USE_ICU */

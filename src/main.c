@@ -50,8 +50,10 @@ int main(void) {
     /* Init PWM */
     sc_pwm_init();
 
+#if HAL_USE_ICU
     /* Init ICU for reading xBee signal strength */
     sc_icu_init(1);
+#endif
 
     /* Init and start a user thread */
     //sc_user_thread_init();
