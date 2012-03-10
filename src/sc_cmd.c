@@ -145,8 +145,6 @@ static void parse_command_pwm_frequency(void)
 }
 
 
-static uint8_t str_duty[10];
-
 /*
  * Parse PWM duty cycle command
  */
@@ -155,6 +153,7 @@ static void parse_command_pwm_duty(void)
   uint8_t pwm;
   uint16_t value;
   int str_len;
+  uint8_t str_duty[10];
 
   // Parse the PWM number as integer
   pwm = receive_buffer[1] - '0';
