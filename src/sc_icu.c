@@ -27,10 +27,9 @@
  */
 
 #include "sc_utils.h"
+#include "sc_icu.h"
 
 #if HAL_USE_ICU
-
-#include "sc_icu.h"
 
 static int last_width = -1;
 static int last_period = -1;
