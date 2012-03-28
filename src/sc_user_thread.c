@@ -38,7 +38,7 @@ static uint8_t msg[] = {'t','e','s','t','i','n','g','\r','\n'};
 /*
  * Setup a working area with a 32 byte stack for user thread
  */
-static WORKING_AREA(user_thread, 32);
+static WORKING_AREA(user_thread, 128);
 static msg_t userThread(void *UNUSED(arg))
 {
 
