@@ -39,7 +39,7 @@
 #include "sc_icu.h"
 #include "sc_cmd.h"
 
-#define MAX_SEND_BUF_LEN      16
+#define MAX_SEND_BUF_LEN      32
 #define MAX_CIRCULAR_BUFS     2
 
 static UARTDriver *last_uart = NULL;
