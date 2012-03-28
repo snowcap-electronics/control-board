@@ -62,5 +62,6 @@ typedef enum SC_UART {
 
 void sc_uart_init(SC_UART uart);
 void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len);
+void sc_uart_send_str(SC_UART uart, char *msg);
 
 #endif

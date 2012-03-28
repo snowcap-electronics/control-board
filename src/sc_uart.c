@@ -180,7 +180,7 @@ void sc_uart_init(SC_UART uart)
  *
  * @param[in] uart      UART to use.
  * @param[in] msg       Message to send.
- * @param[in] len       Lenght of the message in bytes.
+ * @param[in] len       Length of the message in bytes. 
  */
 void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 {
@@ -256,6 +256,29 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
   }
 
   chBSemSignal(&circular_sem);
+}
+
+
+
+/**
+ * @brief   Send a string over UART.
+ *
+ * @param[in] uart      UART to use.
+ * @param[in] str       String to send. Must be \0 terminated.
+ */
+void sc_uart_send_str(SC_UART uart, char *msg)
+{
+  int len = 0;
+
+  if (msg == NULL) {
+	return;
+  }
+
+  while (msg[len] != '\0') {
+	++len;
+  }
+
+  sc_uart_send_msg(uart, (uint8_t *)msg, len);
 }
 
 
