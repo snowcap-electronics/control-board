@@ -48,12 +48,15 @@ void sc_pwr_standby(void)
 
 
 /*
- * Set periodic wakeup
+ * Set periodic wakeup.
+ * Note that this seems to be cleared on reset (i.e. also in wake up from
+ * stand by).
  */
-void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms)
+void sc_pwr_wakeup_set(uint32_t sec, UNUSED(uint32_t ms))
 {
   RTCWakeup wakeupspec;
- 
+
+  /* FIXME: faster clock source for millisecond sleeps? */
   wakeupspec.wakeup = ((uint32_t)4) << 16; /* select 1 Hz clock source */
 
   /* FIXME: No idea why this doesn't match to 1Hz */
@@ -65,7 +68,7 @@ void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms)
 
 
 /*
- * Set periodic wakeup
+ * Clear periodic wakeup
  */
 void sc_pwr_wakeup_clear(void)
 {
