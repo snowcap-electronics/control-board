@@ -30,7 +30,6 @@
 #define SC_PWR_H
 
 void sc_pwr_standby(void);
-/*void sc_pwr_stop(SC_PWR_STOP_MODE mode);*/
 void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms);
 void sc_pwr_wakeup_clear(void);
 
