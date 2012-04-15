@@ -30,12 +30,12 @@
 #include "sc_uart.h"
 #include "sc_pwm.h"
 #include "sc_led.h"
+#include "sc_event.h"
 
-static void parse_command(void);
-static void parse_command_pwm(void);
-static void parse_command_pwm_frequency(void);
-static void parse_command_pwm_duty(void);
-static void parse_command_led(void);
+static void parse_command_pwm(uint8_t *cmd);
+static void parse_command_pwm_frequency(uint8_t *cmd);
+static void parse_command_pwm_duty(uint8_t *cmd);
+static void parse_command_led(uint8_t *cmd);
 
 /*
  * Buffer for incoming commands.
@@ -46,58 +46,115 @@ static void parse_command_led(void);
 static uint8_t receive_buffer[MAX_RECV_BUF_LEN];
 static uint8_t recv_i = 0;
 
+/* Semaphore to guard internals of command module. */
+static BinarySemaphore command_sem;
+
+
 /*
- * Receive byte
+ * Initialize command module
+ */
+void sc_cmd_init(void)
+{
+  // Initialize semaphore
+  chBSemInit(&command_sem, FALSE);
+}
+
+
+
+
+/*
+ * Receive byte. This can be called from e.g. an interrupt handler.
  */
 void sc_cmd_push_byte(uint8_t byte)
 {  
+  chBSemWaitS(&command_sem);
+
+  // Convert all different types of newlines to single \n
+  if (byte == '\r') {
+    byte = '\n';
+  }
+
+  // Do nothing on \n if there's no previous command in the buffer
+  if ((byte == '\n') && (recv_i == 0 || receive_buffer[recv_i - 1] == '\n')) {
+    return;
+  }
+
   // Store the received character
   receive_buffer[recv_i++] = byte;
 
-  // Ignore zero length commands
-  if (recv_i == 1 && (byte == '\n' || byte == '\r')) {
-	recv_i = 0;
-	return;
-  }
-
-
   // Check for full command in the buffer
-  if (byte == '\n' || byte == '\r') {
-	// FIXME: return and handle in separate thread?
-	parse_command();
-	recv_i = 0;
+  if (byte == '\n') {
+	// Release the command module semaphore
+	chBSemSignal(&command_sem);
+
+	// Signal about new data
+	sc_event_action();
 	return;
   }
 
-  // Discard all data in buffer if buffer is full and no \n received
+  // Discard all data in buffer if buffer is full.
+  // This also discards commands in buffer that has not been handled yet.
   if (recv_i == MAX_RECV_BUF_LEN) {
 	recv_i = 0;
   }
+
+  chBSemSignal(&command_sem);
 }
 
 
 
 /*
- * Parse a received command
+ * Parse a received command.
  */
-static void parse_command(void)
+void sc_cmd_parse_command(void)
 {
-  if (recv_i < MIN_CMD_LEN) {
-	// Invalid command, ignoring
-	return;
+  int i;
+  int found = 0;
+  chBSemWaitS(&command_sem);
+  uint8_t command_buf[MAX_RECV_BUF_LEN];
+
+  // Check for full command in the buffer
+  for(i = 0; i < recv_i; ++i) {
+    if (receive_buffer[i] == '\n') {
+      // Mark the position of the next possible command
+      found = i + 1;
+      break;
+    }
   }
 
-  switch (receive_buffer[0]) {
+  if (!found ) {
+    // No full command in buffer, do nothing
+    chBSemSignal(&command_sem);
+    return;
+  }
+  
+  // Copy command to handling buffer
+  for (i = 0; i < found; ++i) {
+    command_buf[i] = receive_buffer[i];
+  }
+
+  // Clear the newline character as that command has been handled
+  receive_buffer[found - 1] = 0;
+
+  // Pop the command away from the recv buffer
+  for (i = 0; i < recv_i - found; ++i) {
+    receive_buffer[i] = receive_buffer[found];
+  }
+  recv_i -= found;
+
+  switch (command_buf[0]) {
   case 'p':
-	parse_command_pwm();
-	break;
+    parse_command_pwm(command_buf);
+    break;
   case 'l':
-	parse_command_led();
-	break;
+    parse_command_led(command_buf);
+    break;
   default:
-	// Invalid command, ignoring
-	break;
+    // Invalid command, ignoring
+    break;
   }	
+
+  chBSemSignal(&command_sem);
 }
 
 
@@ -105,12 +162,12 @@ static void parse_command(void)
 /*
  * Parse PWM command
  */
-static void parse_command_pwm(void)
+static void parse_command_pwm(uint8_t *cmd)
 {
 
-  switch (receive_buffer[1]) {
+  switch (cmd[1]) {
   case 'f':
-	parse_command_pwm_frequency();
+    parse_command_pwm_frequency(cmd);
 	break;
   case '1':
   case '2':
@@ -120,7 +177,7 @@ static void parse_command_pwm(void)
   case '6':
   case '7':
   case '8':
-	parse_command_pwm_duty();
+    parse_command_pwm_duty(cmd);
 	break;
   default:
 	// Invalid PWM command, ignoring
@@ -133,12 +190,12 @@ static void parse_command_pwm(void)
 /*
  * Parse PWM frequency command
  */
-static void parse_command_pwm_frequency(void)
+static void parse_command_pwm_frequency(uint8_t *cmd)
 {
   uint16_t freq;
 
   // Parse the frequency value
-  freq = (uint16_t)(sc_atoi(&receive_buffer[2], recv_i - 2));
+  freq = (uint16_t)(sc_atoi(&cmd[2], recv_i - 2));
 
   // Set the frequency
   sc_pwm_set_freq(freq);
@@ -148,7 +205,7 @@ static void parse_command_pwm_frequency(void)
 /*
  * Parse PWM duty cycle command
  */
-static void parse_command_pwm_duty(void)
+static void parse_command_pwm_duty(uint8_t *cmd)
 {
   uint8_t pwm;
   uint16_t value;
@@ -156,16 +213,16 @@ static void parse_command_pwm_duty(void)
   uint8_t str_duty[10];
 
   // Parse the PWM number as integer
-  pwm = receive_buffer[1] - '0';
+  pwm = cmd[1] - '0';
 
   // Check for stop command
-  if (receive_buffer[2] == 's') {
+  if (cmd[2] == 's') {
 	sc_pwm_stop(pwm);
 	return;
   }
 
   // Parse the PWM value
-  value = (uint16_t)(sc_atoi(&receive_buffer[2], recv_i - 2));
+  value = (uint16_t)(sc_atoi(&cmd[2], recv_i - 2));
 
   // Set the duty cycle
   sc_pwm_set_duty(pwm, value);
@@ -189,10 +246,10 @@ static void parse_command_pwm_duty(void)
 /*
  * Parse led command
  */
-static void parse_command_led(void)
+static void parse_command_led(uint8_t *cmd)
 {
 
-  switch (receive_buffer[1]) {
+  switch (cmd[1]) {
   case '0':
 	sc_led_off();
 	break;
@@ -208,3 +265,10 @@ static void parse_command_led(void)
   }
 }
 
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

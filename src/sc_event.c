@@ -1,8 +1,7 @@
-/***
- * Snowcap Control Board v1 firmware
+/*
+ * Event loop
  *
- * Copyright 2011,2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
- *                     Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2012 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,50 +25,52 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
 
-/* Project includes */
-#include "sc_utils.h"
 #include "sc_event.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
-#include "sc_i2c.h"
 #include "sc_cmd.h"
 
-int main(void) {
 
-    /* Initialize ChibiOS HAL and core */
-    halInit();
-    chSysInit();
+// Action semaphore used in event loop to signal action from other
+// threads and interrupt handlers.
+static Semaphore action_sem;
 
-    /* Init uarts 1 and 2 (xBee) */
-    sc_uart_init(SC_UART_1);
-    sc_uart_init(SC_UART_2);
+/*
+ * Run the event loop. This must be called from the main thread.
+ */
+void sc_event_loop(void)
+{
 
-    /* Init PWM */
-    sc_pwm_init();
+  // Initialize the action semaphore
+  chSemInit(&action_sem, 0);
 
-    /* Initialize command parsing */
-    sc_cmd_init();
+  while (TRUE) {
 
-#if HAL_USE_ICU
-    /* Init ICU for reading xBee signal strength */
-    sc_icu_init(1);
-#endif
+	// Wait for action
+	chSemWait(&action_sem);
 
-#if HAL_USE_I2C
-    /* Init I²C bus */
-    sc_i2c_init(0);
-#endif
-
-    /* Init and start a user thread */
-    //sc_user_thread_init();
-
-    sc_event_loop();
-
-    return 0;
+	// Go through all possible actions
+	// Fixme: Use flags to do only the flagged action?
+	sc_cmd_parse_command();
+  }
 }
+
+
+
+/*
+ * Notify the main thread to check for actions. This can be called
+ * from other threads and interrupt handlers.
+ */
+void sc_event_action(void)
+{
+  chSemSignalI(&action_sem);
+}
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
