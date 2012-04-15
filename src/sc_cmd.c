@@ -26,16 +26,19 @@
  *
  */
 
+#include "sc_utils.h"
 #include "sc_cmd.h"
 #include "sc_uart.h"
 #include "sc_pwm.h"
 #include "sc_led.h"
 #include "sc_event.h"
+#include "sc_temperature.h"
 
 static void parse_command_pwm(uint8_t *cmd);
 static void parse_command_pwm_frequency(uint8_t *cmd);
 static void parse_command_pwm_duty(uint8_t *cmd);
 static void parse_command_led(uint8_t *cmd);
+static void parse_command_temperature(uint8_t *cmd);
 
 /*
  * Buffer for incoming commands.
@@ -148,6 +151,9 @@ void sc_cmd_parse_command(void)
     break;
   case 'l':
     parse_command_led(command_buf);
+    break;
+  case 't':
+    parse_command_temperature(command_buf);
     break;
   default:
     // Invalid command, ignoring
@@ -262,6 +268,25 @@ static void parse_command_led(uint8_t *cmd)
   default:
 	// Invalid value, ignoring command
 	return;
+  }
+}
+
+/*
+ * Parse temperature command
+ */
+static void parse_command_temperature(uint8_t *cmd)
+{
+
+  switch (cmd[1]) {
+  case '0':
+    temperature_disable();
+    break;
+  case '1':
+    temperature_enable();
+    break;
+  default:
+    // Invalid value, ignoring command
+    return;
   }
 }
 
