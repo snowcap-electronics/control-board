@@ -87,9 +87,16 @@ int sc_itoa(int value, uint8_t *str, int len)
   int index = len;
   int extra, i;
   int str_len;
+  int negative = 0;
+  int start = 0;
 
   // FIXME: Add always \r\n to the buffer??
   // FIXME: in error: e\r\n ??
+
+  if (value < 0) {
+	negative = 1;
+	value *= -1;
+  }
 
   // Go through all numbers and store the last digit to the string
   // starting for the last character
@@ -101,20 +108,26 @@ int sc_itoa(int value, uint8_t *str, int len)
 	value /= 10;
   }
 
-  // Check for overflow (needs also space for \0).
-  if (index < 1) {
+  // Check for overflow (needs also space for '\0' and possible '-').
+  if (index < 1 || (negative && index < 2)) {
 	str[0] = '\0';
 	return 0;
+  }
+
+  // Add - for negative numbers
+  if (negative) {
+	str[0] = '-';
+	start = 1;
   }
 
   // Move numbers to the start of the string. Add \0 after the last
   // number or as the last character in case of overflow
   extra = index;
-  for (i = 0; i < extra; i++) {
-	str[i] = str[i + extra];
+  for (i = 0; i < len - extra; i++) {
+	str[i + start] = str[i + extra];
   }
+  str_len = len - extra + start;
 
-  str_len = len - extra;
   str[str_len] = '\0';
 
   return str_len;
