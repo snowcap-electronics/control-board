@@ -90,9 +90,7 @@ int sc_itoa(int value, uint8_t *str, int len)
   int negative = 0;
   int start = 0;
 
-  // FIXME: Add always \r\n to the buffer??
-  // FIXME: in error: e\r\n ??
-
+  // Check for negative values
   if (value < 0) {
 	negative = 1;
 	value *= -1;
