@@ -92,6 +92,12 @@ CSRC = $(PORTSRC) \
        src/sc_event.c \
        src/main.c
 
+# Drivers
+# Sources should be guarded so that they can be turned on/off from sc_conf.h
+
+# TI TMP275 temperature sensor
+CSRC += drivers/tmp275.c
+
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
 CPPSRC =

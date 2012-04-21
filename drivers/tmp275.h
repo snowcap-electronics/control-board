@@ -1,7 +1,7 @@
 /***
- * Temperature API
+ * TI TMP275 temperature sensor support
  *
- * Copyright 2011 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
+ * Copyright 2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,30 +26,22 @@
  *
  */
 
-
-// ChibiOS includes
-#include "ch.h"
-#include "hal.h"
-
 #include "sc_conf.h"
-#include "sc_temperature.h"
 
+#ifndef SC_TMP275_H
+#define SC_TMP275_H
+
+/* Enable this driver by defining SC_USE_TMP275 in sc_conf.h */
 #ifdef SC_USE_TMP275
-#include "drivers/tmp275.h"
+
+#ifndef TMP275_ADDRESS
+#define TMP275_ADDRESS 0b1001111
 #endif
 
-void temperature_enable(void)
-{
-#ifdef SC_USE_TMP275
-  tmp275_enable(TMP275_ADDRESS);
-#endif
-}
+void tmp275_enable(i2caddr_t addr);
+void tmp275_disable(i2caddr_t addr);
+int16_t tmp275_read(i2caddr_t addr);
 
-void temperature_disable(void)
-{
-#ifdef SC_USE_TMP275
-  tmp275_disable(TMP275_ADDRESS);
-#endif
-}
+#endif /* SC_USE_TMP275 */
 
-
+#endif /* SC_TMP275_H */
