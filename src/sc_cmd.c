@@ -282,7 +282,7 @@ static void parse_command_temperature(uint8_t *cmd)
     temperature_disable();
     break;
   case '1':
-    temperature_enable();
+    temperature_enable(1000);
     break;
   default:
     // Invalid value, ignoring command

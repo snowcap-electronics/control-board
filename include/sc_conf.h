@@ -46,4 +46,6 @@
 #define I2CDX              I2CD3
 #endif
 
+#define SC_USE_TMP275
+
 #endif

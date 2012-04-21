@@ -35,7 +35,13 @@
 
 #include "sc_conf.h"
 
-void temperature_enable(void);
+/* Enable temperature reading with given interval */
+void temperature_enable(uint16_t interval_ms);
+
+/* Disable temperature reading */
 void temperature_disable(void);
+
+/* Return interval in which temperature reads should be measured */
+uint16_t temperature_interval(void);
 
 #endif

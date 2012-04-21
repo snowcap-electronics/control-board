@@ -38,8 +38,11 @@
 #include "drivers/tmp275.h"
 #endif
 
-void temperature_enable(void)
+static uint16_t interval = 1000;
+
+void temperature_enable(uint16_t interval_ms)
 {
+  interval = interval_ms;
 #ifdef SC_USE_TMP275
   tmp275_enable(TMP275_ADDRESS);
 #endif
@@ -52,4 +55,7 @@ void temperature_disable(void)
 #endif
 }
 
-
+uint16_t temperature_interval(void)
+{
+  return interval;
+}

@@ -33,7 +33,7 @@
 #include "sc_utils.h"
 #include "sc_uart.h"
 #include "sc_i2c.h"
-#include "sc_led.h"
+#include "sc_temperature.h"
 
 #include "drivers/tmp275.h"
 
@@ -50,7 +50,7 @@ static SC_UART uart = SC_UART_LAST;
 static int running = 0;
 static i2caddr_t addr = 0;
 
-static WORKING_AREA(tmp275_thread, 192);
+static WORKING_AREA(tmp275_thread, 256);
 static msg_t tmp275Thread(void *UNUSED(arg))
 {
   while (running) {
@@ -101,7 +101,7 @@ static msg_t tmp275Thread(void *UNUSED(arg))
     /* Reading the value is possible at 300ms intervals when in 12 bit mode,
      * but that probably never makes sense. 1s should be ok as a default.
      * FIXME: This should be configurable... */
-    chThdSleepMilliseconds(1000);
+    chThdSleepMilliseconds(temperature_interval());
   }
   return 0;
 }
