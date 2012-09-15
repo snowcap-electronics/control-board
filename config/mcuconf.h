@@ -38,18 +38,17 @@
  * 0...3        Lowest...Highest.
  */
 
+#define STM32F2xx_MCUCONF
+
 /*
  * HAL driver system settings.
  */
 #define STM32_NO_INIT                       FALSE
 #define STM32_HSI_ENABLED                   TRUE
+#define STM32_LSI_ENABLED                   TRUE
 #define STM32_HSE_ENABLED                   TRUE
 #define STM32_LSE_ENABLED                   FALSE
-#define STM32_LSI_ENABLED                   TRUE
-#define STM32_ACTIVATE_PLL                  TRUE
-#define STM32_ACTIVATE_PLLI2S               FALSE
-#define STM32_ADC_CLOCK_ENABLED             TRUE
-#define STM32_USB_CLOCK_ENABLED             FALSE
+#define STM32_CLOCK48_REQUIRED              TRUE
 #define STM32_SW                            STM32_SW_PLL
 #define STM32_PLLSRC                        STM32_PLLSRC_HSE
 #define STM32_PLLM_VALUE                    25
@@ -60,8 +59,17 @@
 #define STM32_PPRE1                         STM32_PPRE1_DIV4
 #define STM32_PPRE2                         STM32_PPRE2_DIV2
 #define STM32_RTCSEL                        STM32_RTCSEL_LSI
+#define STM32_RTCPRE_VALUE                  8
+#define STM32_MCO1SEL                       STM32_MCO1SEL_HSI
+#define STM32_MCO1PRE                       STM32_MCO1PRE_DIV1
+#define STM32_MCO2SEL                       STM32_MCO2SEL_SYSCLK
+#define STM32_MCO2PRE                       STM32_MCO2PRE_DIV5
+#define STM32_I2SSRC                        STM32_I2SSRC_CKIN
 #define STM32_PLLI2SN_VALUE                 384
 #define STM32_PLLI2SR_VALUE                 5
+#define STM32_VOS                           STM32_VOS_HIGH
+#define STM32_PVD_ENABLE                    FALSE
+#define STM32_PLS                           STM32_PLS_LEV0
 
 /*
  * ADC driver system settings.
@@ -172,10 +180,15 @@
 /*
  * USB driver system settings.
  */
-#define STM32_USB_USE_USB1                  TRUE
-#define STM32_USB_LOW_POWER_ON_SUSPEND      FALSE
-#define STM32_USB_USB1_HP_IRQ_PRIORITY      6
-#define STM32_USB_USB1_LP_IRQ_PRIORITY      14
+#define STM32_USB_USE_OTG1                  FALSE
+#define STM32_USB_USE_OTG2                  TRUE
+#define STM32_USB_OTG1_IRQ_PRIORITY         14
+#define STM32_USB_OTG2_IRQ_PRIORITY         14
+#define STM32_USB_OTG1_RX_FIFO_SIZE         512
+#define STM32_USB_OTG2_RX_FIFO_SIZE         1024
+#define STM32_USB_OTG_THREAD_PRIO           LOWPRIO
+#define STM32_USB_OTG_THREAD_STACK_SIZE     128
+#define STM32_USB_OTGFIFO_FILL_BASEPRI      0
 
 /*
  * I2C driver settings

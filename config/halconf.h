@@ -128,7 +128,7 @@
  * @brief   Enables the SERIAL over USB subsystem.
  */
 #if !defined(HAL_USE_SERIAL_USB) || defined(__DOXYGEN__)
-#define HAL_USE_SERIAL_USB          FALSE
+#define HAL_USE_SERIAL_USB          TRUE
 #endif
 
 /**
@@ -149,7 +149,7 @@
  * @brief   Enables the USB subsystem.
  */
 #if !defined(HAL_USE_USB) || defined(__DOXYGEN__)
-#define HAL_USE_USB                 FALSE
+#define HAL_USE_USB                 TRUE
 #endif
 
 /*===========================================================================*/
@@ -258,9 +258,10 @@
 /*===========================================================================*/
 /* SDC driver related settings.                                              */
 /*===========================================================================*/
+
 /**
  * @brief   Number of initialization attempts before rejecting the card.
- * @note    Attempts are performed at 10mS intevals.
+ * @note    Attempts are performed at 10mS intervals.
  */
 #if !defined(SDC_INIT_RETRY) || defined(__DOXYGEN__)
 #define SDC_INIT_RETRY              100

@@ -38,6 +38,7 @@
 #include "sc_led.h"
 #include "sc_icu.h"
 #include "sc_cmd.h"
+#include "sc_sdu.h"
 
 #define MAX_SEND_BUF_LEN      32
 #define MAX_CIRCULAR_BUFS     2
@@ -70,6 +71,10 @@ static UARTDriver *circular_uart[MAX_CIRCULAR_BUFS];
 static int8_t circular_sending;
 static int8_t circular_free;
 static BinarySemaphore circular_sem;
+
+/* Boolean to tell if the last character was received from USB */
+/* FIXME: Quite a hack */
+static uint8_t uart_use_usb;
 
 /*
  * UART driver configuration structure for UART1
@@ -164,6 +169,9 @@ void sc_uart_init(SC_UART uart)
 	return;
   }
 
+  // Don't use Serial over USB by default
+  uart_use_usb = FALSE;
+
   // Initialize sending side circular buffer state
   circular_sending = -1;
   circular_free = 0;
@@ -187,6 +195,13 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
   UARTDriver *uartdrv;
   int i;
   int circular_current;
+
+
+  // If last byte received from Serial USB, send message using Serial USB
+  if (uart == SC_UART_USB || (uart == SC_UART_LAST && uart_use_usb)) {
+	sc_sdu_send_msg(msg, len);
+	return;
+  }
 
   switch (uart) {
 #if STM32_UART_USE_USART1
@@ -212,7 +227,7 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 	// CHECKME: assert?
 	return;
   }
-
+  
   // Check for oversized message
   if (len > MAX_SEND_BUF_LEN) {
 	// CHECKME: assert?
@@ -259,6 +274,20 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 }
 
 
+
+/**
+ * @brief   Receive a character from Serial USB (sc_sdu)
+ *
+ * @param[in] c         Received character
+ */
+void sc_uart_revc_usb_byte(uint8_t c)
+{
+  // Mark that the last character is received from Serial USB
+  uart_use_usb = TRUE;
+
+  // Pass data to command module
+  sc_cmd_push_byte(c);
+}
 
 /**
  * @brief   Send a string over UART.
@@ -383,6 +412,9 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c)
 static void rxchar(uint16_t c)
 {
   // TODO: blink a led (optionally)?
+
+  // Mark that the last character was received over UART
+  uart_use_usb = FALSE;
 
   // Pass data to command module
   sc_cmd_push_byte((uint8_t)c);
