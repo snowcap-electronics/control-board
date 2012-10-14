@@ -32,10 +32,10 @@
 #include "sc_led.h"
 #include "sc_event.h"
 
-static void parse_command_pwm(uint8_t *cmd);
-static void parse_command_pwm_frequency(uint8_t *cmd);
-static void parse_command_pwm_duty(uint8_t *cmd);
-static void parse_command_led(uint8_t *cmd);
+static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 
 /*
  * Buffer for incoming commands.
@@ -144,10 +144,10 @@ void sc_cmd_parse_command(void)
 
   switch (command_buf[0]) {
   case 'p':
-    parse_command_pwm(command_buf);
+    parse_command_pwm(command_buf, found);
     break;
   case 'l':
-    parse_command_led(command_buf);
+    parse_command_led(command_buf, found);
     break;
   default:
     // Invalid command, ignoring
@@ -162,12 +162,12 @@ void sc_cmd_parse_command(void)
 /*
  * Parse PWM command
  */
-static void parse_command_pwm(uint8_t *cmd)
+static void parse_command_pwm(uint8_t *cmd, uint8_t len)
 {
 
   switch (cmd[1]) {
   case 'f':
-    parse_command_pwm_frequency(cmd);
+    parse_command_pwm_frequency(cmd, len);
 	break;
   case '1':
   case '2':
@@ -177,7 +177,7 @@ static void parse_command_pwm(uint8_t *cmd)
   case '6':
   case '7':
   case '8':
-    parse_command_pwm_duty(cmd);
+    parse_command_pwm_duty(cmd, len);
 	break;
   default:
 	// Invalid PWM command, ignoring
@@ -190,12 +190,12 @@ static void parse_command_pwm(uint8_t *cmd)
 /*
  * Parse PWM frequency command
  */
-static void parse_command_pwm_frequency(uint8_t *cmd)
+static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len)
 {
   uint16_t freq;
 
   // Parse the frequency value
-  freq = (uint16_t)(sc_atoi(&cmd[2], recv_i - 2));
+  freq = (uint16_t)(sc_atoi(&cmd[2], cmd_len - 2));
 
   // Set the frequency
   sc_pwm_set_freq(freq);
@@ -205,7 +205,7 @@ static void parse_command_pwm_frequency(uint8_t *cmd)
 /*
  * Parse PWM duty cycle command
  */
-static void parse_command_pwm_duty(uint8_t *cmd)
+static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 {
   uint8_t pwm;
   uint16_t value;
@@ -222,7 +222,7 @@ static void parse_command_pwm_duty(uint8_t *cmd)
   }
 
   // Parse the PWM value
-  value = (uint16_t)(sc_atoi(&cmd[2], recv_i - 2));
+  value = (uint16_t)(sc_atoi(&cmd[2], cmd_len - 2));
 
   // Set the duty cycle
   sc_pwm_set_duty(pwm, value);
@@ -246,8 +246,11 @@ static void parse_command_pwm_duty(uint8_t *cmd)
 /*
  * Parse led command
  */
-static void parse_command_led(uint8_t *cmd)
+static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
 {
+
+  // Unused currently
+  (void)cmd_len;
 
   switch (cmd[1]) {
   case '0':
