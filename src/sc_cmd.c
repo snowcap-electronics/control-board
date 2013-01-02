@@ -76,6 +76,7 @@ void sc_cmd_push_byte(uint8_t byte)
 
   // Do nothing on \n if there's no previous command in the buffer
   if ((byte == '\n') && (recv_i == 0 || receive_buffer[recv_i - 1] == '\n')) {
+    chBSemSignalI(&command_sem);
     return;
   }
 
@@ -84,21 +85,23 @@ void sc_cmd_push_byte(uint8_t byte)
 
   // Check for full command in the buffer
   if (byte == '\n') {
-	// Release the command module semaphore
-	chBSemSignal(&command_sem);
+    // Release the command module semaphore
+    chBSemSignalI(&command_sem);
 
-	// Signal about new data
-	sc_event_action();
-	return;
+    // Signal about new data
+    sc_event_action();
+    return;
   }
 
   // Discard all data in buffer if buffer is full.
   // This also discards commands in buffer that has not been handled yet.
   if (recv_i == MAX_RECV_BUF_LEN) {
-	recv_i = 0;
+    recv_i = 0;
   }
 
-  chBSemSignal(&command_sem);
+  chBSemSignalI(&command_sem);
+
+  return;
 }
 
 

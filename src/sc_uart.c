@@ -344,7 +344,7 @@ static void txend1_cb(UNUSED(UARTDriver *uartp))
 	circular_sending = -1;
   }
 
-  chBSemSignal(&circular_sem);
+  chBSemSignalI(&circular_sem);
 }
 
 
