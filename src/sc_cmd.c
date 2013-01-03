@@ -46,28 +46,28 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static uint8_t receive_buffer[MAX_RECV_BUF_LEN];
 static uint8_t recv_i = 0;
 
-/* Semaphore to guard internals of command module. */
-static BinarySemaphore command_sem;
-
-
 /*
  * Initialize command module
  */
 void sc_cmd_init(void)
 {
-  // Initialize semaphore
-  chBSemInit(&command_sem, FALSE);
+  // Nothing
 }
 
 
 
 
 /*
- * Receive byte. This can be called from e.g. an interrupt handler.
+ * Receive byte. This can be called only from an interrupt handler.
+ * from_isr must be set to 1 when called from ISR, 0 otherwise.
  */
-void sc_cmd_push_byte(uint8_t byte)
-{  
-  chBSemWaitS(&command_sem);
+void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
+{
+  #define LOCK() if (from_isr) chSysLockFromIsr() else chSysLock();
+  #define UNLOCK() if (from_isr) chSysUnlockFromIsr() else chSysUnlock();
+
+  // Lock receive_buffer
+  LOCK();
 
   // Convert all different types of newlines to single \n
   if (byte == '\r') {
@@ -76,7 +76,7 @@ void sc_cmd_push_byte(uint8_t byte)
 
   // Do nothing on \n if there's no previous command in the buffer
   if ((byte == '\n') && (recv_i == 0 || receive_buffer[recv_i - 1] == '\n')) {
-    chBSemSignalI(&command_sem);
+    UNLOCK();
     return;
   }
 
@@ -85,11 +85,11 @@ void sc_cmd_push_byte(uint8_t byte)
 
   // Check for full command in the buffer
   if (byte == '\n') {
-    // Release the command module semaphore
-    chBSemSignalI(&command_sem);
 
     // Signal about new data
-    sc_event_action();
+    sc_event_action(SC_EVENT_TYPE_PARSE_COMMAND);
+
+    UNLOCK();
     return;
   }
 
@@ -99,7 +99,10 @@ void sc_cmd_push_byte(uint8_t byte)
     recv_i = 0;
   }
 
-  chBSemSignalI(&command_sem);
+  UNLOCK();
+
+  #undef UNLOCK
+  #undef LOCK
 
   return;
 }
@@ -113,8 +116,10 @@ void sc_cmd_parse_command(void)
 {
   int i;
   int found = 0;
-  chBSemWaitS(&command_sem);
   uint8_t command_buf[MAX_RECV_BUF_LEN];
+
+  // Lock receive_buffer
+  chSysLock();
 
   // Check for full command in the buffer
   for(i = 0; i < recv_i; ++i) {
@@ -127,7 +132,7 @@ void sc_cmd_parse_command(void)
 
   if (!found ) {
     // No full command in buffer, do nothing
-    chBSemSignal(&command_sem);
+    chSysUnlock();
     return;
   }
   
@@ -145,6 +150,8 @@ void sc_cmd_parse_command(void)
   }
   recv_i -= found;
 
+  chSysUnlock();
+
   switch (command_buf[0]) {
   case 'p':
     parse_command_pwm(command_buf, found);
@@ -155,9 +162,8 @@ void sc_cmd_parse_command(void)
   default:
     // Invalid command, ignoring
     break;
-  }	
+  }
 
-  chBSemSignal(&command_sem);
 }
 
 

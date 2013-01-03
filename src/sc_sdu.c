@@ -400,7 +400,7 @@ static msg_t scSduSendThread(void *UNUSED(arg))
     chBSemWait(&send_sem);
 
     // Lock send buffer
-    chBSemWaitS(&buf_sem);
+    chBSemWait(&buf_sem);
 
     // FIXME: should support binary messages
     chprintf((BaseSequentialStream *)&SDU1, (const char *)send_buf);
@@ -420,7 +420,7 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
   int i;
 
   // Lock send buffer
-  if (chBSemWaitTimeoutS(&buf_sem, TIME_IMMEDIATE) == RDY_TIMEOUT) {
+  if (chBSemWaitTimeout(&buf_sem, TIME_IMMEDIATE) == RDY_TIMEOUT) {
     // Return error if would block
     return 1;
   }
@@ -434,10 +434,10 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
   send_buf[len] = '\0';
   
   // Unlock send buffer
-  chBSemSignalI(&buf_sem);
+  chBSemSignal(&buf_sem);
 
   // Inform the sending thread that there is data to send
-  chBSemSignalI(&send_sem);
+  chBSemSignal(&send_sem);
 
   return 0;
 }

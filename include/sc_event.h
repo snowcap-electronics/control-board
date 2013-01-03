@@ -31,8 +31,14 @@
 
 #include <sc_utils.h>
 
+typedef enum SC_EVENT_TYPES {
+  SC_EVENT_TYPE_PARSE_COMMAND,
+  SC_EVENT_TYPE_UART_SEND_FINISHED,
+  SC_EVENT_TYPE_MAX
+} SC_EVENT_TYPE;
+
 void sc_event_loop(void);
-void sc_event_action(void);
+void sc_event_action(SC_EVENT_TYPE type);
 
 #endif
 

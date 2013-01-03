@@ -382,6 +382,17 @@
 /*===========================================================================*/
 
 /**
+ * @brief   Debug option, system state check.
+ * @details If enabled the correct call protocol for system APIs is checked
+ *          at runtime.
+ *
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH_DBG_SYSTEM_STATE_CHECK) || defined(__DOXYGEN__)
+#define CH_DBG_SYSTEM_STATE_CHECK       TRUE
+#endif
+
+/**
  * @brief   Debug option, parameters checks.
  * @details If enabled then the checks on the API functions input
  *          parameters are activated.

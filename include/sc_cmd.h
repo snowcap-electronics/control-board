@@ -33,6 +33,6 @@
 
 void sc_cmd_init(void);
 void sc_cmd_parse_command(void);
-void sc_cmd_push_byte(uint8_t byte);
+void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr);
 
 #endif

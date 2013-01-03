@@ -26,13 +26,18 @@
  *
  */
 
-#include "sc_event.h"
 #include "sc_cmd.h"
+#include "sc_event.h"
+#include "sc_uart.h"
 
 
-// Action semaphore used in event loop to signal action from other
-// threads and interrupt handlers.
+/* Action semaphore used in event loop to signal action from other
+ * threads and interrupt handlers. */
 static Semaphore action_sem;
+
+/*
+ * */
+static SC_EVENT_TYPE events[SC_EVENT_TYPE_MAX] = { 0 };
 
 /*
  * Run the event loop. This must be called from the main thread.
@@ -45,23 +50,37 @@ void sc_event_loop(void)
 
   while (TRUE) {
 
-	// Wait for action
-	chSemWait(&action_sem);
+    // Wait for action
+    chSemWait(&action_sem);
 
-	// Go through all possible actions
-	// Fixme: Use flags to do only the flagged action?
-	sc_cmd_parse_command();
+    // Go through all possible actions
+
+    if (events[SC_EVENT_TYPE_PARSE_COMMAND]) {
+      chSysLock();
+      --events[SC_EVENT_TYPE_PARSE_COMMAND];
+      chSysUnlock();
+      sc_cmd_parse_command();
+    }
+
+    if (events[SC_EVENT_TYPE_UART_SEND_FINISHED]) {
+      chSysLock();
+      --events[SC_EVENT_TYPE_UART_SEND_FINISHED];
+      chSysUnlock();
+      sc_uart_send_finished();
+    }
   }
 }
 
 
 
 /*
- * Notify the main thread to check for actions. This can be called
- * from other threads and interrupt handlers.
+ * Notify the main thread to check for actions. This must be called with either
+ * chSysLockFromIsr or chSysLock already hold
  */
-void sc_event_action(void)
+void sc_event_action(SC_EVENT_TYPE type)
 {
+  ++events[type];
+
   chSemSignalI(&action_sem);
 }
 

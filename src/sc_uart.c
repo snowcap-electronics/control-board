@@ -39,6 +39,7 @@
 #include "sc_icu.h"
 #include "sc_cmd.h"
 #include "sc_sdu.h"
+#include "sc_event.h"
 
 #define MAX_SEND_BUF_LEN      32
 #define MAX_CIRCULAR_BUFS     2
@@ -59,6 +60,7 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 #endif
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
 static void rxchar(uint16_t c);
+static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len);
 
 /*
  * Circular buffer for sending.
@@ -193,9 +195,6 @@ void sc_uart_init(SC_UART uart)
 void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 {
   UARTDriver *uartdrv;
-  int i;
-  int circular_current;
-
 
   // If last byte received from Serial USB, send message using Serial USB
   if (uart == SC_UART_USB || (uart == SC_UART_LAST && uart_use_usb)) {
@@ -240,37 +239,7 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 	return;
   }
 
-  chBSemWaitS(&circular_sem);
-
-  // Copy the message to static circular buffer
-  for (i = 0; i < len; ++i) {
-	circular_buf[circular_free][i] = msg[i];
-  }
-  circular_len[circular_free] = len;
-  circular_uart[circular_free] = uartdrv;
-
-  // Store temporarily the current index
-  circular_current = circular_free;
-
-  // Check for buffer wrapping
-  if (++circular_free == MAX_CIRCULAR_BUFS) {
-	circular_free = 0;
-  }
-
-  // Check for full buffer
-  if (circular_sending != -1 && circular_free == circular_sending) {
-	circular_free = -1;
-  }
-
-  // Check for idle UART
-  if (circular_sending == -1) {
-	circular_sending = circular_current;
-	uartStartSend(circular_uart[circular_current],
-				  circular_len[circular_current],
-				  circular_buf[circular_current]);
-  }
-
-  chBSemSignal(&circular_sem);
+  circular_add_buffer(uartdrv, msg, len);
 }
 
 
@@ -286,7 +255,7 @@ void sc_uart_revc_usb_byte(uint8_t c)
   uart_use_usb = TRUE;
 
   // Pass data to command module
-  sc_cmd_push_byte(c);
+  sc_cmd_push_byte(c, 0);
 }
 
 /**
@@ -313,11 +282,12 @@ void sc_uart_send_str(SC_UART uart, char *msg)
 
 
 /*
- * End of transmission buffer callback.
+ * Delete message after sent (and start new send, if something to send).
+ * This is called from the main event loop as we can't call this directly from ISR.
  */
-static void txend1_cb(UNUSED(UARTDriver *uartp))
+void sc_uart_send_finished(void)
 {
-  chBSemWaitS(&circular_sem);
+  chBSemWait(&circular_sem);
 
   // Mark buffer as empty
   circular_len[circular_sending] = 0;
@@ -335,16 +305,28 @@ static void txend1_cb(UNUSED(UARTDriver *uartp))
   // Check for buffer to send
   if (circular_len[circular_sending] > 0) {
 
-	uartStartSendI(circular_uart[circular_sending],
-				   circular_len[circular_sending],
-				   circular_buf[circular_sending]);
+	uartStartSend(circular_uart[circular_sending],
+				  circular_len[circular_sending],
+				  circular_buf[circular_sending]);
 
   } else {
 	// Nothing to send
 	circular_sending = -1;
   }
 
-  chBSemSignalI(&circular_sem);
+  chBSemSignal(&circular_sem);
+}
+
+
+
+/*
+ * End of transmission buffer callback.
+ */
+static void txend1_cb(UNUSED(UARTDriver *uartp))
+{
+  chSysLockFromIsr();
+  sc_event_action(SC_EVENT_TYPE_UART_SEND_FINISHED);
+  chSysUnlockFromIsr();
 }
 
 
@@ -417,7 +399,7 @@ static void rxchar(uint16_t c)
   uart_use_usb = FALSE;
 
   // Pass data to command module
-  sc_cmd_push_byte((uint8_t)c);
+  sc_cmd_push_byte((uint8_t)c, 1);
 }
 
 
@@ -428,4 +410,53 @@ static void rxchar(uint16_t c)
 static void rxerr_cb(UNUSED(UARTDriver *uartp), UNUSED(uartflags_t e))
 {
   
+}
+
+
+
+/*
+ * Queue message for sending (and start send, if currently idle)
+ */
+static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len)
+{
+  int circular_current;
+  int i;
+
+  chBSemWait(&circular_sem);
+
+  // Lose message, if no space
+  if (circular_free == -1) {
+	chBSemSignal(&circular_sem);
+	return;
+  }
+
+  // Copy the message to static circular buffer
+  for (i = 0; i < len; ++i) {
+	circular_buf[circular_free][i] = msg[i];
+  }
+  circular_len[circular_free] = len;
+  circular_uart[circular_free] = uartdrv;
+
+  // Store temporarily the current index
+  circular_current = circular_free;
+
+  // Check for buffer wrapping
+  if (++circular_free == MAX_CIRCULAR_BUFS) {
+	circular_free = 0;
+  }
+
+  // Check for full buffer
+  if (circular_sending != -1 && circular_free == circular_sending) {
+	circular_free = -1;
+  }
+
+  // Check for idle UART
+  if (circular_sending == -1) {
+	circular_sending = circular_current;
+	uartStartSend(circular_uart[circular_current],
+				  circular_len[circular_current],
+				  circular_buf[circular_current]);
+  }
+
+  chBSemSignal(&circular_sem);
 }
