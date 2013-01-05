@@ -171,7 +171,7 @@ void sc_uart_init(SC_UART uart)
 	return;
   }
 
-  // Don't use Serial over USB by default
+  // Use Serial over USB by default
   uart_use_usb = TRUE;
 
   // Initialize sending side circular buffer state
