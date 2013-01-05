@@ -55,7 +55,7 @@ typedef enum SC_UART {
   SC_UART_4    = 4,
 #endif
 #if HAL_USE_SERIAL_USB
-  SC_UART_USB  = 16,
+  SC_UART_USB  = 5,
 #endif
   /**
    * @brief Use the UART that has latest activity.

@@ -29,16 +29,25 @@
 #ifndef SC_EVENT_H
 #define SC_EVENT_H
 
+#include "sc_uart.h"
 #include <sc_utils.h>
 
-typedef enum SC_EVENT_TYPES {
-  SC_EVENT_TYPE_PARSE_COMMAND,
+typedef enum SC_EVENT_TYPE {
+  SC_EVENT_TYPE_PUSH_BYTE = 1,
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
 } SC_EVENT_TYPE;
 
+typedef enum SC_EVENT_MSG_POST_FROM {
+  SC_EVENT_MSG_POST_FROM_ISR,
+  SC_EVENT_MSG_POST_FROM_NORMAL,
+} SC_EVENT_MSG_POST_FROM;
+
 void sc_event_loop(void);
 void sc_event_action(SC_EVENT_TYPE type);
+void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
+msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart);
+msg_t sc_event_msg_create_type(SC_EVENT_TYPE type);
 
 #endif
 

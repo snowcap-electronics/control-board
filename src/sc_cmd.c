@@ -36,6 +36,7 @@ static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command(void);
 
 /*
  * Buffer for incoming commands.
@@ -58,16 +59,11 @@ void sc_cmd_init(void)
 
 
 /*
- * Receive byte. This can be called only from an interrupt handler.
- * from_isr must be set to 1 when called from ISR, 0 otherwise.
+ * Receive byte. This can be called only from the main thread.
+ * FIXME: per uart buffers. Now we happily mix all uarts together.
  */
-void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
+void sc_cmd_push_byte(uint8_t byte)
 {
-  #define LOCK() if (from_isr) chSysLockFromIsr() else chSysLock();
-  #define UNLOCK() if (from_isr) chSysUnlockFromIsr() else chSysUnlock();
-
-  // Lock receive_buffer
-  LOCK();
 
   // Convert all different types of newlines to single \n
   if (byte == '\r') {
@@ -76,7 +72,6 @@ void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
 
   // Do nothing on \n if there's no previous command in the buffer
   if ((byte == '\n') && (recv_i == 0 || receive_buffer[recv_i - 1] == '\n')) {
-    UNLOCK();
     return;
   }
 
@@ -86,10 +81,8 @@ void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
   // Check for full command in the buffer
   if (byte == '\n') {
 
-    // Signal about new data
-    sc_event_action(SC_EVENT_TYPE_PARSE_COMMAND);
-
-    UNLOCK();
+    // Parse the received command
+    parse_command();
     return;
   }
 
@@ -98,13 +91,6 @@ void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
   if (recv_i == MAX_RECV_BUF_LEN) {
     recv_i = 0;
   }
-
-  UNLOCK();
-
-  #undef UNLOCK
-  #undef LOCK
-
-  return;
 }
 
 
@@ -112,15 +98,13 @@ void sc_cmd_push_byte(uint8_t byte, uint8_t from_isr)
 /*
  * Parse a received command.
  */
-void sc_cmd_parse_command(void)
+static void parse_command(void)
 {
   int i;
   int found = 0;
   uint8_t command_buf[MAX_RECV_BUF_LEN];
 
-  // Lock receive_buffer
-  chSysLock();
-
+  // FIXME: there can be only one command in buffer, so this is useless
   // Check for full command in the buffer
   for(i = 0; i < recv_i; ++i) {
     if (receive_buffer[i] == '\n') {
@@ -132,10 +116,9 @@ void sc_cmd_parse_command(void)
 
   if (!found ) {
     // No full command in buffer, do nothing
-    chSysUnlock();
     return;
   }
-  
+
   // Copy command to handling buffer
   for (i = 0; i < found; ++i) {
     command_buf[i] = receive_buffer[i];
@@ -149,8 +132,6 @@ void sc_cmd_parse_command(void)
     receive_buffer[i] = receive_buffer[found];
   }
   recv_i -= found;
-
-  chSysUnlock();
 
   switch (command_buf[0]) {
   case 'p':

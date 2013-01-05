@@ -59,7 +59,7 @@ static void rx2char_cb(UARTDriver *uartp, uint16_t c);
 static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 #endif
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
-static void rxchar(uint16_t c);
+static void rxchar(uint16_t c, SC_UART uart);
 static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len);
 
 /*
@@ -172,7 +172,7 @@ void sc_uart_init(SC_UART uart)
   }
 
   // Don't use Serial over USB by default
-  uart_use_usb = FALSE;
+  uart_use_usb = TRUE;
 
   // Initialize sending side circular buffer state
   circular_sending = -1;
@@ -251,11 +251,14 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
  */
 void sc_uart_revc_usb_byte(uint8_t c)
 {
+  msg_t msg;
+
   // Mark that the last character is received from Serial USB
   uart_use_usb = TRUE;
 
-  // Pass data to command module
-  sc_cmd_push_byte(c, 0);
+  // Pass data to to command parsing through the main thread
+  msg = sc_event_msg_create_recv_byte(c, SC_UART_USB);
+  sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
 }
 
 /**
@@ -324,9 +327,10 @@ void sc_uart_send_finished(void)
  */
 static void txend1_cb(UNUSED(UARTDriver *uartp))
 {
-  chSysLockFromIsr();
-  sc_event_action(SC_EVENT_TYPE_UART_SEND_FINISHED);
-  chSysUnlockFromIsr();
+  msg_t msg;
+
+  msg = sc_event_msg_create_type(SC_EVENT_TYPE_UART_SEND_FINISHED);
+  sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
 }
 
 
@@ -358,7 +362,7 @@ static void rxend_cb(UNUSED(UARTDriver *uartp))
 static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 {
   last_uart = uartp;
-  rxchar(c);
+  rxchar(c, SC_UART_1);
 }
 #endif
 
@@ -369,7 +373,7 @@ static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 {
   last_uart = uartp;
-  rxchar(c);
+  rxchar(c, SC_UART_2);
 }
 #endif
 
@@ -382,7 +386,7 @@ static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 static void rx3char_cb(UARTDriver *uartp, uint16_t c)
 {
   last_uart = uartp;
-  rxchar(c);
+  rxchar(c, SC_UART_3);
 }
 #endif
 
@@ -391,15 +395,16 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c)
 /*
  * Character received while out of the UART_RECEIVE state.
  */
-static void rxchar(uint16_t c)
+static void rxchar(uint16_t c, SC_UART uart)
 {
-  // TODO: blink a led (optionally)?
+  msg_t msg;
 
   // Mark that the last character was received over UART
   uart_use_usb = FALSE;
 
-  // Pass data to command module
-  sc_cmd_push_byte((uint8_t)c, 1);
+  // Pass data to to command parsing through the main thread
+  msg = sc_event_msg_create_recv_byte((uint8_t)c, uart);
+  sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
 }
 
 

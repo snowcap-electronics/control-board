@@ -30,14 +30,25 @@
 #include "sc_event.h"
 #include "sc_uart.h"
 
+#define EVENT_MSG_BYTE_MASK  0x000000ff
+#define EVENT_MSG_UART_MASK  0x00000f00
+#define EVENT_MSG_TYPE_MASK  0x0000f000
 
-/* Action semaphore used in event loop to signal action from other
- * threads and interrupt handlers. */
-static Semaphore action_sem;
+#define EVENT_MSG_BYTE_SHIFT          0
+#define EVENT_MSG_UART_SHIFT          8
+#define EVENT_MSG_TYPE_SHIFT         12
 
-/*
- * */
-static SC_EVENT_TYPE events[SC_EVENT_TYPE_MAX] = { 0 };
+#define EVENT_MSG_GET_TYPE(m)                                           \
+  ((SC_EVENT_TYPE)((m & EVENT_MSG_TYPE_MASK) >> EVENT_MSG_TYPE_SHIFT))
+
+#define EVENT_MSG_GET_BYTE(m)                                     \
+  ((uint8_t)((m & EVENT_MSG_BYTE_MASK) >> EVENT_MSG_BYTE_SHIFT))
+
+/* Action event mailbox used in event loop to pass data and action
+ * from other threads and interrupt handlers to the main thread. */
+#define EVENT_MB_SIZE 50
+static msg_t event_mb_buffer[EVENT_MB_SIZE];
+MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
 
 /*
  * Run the event loop. This must be called from the main thread.
@@ -45,28 +56,29 @@ static SC_EVENT_TYPE events[SC_EVENT_TYPE_MAX] = { 0 };
 void sc_event_loop(void)
 {
 
-  // Initialize the action semaphore
-  chSemInit(&action_sem, 0);
-
   while (TRUE) {
+    msg_t msg;
+    msg_t ret;
+    SC_EVENT_TYPE type;
 
     // Wait for action
-    chSemWait(&action_sem);
+    ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
+    chDbgAssert(ret == RDY_OK, "chMBFetch failed", "#1");
+  
+    // Get event type from the message;
+    type = EVENT_MSG_GET_TYPE(msg);
 
-    // Go through all possible actions
-
-    if (events[SC_EVENT_TYPE_PARSE_COMMAND]) {
-      chSysLock();
-      --events[SC_EVENT_TYPE_PARSE_COMMAND];
-      chSysUnlock();
-      sc_cmd_parse_command();
-    }
-
-    if (events[SC_EVENT_TYPE_UART_SEND_FINISHED]) {
-      chSysLock();
-      --events[SC_EVENT_TYPE_UART_SEND_FINISHED];
-      chSysUnlock();
+    switch(type) {
+    case SC_EVENT_TYPE_PUSH_BYTE:
+      // FIXME: push per uart
+      sc_cmd_push_byte(EVENT_MSG_GET_BYTE(msg));
+      break;
+    case SC_EVENT_TYPE_UART_SEND_FINISHED:
       sc_uart_send_finished();
+      break;
+    default:
+      chDbgAssert(0, "Unhandled event", "sc_event_loop");
+      break;
     }
   }
 }
@@ -74,17 +86,60 @@ void sc_event_loop(void)
 
 
 /*
- * Notify the main thread to check for actions. This must be called with either
- * chSysLockFromIsr or chSysLock already hold
+ * Post a mailbox message to main thread. Use helper functions to
+ * create the message.
+ *
  */
-void sc_event_action(SC_EVENT_TYPE type)
+void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from)
 {
-  ++events[type];
+  msg_t ret;
 
-  chSemSignalI(&action_sem);
+  if (from == SC_EVENT_MSG_POST_FROM_ISR) {
+    chSysLockFromIsr();
+
+    ret = chMBPostI(&event_mb, msg);
+    chDbgAssert(ret == RDY_OK, "chMBPostI failed", "#1");
+
+    chSysUnlockFromIsr();
+  } else {
+
+    ret = chMBPost(&event_mb, msg, TIME_IMMEDIATE);
+    chDbgAssert(ret == RDY_OK, "chMBPost failed", "#1");
+  }
 }
 
 
+
+/*
+ * Create a mailbox message from received byte
+ */
+msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart)
+{
+  msg_t msg = 0;
+  SC_EVENT_TYPE type = SC_EVENT_TYPE_PUSH_BYTE;
+
+  // FIXME: assert if uart > 16?
+  msg =
+    (type << EVENT_MSG_TYPE_SHIFT) |
+    (uart << EVENT_MSG_UART_SHIFT) |
+    (byte << EVENT_MSG_BYTE_SHIFT);
+
+  return msg;
+}
+
+
+
+/*
+ * Create a mailbox message for event
+ */
+msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
+{
+  msg_t msg = 0;
+
+  msg = (type << EVENT_MSG_TYPE_SHIFT);
+
+  return msg;
+}
 
 /* Emacs indentatation information
    Local Variables:
