@@ -207,8 +207,8 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 
   // Check for stop command
   if (cmd[2] == 's') {
-	sc_pwm_stop(pwm);
-	return;
+    sc_pwm_stop(pwm);
+    return;
   }
 
   // Parse the PWM value
@@ -221,11 +221,11 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 
   // In error send 'e'
   if (str_len == 0) {
-	str_duty[0] = 'e';
-	str_len = 1;
+    str_duty[0] = 'e';
+    str_len = 1;
   } else {
-	str_duty[str_len++] = '\r';
-	str_duty[str_len++] = '\n';
+    str_duty[str_len++] = '\r';
+    str_duty[str_len++] = '\n';
   }
 
   sc_uart_send_msg(SC_UART_LAST, str_duty, str_len);
@@ -244,16 +244,16 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
 
   switch (cmd[1]) {
   case '0':
-	sc_led_off();
-	break;
+    sc_led_off();
+    break;
   case '1':
-	sc_led_on();
-	break;
+    sc_led_on();
+    break;
   case 't':
-	sc_led_toggle();
-	break;
+    sc_led_toggle();
+    break;
   default:
-	// Invalid value, ignoring command
+    // Invalid value, ignoring command
 	return;
   }
 }
