@@ -80,6 +80,7 @@ CSRC = $(PORTSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/chprintf.c \
+       src/sc.c \
        src/sc_led.c \
        src/sc_pwm.c \
        src/sc_uart.c \
@@ -91,6 +92,7 @@ CSRC = $(PORTSRC) \
        src/sc_pwr.c \
        src/sc_event.c \
        src/sc_sdu.c \
+       src/sc_adc.c \
        src/main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

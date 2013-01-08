@@ -44,6 +44,9 @@
 #define EVENT_MSG_GET_BYTE(m)                                     \
   ((uint8_t)((m & EVENT_MSG_BYTE_MASK) >> EVENT_MSG_BYTE_SHIFT))
 
+#define EVENT_MSG_GET_UART(m)                                     \
+  ((SC_UART)((m & EVENT_MSG_UART_MASK) >> EVENT_MSG_UART_SHIFT))
+
 /* Action event mailbox used in event loop to pass data and action
  * from other threads and interrupt handlers to the main thread. */
 #define EVENT_MB_SIZE 50
@@ -51,9 +54,17 @@ static msg_t event_mb_buffer[EVENT_MB_SIZE];
 MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
 
 /*
- * Run the event loop. This must be called from the main thread.
+ * Callbacks
  */
-void sc_event_loop(void)
+static sc_event_cb_handle_byte    cb_handle_byte = NULL;
+static sc_event_cb_adc_available  cb_adc_available = NULL;
+static sc_event_cb_temp_available cb_temp_available = NULL;
+
+/*
+ * Setup a working area with a 256 byte stack for even loop thread
+ */
+static WORKING_AREA(event_loop_thread, 128);
+static msg_t eventLoopThread(void *UNUSED(arg))
 {
 
   while (TRUE) {
@@ -64,15 +75,25 @@ void sc_event_loop(void)
     // Wait for action
     ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
     chDbgAssert(ret == RDY_OK, "chMBFetch failed", "#1");
-  
+    if (ret != RDY_OK) {
+      continue;
+    }
+
     // Get event type from the message;
     type = EVENT_MSG_GET_TYPE(msg);
 
     switch(type) {
+
+      // Application registrable events
     case SC_EVENT_TYPE_PUSH_BYTE:
-      // FIXME: push per uart
-      sc_cmd_push_byte(EVENT_MSG_GET_BYTE(msg));
+      if (cb_handle_byte != NULL) {
+        SC_UART uart = EVENT_MSG_GET_UART(msg);
+        uint8_t byte = EVENT_MSG_GET_BYTE(msg);
+        cb_handle_byte(uart, byte);
+      }
       break;
+
+      // SC internal types
     case SC_EVENT_TYPE_UART_SEND_FINISHED:
       sc_uart_send_finished();
       break;
@@ -81,7 +102,21 @@ void sc_event_loop(void)
       break;
     }
   }
+
+  return RDY_OK;
 }
+
+
+
+/*
+ * Start a user thread
+ */
+void sc_event_loop_start(void)
+{
+  // Start a thread dedicated to event loop
+  chThdCreateStatic(event_loop_thread, sizeof(event_loop_thread), NORMALPRIO, eventLoopThread, NULL);
+}
+
 
 
 
@@ -140,6 +175,38 @@ msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
 
   return msg;
 }
+
+
+
+/*
+ * Register callback for new byte
+ */
+void sc_event_register_handle_byte(sc_event_cb_handle_byte func)
+{
+  cb_handle_byte = func;
+}
+
+
+
+/*
+ * Register callback for new ADC data available
+ */
+void sc_event_register_adc_available(sc_event_cb_adc_available func)
+{
+  cb_adc_available = func;
+}
+
+
+
+/*
+ * Register callback for new temperature data available
+ */
+void sc_event_register_temp_available(sc_event_cb_temp_available func)
+{
+  cb_temp_available = func;
+}
+
+
 
 /* Emacs indentatation information
    Local Variables:

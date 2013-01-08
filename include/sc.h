@@ -1,5 +1,4 @@
-/***
- * Snowcap project specific configurations
+/*
  *
  * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
@@ -26,30 +25,25 @@
  *
  */
 
-#ifndef SC_CONF_H
-#define SC_CONF_H
+#ifndef SC_H
+#define SC_H
 
-// Snowcap Control Board V1 defines
-#ifndef USER_LED
-#define USER_LED           GPIOB_LED1
-#endif
+/* ChibiOS includes */
+#include "ch.h"
+#include "hal.h"
 
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOB
-#endif
+/* Project includes */
+#include "sc_utils.h"
+#include "sc_event.h"
+#include "sc_uart.h"
+#include "sc_pwm.h"
+#include "sc_user_thread.h"
+#include "sc_icu.h"
+#include "sc_i2c.h"
+#include "sc_sdu.h"
+#include "sc_cmd.h"
+#include "sc_adc.h"
 
-#ifndef PWMDX
-#define PWMDX              PWMD3
-#endif
-
-#ifndef I2CDX
-#define I2CDX              I2CD3
-#endif
-
-#ifndef ADCDx
-#define ADCDx              ADCD1
-#endif
-
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
+void sc_init(void);
 
 #endif

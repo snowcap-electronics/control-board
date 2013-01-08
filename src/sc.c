@@ -1,5 +1,5 @@
-/***
- * Snowcap project specific configurations
+/*
+ * SC init
  *
  * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
@@ -26,30 +26,46 @@
  *
  */
 
-#ifndef SC_CONF_H
-#define SC_CONF_H
+#include "sc.h"
 
-// Snowcap Control Board V1 defines
-#ifndef USER_LED
-#define USER_LED           GPIOB_LED1
+void sc_init(void)
+{
+  /* Initialize ChibiOS HAL and core */
+  halInit();
+  chSysInit();
+
+  /* Init uarts 1 and 2 (radio) */
+  sc_uart_init(SC_UART_1);
+  //sc_uart_init(SC_UART_2);
+
+  /* Init PWM */
+  sc_pwm_init();
+
+  /* Initialize command parsing */
+  sc_cmd_init();
+
+#if 0 /*HAL_USE_ICU*/
+  /* Init ICU for reading xBee signal strength */
+  sc_icu_init(1);
 #endif
 
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOB
+#if HAL_USE_I2C
+  /* Init I2C bus */
+  sc_i2c_init(0);
 #endif
 
-#ifndef PWMDX
-#define PWMDX              PWMD3
+#if HAL_USE_SERIAL_USB
+  /* Initializes a serial-over-USB CDC driver */
+  sc_sdu_init();
 #endif
 
-#ifndef I2CDX
-#define I2CDX              I2CD3
-#endif
+  sc_adc_init();
+}
 
-#ifndef ADCDx
-#define ADCDx              ADCD1
-#endif
-
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
-
-#endif
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

@@ -1,7 +1,7 @@
 /***
- * Snowcap project specific configurations
+ * ADC functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2012 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,30 +26,12 @@
  *
  */
 
-#ifndef SC_CONF_H
-#define SC_CONF_H
+#ifndef SC_ADC_H
+#define SC_ADC_H
 
-// Snowcap Control Board V1 defines
-#ifndef USER_LED
-#define USER_LED           GPIOB_LED1
-#endif
-
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOB
-#endif
-
-#ifndef PWMDX
-#define PWMDX              PWMD3
-#endif
-
-#ifndef I2CDX
-#define I2CDX              I2CD3
-#endif
-
-#ifndef ADCDx
-#define ADCDx              ADCD1
-#endif
-
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
+void sc_adc_init(void);
+void sc_adc_start_conversion(uint8_t channels);
+void sc_adc_stop_conversion(void);
+uint16_t sc_adc_channel_get(uint8_t channel);
 
 #endif

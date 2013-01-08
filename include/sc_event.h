@@ -32,22 +32,37 @@
 #include "sc_uart.h"
 #include <sc_utils.h>
 
+// Event types
 typedef enum SC_EVENT_TYPE {
+  // Application registrable events
   SC_EVENT_TYPE_PUSH_BYTE = 1,
+  SC_EVENT_TYPE_ADC_AVAILABLE,
+  SC_EVENT_TYPE_TEMP_AVAILABLE,
+  // SC internal types
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
 } SC_EVENT_TYPE;
 
+// Whether or not sc_event_msg_post is called inside ISR
 typedef enum SC_EVENT_MSG_POST_FROM {
   SC_EVENT_MSG_POST_FROM_ISR,
   SC_EVENT_MSG_POST_FROM_NORMAL,
 } SC_EVENT_MSG_POST_FROM;
 
-void sc_event_loop(void);
+// Callback function definitions
+typedef void (*sc_event_cb_handle_byte)(SC_UART uart, uint8_t byte);
+typedef void (*sc_event_cb_adc_available)(void);
+typedef void (*sc_event_cb_temp_available)(void);
+
+void sc_event_loop_start(void);
 void sc_event_action(SC_EVENT_TYPE type);
 void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
 msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart);
 msg_t sc_event_msg_create_type(SC_EVENT_TYPE type);
+
+void sc_event_register_handle_byte(sc_event_cb_handle_byte func);
+void sc_event_register_adc_available(sc_event_cb_adc_available func);
+void sc_event_register_temp_available(sc_event_cb_temp_available func);
 
 #endif
 

@@ -1,4 +1,4 @@
-/***
+/*
  * Snowcap Control Board v1 firmware
  *
  * Copyright 2011,2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
@@ -26,56 +26,47 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
 
-/* Project includes */
-#include "sc_utils.h"
-#include "sc_event.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
-#include "sc_i2c.h"
-#include "sc_sdu.h"
-#include "sc_cmd.h"
+#include "sc.h"
 
-int main(void) {
+static void cb_handle_byte(SC_UART uart, uint8_t byte);
 
-    /* Initialize ChibiOS HAL and core */
-    halInit();
-    chSysInit();
+int main(void)
+{
+  // Init SC framework
+  // FIXME: define what subsystems to initialize?
+  sc_init();
 
-    /* Init uarts 1 and 2 (xBee/cc430) */
-    sc_uart_init(SC_UART_1);
-    //sc_uart_init(SC_UART_2);
+  // Start event loop. This will start a new thread and return
+  sc_event_loop_start();
 
-    /* Init PWM */
-    sc_pwm_init();
+  // Register callbacks.
+  // These will be called from Event Loop thread. It's OK to do some
+  // calculations etc. time consuming there, but not to sleep or block.
+  sc_event_register_handle_byte(cb_handle_byte);
 
-    /* Initialize command parsing */
-    sc_cmd_init();
+  // Loop forever waiting for callbacks
+  while(1) {
+    chThdSleepMilliseconds(1000);
+  }
 
-#if 0 /*HAL_USE_ICU*/
-    /* Init ICU for reading xBee signal strength */
-    sc_icu_init(1);
-#endif
-
-#if HAL_USE_I2C
-    /* Init I2C bus */
-    sc_i2c_init(0);
-#endif
-
-#if HAL_USE_SERIAL_USB
-	/* Initializes a serial-over-USB CDC driver */
-	sc_sdu_init();
-#endif
-
-    /* Init and start a user thread */
-    sc_user_thread_init();
-
-    sc_event_loop();
-
-    return 0;
+  return 0;
 }
+
+
+
+static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
+{
+  // Push received byte to generic command parsing
+  // FIXME: per uart
+  sc_cmd_push_byte(byte);
+}
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
