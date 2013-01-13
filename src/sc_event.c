@@ -92,6 +92,16 @@ static msg_t eventLoopThread(void *UNUSED(arg))
         cb_handle_byte(uart, byte);
       }
       break;
+    case SC_EVENT_TYPE_ADC_AVAILABLE:
+      if (cb_adc_available != NULL) {
+        cb_adc_available();
+      }
+      break;
+    case SC_EVENT_TYPE_TEMP_AVAILABLE:
+      if (cb_temp_available != NULL) {
+        cb_temp_available();
+      }
+      break;
 
       // SC internal types
     case SC_EVENT_TYPE_UART_SEND_FINISHED:
