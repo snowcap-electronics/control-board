@@ -39,16 +39,15 @@
 /* SC_ADC_BUFFER_DEPTH in bits for shifting instead of division */
 #define SC_ADC_BUFFER_DEPTH_BITS      2
 /* How many samples to read before processing */
-#define SC_ADC_BUFFER_DEPTH          (2 << SC_ADC_BUFFER_DEPTH_BITS)
+#define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
 // FIXME: should this be a parameter to sc_adc_start_conversion?
 // ADC_SAMPLE_480 might be the minimum for reading internal temp sensor
-#define SC_ADC_SAMPLE_TIME           ADC_SAMPLE_480
+#define SC_ADC_SAMPLE_TIME           ADC_SAMPLE_56
 
 
 static msg_t tempThread(void *UNUSED(arg));
 static uint8_t thread_run = 0;
-static adcsample_t samples[SC_ADC_MAX_CHANNELS * SC_ADC_BUFFER_DEPTH];
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
 
 static ADCConversionGroup convCfg = {
@@ -98,7 +97,8 @@ static msg_t tempThread(void *UNUSED(arg))
   while (thread_run) {
     msg_t retval;
     int i, ch;
-    int totadc[SC_ADC_MAX_CHANNELS] = {0};
+    int total_adc[SC_ADC_MAX_CHANNELS] = {0};
+    adcsample_t samples[SC_ADC_MAX_CHANNELS * SC_ADC_BUFFER_DEPTH];
 
     // Ask for a temperature conversion once a second
     // FIXME: need to count in the time spent in adcConvert()
@@ -112,13 +112,13 @@ static msg_t tempThread(void *UNUSED(arg))
     // Calculate average byt first summing the adc values ..
     for(i = 0; i < SC_ADC_BUFFER_DEPTH; i++) {
       for (ch = 0; ch < convCfg.num_channels; ++ch) {
-        totadc[ch] += samples[ch*i + ch];
+        total_adc[ch] += samples[i*convCfg.num_channels + ch];
       }
     }
 
     // .. and then dividing
     for (ch = 0; ch < convCfg.num_channels; ++ch) {
-      adc_latest[ch] = totadc[ch] >> SC_ADC_BUFFER_DEPTH_BITS;
+      adc_latest[ch] = (uint16_t)(total_adc[ch] >> SC_ADC_BUFFER_DEPTH_BITS);
     }
 
     // Announce that new ADC data is available
@@ -165,6 +165,11 @@ void sc_adc_start_conversion(uint8_t channels)
   convCfg.num_channels = channels;
   convCfg.sqr1 = ADC_SQR1_NUM_CH(channels);
 
+  if (channels < 1 || channels > 4) {
+    chDbgAssert(0, "Invalid amount of channels", "#1");
+    return;
+  }
+
   switch(channels) {
   case 4: // Sampling time and channel for 4th pin
     convCfg.smpr1 |= ADC_SMPR1_SMP_AN15(SC_ADC_SAMPLE_TIME);
@@ -179,10 +184,9 @@ void sc_adc_start_conversion(uint8_t channels)
     convCfg.smpr1 |= ADC_SMPR1_SMP_AN10(SC_ADC_SAMPLE_TIME);
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
-  default:
-    chDbgAssert(0, "Invalid amount of channels", "#1");
   }
-  /* Start a thread dedicated to starting ADC conversion */
+
+  /* Start a thread dedicated to ADC conversion */
   thread_run = TRUE;
   chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
 }
