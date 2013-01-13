@@ -30,6 +30,7 @@
 #include "sc.h"
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
+static void cb_adc_available(void);
 
 int main(void)
 {
@@ -44,10 +45,16 @@ int main(void)
   // These will be called from Event Loop thread. It's OK to do some
   // calculations etc. time consuming there, but not to sleep or block.
   sc_event_register_handle_byte(cb_handle_byte);
+  sc_event_register_adc_available(cb_adc_available);
+
+  // Start periodic ADC readings
+  sc_adc_start_conversion(1);
 
   // Loop forever waiting for callbacks
   while(1) {
+    uint8_t msg[] = {'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
+    sc_uart_send_msg(SC_UART_LAST, msg, 6);
   }
 
   return 0;
@@ -60,6 +67,27 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
   // Push received byte to generic command parsing
   // FIXME: per uart
   sc_cmd_push_byte(byte);
+}
+
+
+
+static void cb_adc_available(void)
+{
+  uint16_t adc;
+  uint8_t msg[8];
+  int len;
+
+  // Get ADC reading for the first pin
+  adc = sc_adc_channel_get(0);
+
+  len = sc_itoa(adc, msg, 8);
+  if (len > 6) {
+    len = 6;
+  }
+
+  msg[len + 0] = '\r';
+  msg[len + 1] = '\n';
+  sc_uart_send_msg(SC_UART_LAST, msg, len + 2);
 }
 
 
