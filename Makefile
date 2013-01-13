@@ -63,7 +63,7 @@ LDSCRIPT= $(PORTLD)/STM32F205xB.ld
 # Imported source files
 CHIBIOS = ChibiOS
 include $(CHIBIOS)/boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F2xx/platform.mk
+include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F2xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
