@@ -73,17 +73,15 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 
 static void cb_adc_available(void)
 {
-  uint16_t adc;
+  uint16_t adc, cm;
   uint8_t msg[8];
   int len;
 
   // Get ADC reading for the first pin
   adc = sc_adc_channel_get(0);
+  cm = (uint16_t)(adc * 0.3175);
 
-  len = sc_itoa(adc, msg, 8);
-  if (len > 6) {
-    len = 6;
-  }
+  len = sc_itoa(cm, msg, 6);
 
   msg[len + 0] = '\r';
   msg[len + 1] = '\n';
