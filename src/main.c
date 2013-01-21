@@ -97,25 +97,6 @@ static void cb_adc_available(void)
 
   sc_uart_send_msg(SC_UART_LAST, msg, len);
 
-  // Get ADC reading for the current consumption in milliamps
-  // Max 89.4A, 1bit == 0.021826171875 amps
-  adc = sc_adc_channel_get(1);
-  converted = (uint16_t)(adc * 21.826171875);
-
-  len = 0;
-  msg[len++] = 'a';
-  msg[len++] = 'm';
-  msg[len++] = 'p';
-  msg[len++] = ':';
-  msg[len++] = ' ';
-
-  len += sc_itoa(converted, msg + len, 16 - (len + 2));
-
-  msg[len++] = '\r';
-  msg[len++] = '\n';
-
-  sc_uart_send_msg(SC_UART_LAST, msg, len);
-
   // Get ADC reading for the battery voltage
   // Max 51.8V, 1bit == 0.012646484375 volts
   adc = sc_adc_channel_get(1);
@@ -135,6 +116,24 @@ static void cb_adc_available(void)
 
   sc_uart_send_msg(SC_UART_LAST, msg, len);
 
+  // Get ADC reading for the current consumption in milliamps
+  // Max 89.4A, 1bit == 0.021826171875 amps
+  adc = sc_adc_channel_get(2);
+  converted = (uint16_t)(adc * 21.826171875);
+
+  len = 0;
+  msg[len++] = 'a';
+  msg[len++] = 'm';
+  msg[len++] = 'p';
+  msg[len++] = ':';
+  msg[len++] = ' ';
+
+  len += sc_itoa(converted, msg + len, 16 - (len + 2));
+
+  msg[len++] = '\r';
+  msg[len++] = '\n';
+
+  sc_uart_send_msg(SC_UART_LAST, msg, len);
 
 }
 
