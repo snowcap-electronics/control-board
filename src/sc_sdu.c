@@ -40,15 +40,16 @@
 #if HAL_USE_SERIAL_USB
 
 #define MAX_SEND_BUF_LEN      (32 + 1)
+#define MAX_SEND_BUFFERS      5
 
 /*
  * Buffer for blocking send.
  */
-static uint8_t send_buf[MAX_SEND_BUF_LEN];
-static uint8_t send_len;
+static uint8_t send_buf[MAX_SEND_BUFFERS][MAX_SEND_BUF_LEN];
 static BinarySemaphore buf_sem;
-static BinarySemaphore send_sem;
-
+static Semaphore send_sem;
+static uint8_t first_free = 0;
+static uint8_t previous_full = MAX_SEND_BUFFERS - 1;
 
 /* Max message size, should match the sc_uart.c's MAX_SEND_BUF_LEN */
 #define MAX_SDU_BUF_LEN      32
@@ -397,16 +398,21 @@ static msg_t scSduSendThread(void *UNUSED(arg))
   while (TRUE) {
 
     // Wait for data to be send
-    chBSemWait(&send_sem);
+    chSemWait(&send_sem);
 
     // Lock send buffer
     chBSemWait(&buf_sem);
 
-    // FIXME: should support binary messages
-    chprintf((BaseSequentialStream *)&SDU1, (const char *)send_buf);
+    ++previous_full;
+    if (previous_full == MAX_SEND_BUFFERS) {
+      previous_full = 0;
+    }
 
     // Unlock send buffer
     chBSemSignal(&buf_sem);
+
+    // FIXME: should support binary messages
+    chprintf((BaseSequentialStream *)&SDU1, (const char *)send_buf[previous_full]);
 
   }
   return 0;
@@ -418,26 +424,40 @@ static msg_t scSduSendThread(void *UNUSED(arg))
 int sc_sdu_send_msg(uint8_t *msg, int len)
 {
   int i;
+  msg_t ret;
 
   // Lock send buffer
-  if (chBSemWaitTimeout(&buf_sem, TIME_IMMEDIATE) == RDY_TIMEOUT) {
-    // Return error if would block
+  ret = chBSemWait(&buf_sem);
+  chDbgAssert(ret == RDY_OK, "chBSemWait failed", "#1");
+  if (ret != RDY_OK) {
+    return 1;
+  }
+
+  // Check if there's space in the buffer
+  if (first_free == previous_full) {
+    // No space, lose data
+    chBSemSignal(&buf_sem);
     return 1;
   }
 
   // Store data
   for (i = 0; i < len; ++i) {
-    send_buf[i] = msg[i];
+    send_buf[first_free][i] = msg[i];
   }
-  send_len = len;
+
   // FIXME: should support binary messages and not assuming null-termination
-  send_buf[len] = '\0';
+  send_buf[first_free][len] = '\0';
+
+  ++first_free;
+  if (first_free == MAX_SEND_BUFFERS) {
+    first_free = 0;
+  }
   
   // Unlock send buffer
   chBSemSignal(&buf_sem);
 
   // Inform the sending thread that there is data to send
-  chBSemSignal(&send_sem);
+  chSemSignal(&send_sem);
 
   return 0;
 }
@@ -446,9 +466,8 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
 void sc_sdu_init(void)
 {
   // Initialize sending related semaphores and variables
-  send_len = 0;
   chBSemInit(&buf_sem, 0);
-  chBSemInit(&send_sem, 0);
+  chSemInit(&send_sem, 0);
 
   // Initialize USB
   sduObjectInit(&SDU1);
