@@ -48,13 +48,13 @@ int main(void)
   sc_event_register_adc_available(cb_adc_available);
 
   // Start periodic ADC readings
-  sc_adc_start_conversion(1);
+  sc_adc_start_conversion(3);
 
   // Loop forever waiting for callbacks
   while(1) {
-    uint8_t msg[] = {'p','i','n','g','\r','\n'};
+    uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    sc_uart_send_msg(SC_UART_LAST, msg, 6);
+    sc_uart_send_msg(SC_UART_LAST, msg, 9);
   }
 
   return 0;
@@ -64,6 +64,7 @@ int main(void)
 
 static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 {
+
   // Push received byte to generic command parsing
   // FIXME: per uart
   sc_cmd_push_byte(byte);
@@ -73,19 +74,68 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 
 static void cb_adc_available(void)
 {
-  uint16_t adc, cm;
-  uint8_t msg[8];
+  uint16_t adc, converted;
+  uint8_t msg[16];
   int len;
 
-  // Get ADC reading for the first pin
+  // Get ADC reading for the sonar pin
+  // Vcc/512 per inch, 1 bit == 0.3175 cm
   adc = sc_adc_channel_get(0);
-  cm = (uint16_t)(adc * 0.3175);
+  converted = (uint16_t)(adc * 0.3175);
 
-  len = sc_itoa(cm, msg, 6);
+  len = 0;
+  msg[len++] = 'd';
+  msg[len++] = 's';
+  msg[len++] = 't';
+  msg[len++] = ':';
+  msg[len++] = ' ';
 
-  msg[len + 0] = '\r';
-  msg[len + 1] = '\n';
-  sc_uart_send_msg(SC_UART_LAST, msg, len + 2);
+  len += sc_itoa(converted, msg + len, 16 - (len + 2));
+
+  msg[len++] = '\r';
+  msg[len++] = '\n';
+
+  sc_uart_send_msg(SC_UART_LAST, msg, len);
+
+  // Get ADC reading for the current consumption in milliamps
+  // Max 89.4A, 1bit == 0.021826171875 amps
+  adc = sc_adc_channel_get(1);
+  converted = (uint16_t)(adc * 21.826171875);
+
+  len = 0;
+  msg[len++] = 'a';
+  msg[len++] = 'm';
+  msg[len++] = 'p';
+  msg[len++] = ':';
+  msg[len++] = ' ';
+
+  len += sc_itoa(converted, msg + len, 16 - (len + 2));
+
+  msg[len++] = '\r';
+  msg[len++] = '\n';
+
+  sc_uart_send_msg(SC_UART_LAST, msg, len);
+
+  // Get ADC reading for the battery voltage
+  // Max 51.8V, 1bit == 0.012646484375 volts
+  adc = sc_adc_channel_get(1);
+  converted = (uint16_t)(adc * 12.646484375);
+
+  len = 0;
+  msg[len++] = 'v';
+  msg[len++] = 'l';
+  msg[len++] = 't';
+  msg[len++] = ':';
+  msg[len++] = ' ';
+
+  len += sc_itoa(converted, msg + len, 16 - (len + 2));
+
+  msg[len++] = '\r';
+  msg[len++] = '\n';
+
+  sc_uart_send_msg(SC_UART_LAST, msg, len);
+
+
 }
 
 
