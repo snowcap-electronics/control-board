@@ -41,8 +41,8 @@ static PWMConfig pwmcfg = {
     // Enable channels 1 through 4 (all)
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-    {PWM_OUTPUT_DISABLED, NULL},
-    {PWM_OUTPUT_DISABLED, NULL}
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL}
   },
   // HW dependent part
   0, // TIM CR2 register initialization data
@@ -57,7 +57,7 @@ static PWMConfig pwmcfg = {
  */
 void sc_pwm_init(void)
 {
-  // Start the second PWM driver driven by TIM2 timer
+  // Start the configure PWM driver
   pwmStart(&PWMDX, &pwmcfg);
 }
 
