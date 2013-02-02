@@ -38,8 +38,12 @@
 #define USER_LED_PORT      GPIOB
 #endif
 
-#ifndef PWMDX
-#define PWMDX              PWMD3
+#ifndef PWMDX1
+#define PWMDX1             PWMD3
+#endif
+
+#ifndef PWMDX2
+#define PWMDX2             PWMD4
 #endif
 
 #ifndef I2CDX

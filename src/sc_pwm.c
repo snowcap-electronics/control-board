@@ -33,7 +33,7 @@
 // Use 1MHz clock
 #define SC_PWM_CLOCK    1000000
 
-static PWMConfig pwmcfg = {
+static PWMConfig pwmcfg1 = {
   SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
   SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
   NULL,              // No periodic callback.
@@ -51,14 +51,36 @@ static PWMConfig pwmcfg = {
 #endif
 };
 
+static PWMConfig pwmcfg2 = {
+  SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
+  SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
+  NULL,              // No periodic callback.
+  {
+    // Enable channels 1 through 2
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+    {PWM_OUTPUT_DISABLED, NULL},
+    {PWM_OUTPUT_DISABLED, NULL}
+  },
+  // HW dependent part
+  0, // TIM CR2 register initialization data
+#if STM32_PWM_USE_ADVANCED
+  0, // TIM BDTR (break & dead-time) register initialization data.
+#endif
+};
+
 
 /*
  * Initialize PWM
  */
 void sc_pwm_init(void)
 {
-  // Start the configure PWM driver
-  pwmStart(&PWMDX, &pwmcfg);
+  // Configure PWM driver(s)
+  pwmStart(&PWMDX1, &pwmcfg1);
+
+#ifdef PWMDX2
+  pwmStart(&PWMDX2, &pwmcfg2);
+#endif
 }
 
 
@@ -68,7 +90,11 @@ void sc_pwm_init(void)
  */
 void sc_pwm_set_freq(uint16_t freq)
 {
-  pwmChangePeriod(&PWMDX, SC_PWM_CLOCK / freq);
+  pwmChangePeriod(&PWMDX1, SC_PWM_CLOCK / freq);
+
+#ifdef PWMDX2
+  pwmChangePeriod(&PWMDX2, SC_PWM_CLOCK / freq);
+#endif
 }
 
 
@@ -79,7 +105,20 @@ void sc_pwm_set_freq(uint16_t freq)
 void sc_pwm_stop(int pwm)
 {
   if (pwm >= 1 && pwm <= 4) {
-	pwmDisableChannel(&PWMDX, pwm - 1);
+	pwmDisableChannel(&PWMDX1, pwm - 1);
+  }
+
+  if (pwm >= 5 && pwm <= 6) {
+	// Not enabled, do nothing
+	return;
+  }
+
+  if (pwm >= 7 && pwm <= 8) {
+#ifdef PWMDX2
+	pwmDisableChannel(&PWMDX2, pwm - 7);
+#else
+	chDbgAssert(0, "PWMDX2 not defined", "#1");
+#endif
   }
 }
 
@@ -94,6 +133,19 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
 	duty = 10000;
   }
   if (pwm >= 1 && pwm <= 4) {
-	pwmEnableChannel(&PWMDX, pwm - 1, PWM_PERCENTAGE_TO_WIDTH(&PWMDX, duty));
+	pwmEnableChannel(&PWMDX1, pwm - 1, PWM_PERCENTAGE_TO_WIDTH(&PWMDX1, duty));
+  }
+
+  if (pwm >= 5 && pwm <= 6) {
+	// Not enabled, do nothing
+	return;
+  }
+
+  if (pwm >= 7 && pwm <= 8) {
+#ifdef PWMDX2
+	pwmEnableChannel(&PWMDX2, pwm - 7, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
+#else
+	chDbgAssert(0, "PWMDX2 not defined", "#2");
+#endif
   }
 }
