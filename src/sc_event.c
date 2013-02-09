@@ -49,7 +49,7 @@
 
 /* Action event mailbox used in event loop to pass data and action
  * from other threads and interrupt handlers to the main thread. */
-#define EVENT_MB_SIZE 50
+#define EVENT_MB_SIZE 128
 static msg_t event_mb_buffer[EVENT_MB_SIZE];
 MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
 
