@@ -41,14 +41,13 @@
 /* How many samples to read before processing */
 #define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
-// FIXME: should this be a parameter to sc_adc_start_conversion?
-// ADC_SAMPLE_480 might be the minimum for reading internal temp sensor
-#define SC_ADC_SAMPLE_TIME           ADC_SAMPLE_56
-
 
 static msg_t tempThread(void *UNUSED(arg));
 static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
+static uint16_t interval_ms;
+static systime_t last_conversion_time;
+
 
 static ADCConversionGroup convCfg = {
   /* Circular buffer mode */
@@ -99,10 +98,14 @@ static msg_t tempThread(void *UNUSED(arg))
     int i, ch;
     int total_adc[SC_ADC_MAX_CHANNELS] = {0};
     adcsample_t samples[SC_ADC_MAX_CHANNELS * SC_ADC_BUFFER_DEPTH];
+    systime_t time_now;
 
-    // Ask for a temperature conversion once a second
-    // FIXME: need to count in the time spent in adcConvert()
-    chThdSleepMilliseconds(1000);
+    // Do a temperature conversion once per interval
+    last_conversion_time += MS2ST(interval_ms);
+    time_now = chTimeNow();
+    chDbgAssert(last_conversion_time > time_now, "Too slow ADC for specified interval", "#1");
+
+    chThdSleepUntil(last_conversion_time);
 
     retval = adcConvert(&ADCDx, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
     if (retval != RDY_OK) {
@@ -151,7 +154,7 @@ void sc_adc_init(void)
 }
 
 
-void sc_adc_start_conversion(uint8_t channels)
+void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)
 {
   // FIXME: the following hardcoded pins should be somehow in sc_conf.h
   // Control Board maps PC0, PC1, PC4, and PC5 to AN1-4
@@ -162,6 +165,10 @@ void sc_adc_start_conversion(uint8_t channels)
   // PC5: ADC12_IN15
   //
   //
+
+  // Set global interval time in milliseconds
+  interval_ms = interval_in_ms;
+
   convCfg.num_channels = channels;
   convCfg.sqr1 = ADC_SQR1_NUM_CH(channels);
 
@@ -172,21 +179,22 @@ void sc_adc_start_conversion(uint8_t channels)
 
   switch(channels) {
   case 4: // Sampling time and channel for 4th pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN15(SC_ADC_SAMPLE_TIME);
+    convCfg.smpr1 |= ADC_SMPR1_SMP_AN15(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN15);
   case 3: // Sampling time and channel for 3rd pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN14(SC_ADC_SAMPLE_TIME);
+    convCfg.smpr1 |= ADC_SMPR1_SMP_AN14(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN14);
   case 2: // Sampling time and channel for 2nd pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN11(SC_ADC_SAMPLE_TIME);
+    convCfg.smpr1 |= ADC_SMPR1_SMP_AN11(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN11);
   case 1: // Sampling time and channel for 1st pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN10(SC_ADC_SAMPLE_TIME);
+    convCfg.smpr1 |= ADC_SMPR1_SMP_AN10(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
   }
 
   /* Start a thread dedicated to ADC conversion */
+  last_conversion_time = chTimeNow();
   thread_run = TRUE;
   chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
 }

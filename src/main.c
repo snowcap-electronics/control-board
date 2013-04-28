@@ -48,7 +48,7 @@ int main(void)
   sc_event_register_adc_available(cb_adc_available);
 
   // Start periodic ADC readings
-  sc_adc_start_conversion(3);
+  sc_adc_start_conversion(3, 1000, ADC_SAMPLE_56);
 
   // Loop forever waiting for callbacks
   while(1) {
