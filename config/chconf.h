@@ -41,7 +41,7 @@
 /*
  * Increase stack size
  */
-#define PORT_INT_REQUIRED_STACK 32
+#define PORT_INT_REQUIRED_STACK 48
 
 /*===========================================================================*/
 /* Kernel parameters.                                                        */
