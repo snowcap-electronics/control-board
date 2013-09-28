@@ -167,7 +167,7 @@ void sc_uart_init(SC_UART uart)
 #endif
   default:
 	// Invalid uart, do nothing
-	// CHECKME: assert?
+    chDbgAssert(0, "Invalid UART specified", "#1");
 	return;
   }
 
@@ -223,19 +223,19 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 	break;
   default:
 	// Invalid uart, do nothing
-	// CHECKME: assert?
+    chDbgAssert(0, "Invalid UART specified", "#1");
 	return;
   }
   
   // Check for oversized message
   if (len > MAX_SEND_BUF_LEN) {
-	// CHECKME: assert?
+    chDbgAssert(0, "Oversized message", "#1");
 	return;
   }
 
   // Check for free buffers
   if (circular_free == -1) {
-	// CHECKME: assert?
+    chDbgAssert(0, "Circular buffer full", "#1");
 	return;
   }
 
