@@ -26,9 +26,34 @@
  *
  */
 
-// Snowcap Control Board V1
-#if defined(BOARD_SNOWCAP_V1)
-#include "mcuconf_snowcap_v1.h"
-#else
-#error "Unknown board or board not defined."
+#ifndef SC_CONF_SNOWCAP_V1_H
+#define SC_CONF_SNOWCAP_V1_H
+
+#ifndef USER_LED
+#define USER_LED           GPIOB_LED1
+#endif
+
+#ifndef USER_LED_PORT
+#define USER_LED_PORT      GPIOB
+#endif
+
+#ifndef PWMDX1
+#define PWMDX1             PWMD3
+#endif
+
+#ifndef PWMDX2
+#define PWMDX2             PWMD4
+#endif
+
+#ifndef I2CDX
+#define I2CDX              I2CD3
+#endif
+
+#ifndef ADCDx
+#define ADCDx              ADCD1
+#endif
+
+
+// FIXME: ADC pin macros from sc_adc_start_conversion should be here
+
 #endif

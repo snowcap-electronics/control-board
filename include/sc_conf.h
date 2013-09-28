@@ -1,7 +1,7 @@
 /***
  * Snowcap project specific configurations
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,31 +29,13 @@
 #ifndef SC_CONF_H
 #define SC_CONF_H
 
-// Snowcap Control Board V1 defines
-#ifndef USER_LED
-#define USER_LED           GPIOB_LED1
-#endif
+#include "hal.h"
 
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOB
+// Snowcap Control Board V1
+#if defined(BOARD_SNOWCAP_V1)
+#include "sc_conf_snowcap_v1.h"
+#else
+#error "Unknown board or board not defined."
 #endif
-
-#ifndef PWMDX1
-#define PWMDX1             PWMD3
-#endif
-
-#ifndef PWMDX2
-#define PWMDX2             PWMD4
-#endif
-
-#ifndef I2CDX
-#define I2CDX              I2CD3
-#endif
-
-#ifndef ADCDx
-#define ADCDx              ADCD1
-#endif
-
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif
