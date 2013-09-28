@@ -28,38 +28,58 @@
 
 #include "sc.h"
 
-void sc_init(void)
+void sc_init(uint32_t subsystems)
 {
   /* Initialize ChibiOS HAL and core */
   halInit();
   chSysInit();
 
-  /* Init uarts 1 and 2 (radio) */
-  sc_uart_init(SC_UART_1);
-  //sc_uart_init(SC_UART_2);
-
-  /* Init PWM */
-  sc_pwm_init();
-
   /* Initialize command parsing */
   sc_cmd_init();
 
-#if 0 /*HAL_USE_ICU*/
+  if (subsystems & SC_INIT_UART1) {
+    sc_uart_init(SC_UART_1);
+  }
+
+  if (subsystems & SC_INIT_UART2) {
+    sc_uart_init(SC_UART_2);
+  }
+
+  
+  if (subsystems & SC_INIT_PWM) {
+    sc_pwm_init();
+  }
+
   /* Init ICU for reading xBee signal strength */
-  sc_icu_init(1);
+  if (subsystems & SC_INIT_ICU) {
+#if HAL_USE_ICU
+    sc_icu_init(1);
+#else
+    chDbgAssert(0, "HAL_USE_ICU undefined", "#1");
 #endif
+  }
 
+  if (subsystems & SC_INIT_I2C) {
 #if HAL_USE_I2C
-  /* Init I2C bus */
-  sc_i2c_init(0);
+    sc_i2c_init(0);
+#else
+    chDbgAssert(0, "HAL_USE_I2C undefined", "#1");
 #endif
+  }
 
-#if HAL_USE_SERIAL_USB
   /* Initializes a serial-over-USB CDC driver */
-  sc_sdu_init();
+  if (subsystems & SC_INIT_SDU) {
+#if HAL_USE_SERIAL_USB
+    sc_sdu_init();
+#else
+    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined", "#1");
 #endif
+  }
 
-  sc_adc_init();
+  if (subsystems & SC_INIT_ADC) {
+    sc_adc_init();
+  }
+
 }
 
 /* Emacs indentatation information

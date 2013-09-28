@@ -44,6 +44,16 @@
 #include "sc_cmd.h"
 #include "sc_adc.h"
 
-void sc_init(void);
+#define SC_INIT_UART1       0x0001
+#define SC_INIT_UART2       0x0002
+#define SC_INIT_UART3       0x0004
+#define SC_INIT_UART4       0x0008
+#define SC_INIT_PWM         0x0010
+#define SC_INIT_ICU         0x0020
+#define SC_INIT_I2C         0x0040
+#define SC_INIT_SDU         0x0080
+#define SC_INIT_ADC         0x0100
+
+void sc_init(uint32_t subsystems);
 
 #endif

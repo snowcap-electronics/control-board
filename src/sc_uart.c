@@ -171,9 +171,6 @@ void sc_uart_init(SC_UART uart)
 	return;
   }
 
-  // Use Serial over USB by default
-  uart_use_usb = TRUE;
-
   // Initialize sending side circular buffer state
   circular_sending = -1;
   circular_free = 0;
@@ -183,7 +180,10 @@ void sc_uart_init(SC_UART uart)
   chBSemInit(&circular_sem, FALSE);
 }
 
-
+void sc_uart_default_usb(uint8_t enable)
+{
+  uart_use_usb = enable;
+}
 
 /**
  * @brief   Send a message over UART.
