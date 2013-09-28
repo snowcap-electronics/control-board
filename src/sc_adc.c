@@ -89,7 +89,7 @@ static msg_t tempThread(void *UNUSED(arg))
   //FIXME: adcAcquireBus?
 
   /* Start ADC driver */
-  adcStart(&ADCDx, NULL);
+  adcStart(&ADCDX, NULL);
   // FIXME: is this needed only for internal temp, bat and vref ADCs?
   adcSTM32EnableTSVREFE();
 
@@ -107,7 +107,7 @@ static msg_t tempThread(void *UNUSED(arg))
 
     chThdSleepUntil(last_conversion_time);
 
-    retval = adcConvert(&ADCDx, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
+    retval = adcConvert(&ADCDX, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
     if (retval != RDY_OK) {
       continue;
     }
@@ -131,7 +131,7 @@ static msg_t tempThread(void *UNUSED(arg))
   /* Stop ADC driver */
   // FIXME: is this needed only for internal temp, bat and vref ADCs?
   adcSTM32DisableTSVREFE();
-  adcStop(&ADCDx);
+  adcStop(&ADCDX);
 
   //FIXME: adcReleaseBus?
 

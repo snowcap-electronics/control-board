@@ -41,6 +41,12 @@ endif
 # Architecture or project specific options
 #
 
+# Enables the use of FPU on Cortex-M4.
+# Enable this if you really want to use the STM FWLib.
+ifeq ($(USE_FPU),)
+  USE_FPU = no
+endif
+
 # Enable this if you really want to use the STM FWLib.
 ifeq ($(USE_FWLIB),)
   USE_FWLIB = no
@@ -57,21 +63,29 @@ endif
 # Define project name here
 PROJECT = control-board
 
-# Define linker script file here
-LDSCRIPT= $(PORTLD)/STM32F205xB.ld
-
 # Imported source files
 CHIBIOS = ChibiOS
 
 ifeq ($(SC_BOARD),SC_SNOWCAP_V1)
+LDSCRIPT= $(PORTLD)/STM32F205xB.ld
+MCU = cortex-m3
 include $(CHIBIOS)/boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
 include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F2xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
 include $(CHIBIOS)/test/test.mk
+else ifeq ($(SC_BOARD),SC_F4_DISCOVERY)
+LDSCRIPT= $(PORTLD)/STM32F407xG.ld
+MCU = cortex-m4
+include $(CHIBIOS)/boards/ST_STM32F4_DISCOVERY/board.mk
+include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/hal.mk
+include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
+include $(CHIBIOS)/os/kernel/kernel.mk
+include $(CHIBIOS)/test/test.mk
 else
-$(error SC_BOARD not defined)
+$(error SC_BOARD not defined, supported: SC_SNOWCAP_V1, SC_F4_DISCOVERY)
 endif
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
@@ -129,6 +143,7 @@ ASMSRC = $(PORTASM)
 
 INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
          $(HALINC) $(PLATFORMINC) $(BOARDINC) \
+         $(CHIBIOS)/os/various/devices_lib/accel \
          $(CHIBIOS)/os/various \
          config include
 
@@ -139,8 +154,6 @@ INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
 ##############################################################################
 # Compiler settings
 #
-
-MCU  = cortex-m3
 
 #TRGT = arm-elf-
 TRGT = arm-none-eabi-
@@ -218,6 +231,13 @@ ULIBS =
 #
 # End of user defines
 ##############################################################################
+
+ifeq ($(USE_FPU),yes)
+  USE_OPT += -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fsingle-precision-constant
+  DDEFS += -DCORTEX_USE_FPU=TRUE
+else
+  DDEFS += -DCORTEX_USE_FPU=FALSE
+endif
 
 ifeq ($(USE_FWLIB),yes)
   include $(CHIBIOS)/ext/stm32lib/stm32lib.mk

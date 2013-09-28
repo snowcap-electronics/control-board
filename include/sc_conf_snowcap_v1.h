@@ -49,8 +49,12 @@
 #define I2CDX              I2CD3
 #endif
 
-#ifndef ADCDx
-#define ADCDx              ADCD1
+#ifndef ADCDX
+#define ADCDX              ADCD1
+#endif
+
+#ifndef USBDX
+#define USBDX              USBD2
 #endif
 
 

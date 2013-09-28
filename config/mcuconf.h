@@ -26,9 +26,10 @@
  *
  */
 
-// Snowcap Control Board V1
 #if defined(BOARD_SNOWCAP_V1)
 #include "mcuconf_snowcap_v1.h"
+#elif defined(BOARD_ST_STM32F4_DISCOVERY)
+#include "mcuconf_f4_discovery.h"
 #else
 #error "Unknown board or board not defined."
 #endif

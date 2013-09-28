@@ -345,7 +345,7 @@ static const USBConfig usbcfg = {
  * Serial over USB driver configuration.
  */
 static const SerialUSBConfig serusbcfg = {
-  &USBD2
+  &USBDX
 };
 
 /*
