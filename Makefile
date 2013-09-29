@@ -60,8 +60,14 @@ endif
 # Project, sources and paths
 #
 
+ifeq ($(SC_PROJECT),)
+  SC_PROJECT = test
+  $(warning Defaulting project name to $(SC_PROJECT))
+endif
+
+
 # Define project name here
-PROJECT = control-board
+PROJECT = $(SC_PROJECT)
 
 # Imported source files
 CHIBIOS = ChibiOS
@@ -112,7 +118,7 @@ CSRC = $(PORTSRC) \
        src/sc_event.c \
        src/sc_sdu.c \
        src/sc_adc.c \
-       src/main.c
+       src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
