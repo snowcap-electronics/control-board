@@ -196,11 +196,13 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
 {
   UARTDriver *uartdrv;
 
+#if HAL_USE_SERIAL_USB
   // If last byte received from Serial USB, send message using Serial USB
   if (uart == SC_UART_USB || (uart == SC_UART_LAST && uart_use_usb)) {
 	sc_sdu_send_msg(msg, len);
 	return;
   }
+#endif
 
   switch (uart) {
 #if STM32_UART_USE_USART1
@@ -249,6 +251,12 @@ void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
  *
  * @param[in] c         Received character
  */
+#if !HAL_USE_SERIAL_USB
+void sc_uart_revc_usb_byte(UNUSED(uint8_t c))
+{
+  chDbgAssert(0, "HAL_USE_SERIAL_USB not defined, cannot call sc_uart_revc_usb_byte()", "#1");
+}
+#else
 void sc_uart_revc_usb_byte(uint8_t c)
 {
   msg_t msg;
@@ -260,6 +268,7 @@ void sc_uart_revc_usb_byte(uint8_t c)
   msg = sc_event_msg_create_recv_byte(c, SC_UART_USB);
   sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
 }
+#endif
 
 /**
  * @brief   Send a string over UART.

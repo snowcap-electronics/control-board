@@ -90,8 +90,12 @@ static msg_t tempThread(void *UNUSED(arg))
 
   /* Start ADC driver */
   adcStart(&ADCDX, NULL);
+
+#ifndef BOARD_ST_STM32VL_DISCOVERY
+  // FIXME: not defined on F1?
   // FIXME: is this needed only for internal temp, bat and vref ADCs?
   adcSTM32EnableTSVREFE();
+#endif
 
   while (thread_run) {
     msg_t retval;
@@ -129,8 +133,11 @@ static msg_t tempThread(void *UNUSED(arg))
   }
 
   /* Stop ADC driver */
+#ifndef BOARD_ST_STM32VL_DISCOVERY
+  // FIXME: not defined on F1?
   // FIXME: is this needed only for internal temp, bat and vref ADCs?
   adcSTM32DisableTSVREFE();
+#endif
   adcStop(&ADCDX);
 
   //FIXME: adcReleaseBus?

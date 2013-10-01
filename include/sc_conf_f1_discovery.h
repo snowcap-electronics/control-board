@@ -1,5 +1,5 @@
 /***
- * Snowcap project specific configurations
+ * Snowcap Controller Board v1 configuration
  *
  * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
@@ -26,19 +26,37 @@
  *
  */
 
-#ifndef SC_CONF_H
-#define SC_CONF_H
+#ifndef SC_CONF_SNOWCAP_V1_H
+#define SC_CONF_SNOWCAP_V1_H
 
-#include "hal.h"
-
-#if defined(BOARD_SNOWCAP_V1)
-#include "sc_conf_snowcap_v1.h"
-#elif defined(BOARD_ST_STM32F4_DISCOVERY)
-#include "sc_conf_f4_discovery.h"
-#elif defined(BOARD_ST_STM32VL_DISCOVERY)
-#include "sc_conf_f1_discovery.h"
-#else
-#error "Unknown board or board not defined."
+#ifndef USER_LED
+#define USER_LED            GPIOC_LED4
 #endif
+
+#ifndef USER_LED_PORT
+#define USER_LED_PORT      GPIOC
+#endif
+
+#ifndef PWMDX1
+#define PWMDX1             PWMD3
+#endif
+
+#ifndef PWMDX2
+#define PWMDX2             PWMD4
+#endif
+
+#ifndef I2CDX
+#define I2CDX              I2CD1
+#endif
+
+#ifndef ADCDX
+#define ADCDX              ADCD1
+#endif
+
+#ifndef USBDX
+#define USBDX              USBD1
+#endif
+
+// FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif

@@ -30,6 +30,8 @@
 #include "mcuconf_snowcap_v1.h"
 #elif defined(BOARD_ST_STM32F4_DISCOVERY)
 #include "mcuconf_f4_discovery.h"
+#elif defined(BOARD_ST_STM32VL_DISCOVERY)
+#include "mcuconf_f1_discovery.h"
 #else
 #error "Unknown board or board not defined."
 #endif

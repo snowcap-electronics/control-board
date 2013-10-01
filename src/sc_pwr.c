@@ -34,6 +34,12 @@
 /*
  * Put the MCU to StandBy mode (all off except RTC)
  */
+#ifdef BOARD_ST_STM32VL_DISCOVERY
+void sc_pwr_standby(void)
+{
+  chDbgAssert(0, "sc_pwr_standby() not implemented for F1 Discovery", "#1");
+}
+#else
 void sc_pwr_standby(void)
 {
   chSysLock();
@@ -44,6 +50,7 @@ void sc_pwr_standby(void)
 
   __WFI();
 }
+#endif
 
 
 
@@ -52,6 +59,12 @@ void sc_pwr_standby(void)
  * Note that this seems to be cleared on reset (i.e. also in wake up from
  * stand by).
  */
+#ifdef BOARD_ST_STM32VL_DISCOVERY
+void sc_pwr_wakeup_set(UNUSED(uint32_t sec), UNUSED(uint32_t ms))
+{
+  chDbgAssert(0, "sc_pwr_wakeup_set() not implemented for F1 Discovery", "#1");
+}
+#else
 void sc_pwr_wakeup_set(uint32_t sec, UNUSED(uint32_t ms))
 {
   RTCWakeup wakeupspec;
@@ -64,13 +77,21 @@ void sc_pwr_wakeup_set(uint32_t sec, UNUSED(uint32_t ms))
 
   rtcSetPeriodicWakeup_v2(&RTCD1, &wakeupspec);
 }
+#endif
 
 
 
 /*
  * Clear periodic wakeup
  */
+#ifdef BOARD_ST_STM32VL_DISCOVERY
+void sc_pwr_wakeup_clear(void)
+{
+  chDbgAssert(0, "sc_pwr_wakeup_clear() not implemented for F1 Discovery", "#1");
+}
+#else
 void sc_pwr_wakeup_clear(void)
 {
   rtcSetPeriodicWakeup_v2(&RTCD1, NULL);
 }
+#endif
