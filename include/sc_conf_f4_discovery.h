@@ -37,6 +37,31 @@
 #define USER_LED_PORT      GPIOD
 #endif
 
+// GPIO1 is PE7
+#ifndef GPIO1_PIN
+#define GPIO1_PIN          7
+#define GPIO1_PORT         GPIOE
+#endif
+
+// GPIO2 is PE8
+#ifndef GPIO2_PIN
+#define GPIO2_PIN          8
+#define GPIO2_PORT         GPIOE
+#endif
+
+
+// GPIO3 is PE9
+#ifndef GPIO3_PIN
+#define GPIO3_PIN          9
+#define GPIO3_PORT         GPIOE
+#endif
+
+// GPIO4 is PE10
+#ifndef GPIO4_PIN
+#define GPIO4_PIN          10
+#define GPIO4_PORT         GPIOE
+#endif
+
 #ifndef PWMDX1
 #define PWMDX1             PWMD3
 #endif

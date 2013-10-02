@@ -29,12 +29,37 @@
 #ifndef SC_CONF_SNOWCAP_V1_H
 #define SC_CONF_SNOWCAP_V1_H
 
+// FIXME: Should prefix all these with SC_
 #ifndef USER_LED
 #define USER_LED           GPIOB_LED1
 #endif
 
 #ifndef USER_LED_PORT
 #define USER_LED_PORT      GPIOB
+#endif
+
+// GPIO1 is PB8
+#ifndef GPIO1_PIN
+#define GPIO1_PIN          8
+#define GPIO1_PORT         GPIOB
+#endif
+
+// GPIO2 is PB5
+#ifndef GPIO2_PIN
+#define GPIO2_PIN          5
+#define GPIO2_PORT         GPIOB
+#endif
+
+// GPIO3 is PD2
+#ifndef GPIO3_PIN
+#define GPIO3_PIN          2
+#define GPIO3_PORT         GPIOD
+#endif
+
+// GPIO4 is PC12
+#ifndef GPIO4_PIN
+#define GPIO4_PIN          12
+#define GPIO4_PORT         GPIOC
 #endif
 
 #ifndef PWMDX1

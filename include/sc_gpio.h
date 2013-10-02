@@ -1,5 +1,5 @@
 /***
- * Snowcap Controller Board v1 configuration
+ * GPIO functions
  *
  * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
@@ -26,61 +26,12 @@
  *
  */
 
-#ifndef SC_CONF_SNOWCAP_V1_H
-#define SC_CONF_SNOWCAP_V1_H
+#ifndef SC_GPIO_H
+#define SC_GPIO_H
 
-#ifndef USER_LED
-#define USER_LED            GPIOC_LED4
-#endif
-
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOC
-#endif
-
-// GPIO1 is PB4
-#ifndef GPIO1_PIN
-#define GPIO1_PIN          4
-#define GPIO1_PORT         GPIOB
-#endif
-
-// GPIO2 is PB5
-#ifndef GPIO2_PIN
-#define GPIO2_PIN          5
-#define GPIO2_PORT         GPIOB
-#endif
-
-// GPIO3 is PB6
-#ifndef GPIO3_PIN
-#define GPIO3_PIN          6
-#define GPIO3_PORT         GPIOB
-#endif
-
-// GPIO4 is PB7
-#ifndef GPIO4_PIN
-#define GPIO4_PIN          7
-#define GPIO4_PORT         GPIOB
-#endif
-
-#ifndef PWMDX1
-#define PWMDX1             PWMD3
-#endif
-
-#ifndef PWMDX2
-#define PWMDX2             PWMD4
-#endif
-
-#ifndef I2CDX
-#define I2CDX              I2CD1
-#endif
-
-#ifndef ADCDX
-#define ADCDX              ADCD1
-#endif
-
-#ifndef USBDX
-#define USBDX              USBD1
-#endif
-
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
+void sc_gpio_init(void);
+void sc_gpio_on(uint8_t gpio);
+void sc_gpio_off(uint8_t gpio);
+void sc_gpio_toggle(uint8_t gpio);
 
 #endif

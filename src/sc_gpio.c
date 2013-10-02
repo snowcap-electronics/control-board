@@ -1,7 +1,7 @@
 /***
- * Snowcap Controller Board v1 configuration
+ * GPIO functions
  *
- * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,61 +26,59 @@
  *
  */
 
-#ifndef SC_CONF_SNOWCAP_V1_H
-#define SC_CONF_SNOWCAP_V1_H
 
-#ifndef USER_LED
-#define USER_LED            GPIOC_LED4
-#endif
+#include "sc_utils.h"
+#include "sc_gpio.h"
 
-#ifndef USER_LED_PORT
-#define USER_LED_PORT      GPIOC
-#endif
+struct gpio_list {
+  uint32_t port;
+  uint_8 pin;
+};
 
-// GPIO1 is PB4
-#ifndef GPIO1_PIN
-#define GPIO1_PIN          4
-#define GPIO1_PORT         GPIOB
-#endif
+struct gpio_list gpio_list = {
+  {0, 0},
+  {GPIO1_PORT, GPIO1_PIN},
+  {GPIO2_PORT, GPIO2_PIN},
+  {GPIO3_PORT, GPIO3_PIN},
+  {GPIO4_PORT, GPIO4_PIN},
+};
 
-// GPIO2 is PB5
-#ifndef GPIO2_PIN
-#define GPIO2_PIN          5
-#define GPIO2_PORT         GPIOB
-#endif
 
-// GPIO3 is PB6
-#ifndef GPIO3_PIN
-#define GPIO3_PIN          6
-#define GPIO3_PORT         GPIOB
-#endif
+/*
+ * Set pinmux
+ */
+void sc_gpio_init(void)
+{
+  int i;
+  for (i = 0; i < 4; ++i) {
+	palSetPadMode(gpio_list[i].port, gpio_list[i].pin, PAL_MODE_OUTPUT_PUSHPULL);
+  }
+}
 
-// GPIO4 is PB7
-#ifndef GPIO4_PIN
-#define GPIO4_PIN          7
-#define GPIO4_PORT         GPIOB
-#endif
+/*
+ * Turn the led on
+ */
+void sc_gpio_on(uint8_t gpio)
+{
+  palSetPad(gpio_list[gpio].port, gpio_list[gpio].pin);
+}
 
-#ifndef PWMDX1
-#define PWMDX1             PWMD3
-#endif
 
-#ifndef PWMDX2
-#define PWMDX2             PWMD4
-#endif
 
-#ifndef I2CDX
-#define I2CDX              I2CD1
-#endif
+/*
+ * Turn the gpio off
+ */
+void sc_gpio_off(uint8_t gpio)
+{
+  palClearPad(gpio_list[gpio].port, gpio_list[gpio].pin);
+}
 
-#ifndef ADCDX
-#define ADCDX              ADCD1
-#endif
 
-#ifndef USBDX
-#define USBDX              USBD1
-#endif
 
-// FIXME: ADC pin macros from sc_adc_start_conversion should be here
-
-#endif
+/*
+ * Toggle gpio
+ */
+void sc_gpio_toggle(uint8_t gpio)
+{
+  palTogglePad(gpio_list[gpio].port, gpio_list[gpio].pin);
+}
