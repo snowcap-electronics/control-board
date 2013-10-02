@@ -1,5 +1,5 @@
 /***
- * Uart functions
+ * LED conveniency functions
  *
  * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
