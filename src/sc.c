@@ -80,6 +80,10 @@ void sc_init(uint32_t subsystems)
     sc_adc_init();
   }
 
+  if (subsystems & SC_INIT_GPIO) {
+    sc_gpio_init();
+  }
+
 }
 
 /* Emacs indentatation information

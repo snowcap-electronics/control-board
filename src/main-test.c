@@ -34,7 +34,7 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte);
 int main(void)
 {
   // Init SC framework
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_GPIO);
 
   sc_uart_default_usb(TRUE);
 

@@ -35,7 +35,7 @@ static void cb_adc_available(void);
 int main(void)
 {
   // Init SC framework
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO);
 
   sc_uart_default_usb(TRUE);
 

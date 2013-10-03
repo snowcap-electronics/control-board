@@ -43,6 +43,7 @@
 #include "sc_sdu.h"
 #include "sc_cmd.h"
 #include "sc_adc.h"
+#include "sc_gpio.h"
 
 #define SC_INIT_UART1       0x0001
 #define SC_INIT_UART2       0x0002
@@ -53,6 +54,7 @@
 #define SC_INIT_I2C         0x0040
 #define SC_INIT_SDU         0x0080
 #define SC_INIT_ADC         0x0100
+#define SC_INIT_GPIO        0x0200
 
 void sc_init(uint32_t subsystems);
 
