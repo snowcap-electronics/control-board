@@ -30,12 +30,14 @@
 #include "sc_uart.h"
 #include "sc_pwm.h"
 #include "sc_led.h"
+#include "sc_gpio.h"
 #include "sc_event.h"
 
 static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
 
 /*
@@ -134,11 +136,14 @@ static void parse_command(void)
   recv_i -= found;
 
   switch (command_buf[0]) {
-  case 'p':
-    parse_command_pwm(command_buf, found);
+  case 'g':
+    parse_command_gpio(command_buf, found);
     break;
   case 'l':
     parse_command_led(command_buf, found);
+    break;
+  case 'p':
+    parse_command_pwm(command_buf, found);
     break;
   default:
     // Invalid command, ignoring
@@ -251,6 +256,36 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
     break;
   case 't':
     sc_led_toggle();
+    break;
+  default:
+    // Invalid value, ignoring command
+	return;
+  }
+}
+
+
+
+/*
+ * Parse gpio command
+ */
+static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len)
+{
+  uint8_t gpio;
+
+  // Unused currently
+  (void)cmd_len;
+
+  gpio = cmd[1] - '0';
+
+  switch (cmd[2]) {
+  case '0':
+    sc_gpio_off(gpio);
+    break;
+  case '1':
+    sc_gpio_on(gpio);
+    break;
+  case 't':
+    sc_gpio_toggle(gpio);
     break;
   default:
     // Invalid value, ignoring command

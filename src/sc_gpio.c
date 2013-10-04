@@ -31,11 +31,11 @@
 #include "sc_gpio.h"
 
 struct gpio_list {
-  uint32_t port;
-  uint_8 pin;
+  ioportid_t port;
+  uint8_t pin;
 };
 
-struct gpio_list gpio_list = {
+struct gpio_list gpio_list[] = {
   {0, 0},
   {GPIO1_PORT, GPIO1_PIN},
   {GPIO2_PORT, GPIO2_PIN},
@@ -49,7 +49,7 @@ struct gpio_list gpio_list = {
  */
 void sc_gpio_init(void)
 {
-  int i;
+  uint8_t i;
   for (i = 0; i < 4; ++i) {
 	palSetPadMode(gpio_list[i].port, gpio_list[i].pin, PAL_MODE_OUTPUT_PUSHPULL);
   }

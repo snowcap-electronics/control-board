@@ -127,6 +127,7 @@ CSRC = $(PORTSRC) \
        src/sc_event.c \
        src/sc_sdu.c \
        src/sc_adc.c \
+       src/sc_gpio.c \
        src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
