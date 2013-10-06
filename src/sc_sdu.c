@@ -34,7 +34,7 @@
 #include "sc_led.h"
 
 /* ChibiOS includes */
-#include "usb_cdc.h"
+//#include "usb_cdc.h"
 #include "chprintf.h"
 
 #if HAL_USE_SERIAL_USB
@@ -59,9 +59,16 @@ static msg_t scSduReadThread(void *UNUSED(arg));
 static msg_t scSduSendThread(void *UNUSED(arg));
 
 /*
+ * Endpoints to be used for USBDX.
+ */
+#define USBDX_DATA_REQUEST_EP           1
+#define USBDX_DATA_AVAILABLE_EP         1
+#define USBDX_INTERRUPT_REQUEST_EP      2
+
+/*
  * Serial over USB Driver structure.
  */
-static SerialUSBDriver SDU1;
+static SerialUSBDriver SDUX;
 
 /*
  * USB Device Descriptor.
@@ -139,7 +146,7 @@ static const uint8_t vcom_configuration_descriptor_data[67] = {
   USB_DESC_BYTE         (0x01),         /* bSlaveInterface0 (Data Class
                                            Interface).                      */
   /* Endpoint 2 Descriptor.*/
-  USB_DESC_ENDPOINT     (USB_CDC_INTERRUPT_REQUEST_EP|0x80,
+  USB_DESC_ENDPOINT     (USBDX_INTERRUPT_REQUEST_EP|0x80,
                          0x03,          /* bmAttributes (Interrupt).        */
                          0x0008,        /* wMaxPacketSize.                  */
                          0xFF),         /* bInterval.                       */
@@ -155,12 +162,12 @@ static const uint8_t vcom_configuration_descriptor_data[67] = {
                                            4.7).                            */
                          0x00),         /* iInterface.                      */
   /* Endpoint 3 Descriptor.*/
-  USB_DESC_ENDPOINT     (USB_CDC_DATA_AVAILABLE_EP,     /* bEndpointAddress.*/
+  USB_DESC_ENDPOINT     (USBDX_DATA_AVAILABLE_EP,       /* bEndpointAddress.*/
                          0x02,          /* bmAttributes (Bulk).             */
                          0x0040,        /* wMaxPacketSize.                  */
                          0x00),         /* bInterval.                       */
   /* Endpoint 1 Descriptor.*/
-  USB_DESC_ENDPOINT     (USB_CDC_DATA_REQUEST_EP|0x80,  /* bEndpointAddress.*/
+  USB_DESC_ENDPOINT     (USBDX_DATA_REQUEST_EP|0x80,    /* bEndpointAddress.*/
                          0x02,          /* bmAttributes (Bulk).             */
                          0x0040,        /* wMaxPacketSize.                  */
                          0x00)          /* bInterval.                       */
@@ -313,11 +320,11 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
     /* Enables the endpoints specified into the configuration.
        Note, this callback is invoked from an ISR so I-Class functions
        must be used.*/
-    usbInitEndpointI(usbp, USB_CDC_DATA_REQUEST_EP, &ep1config);
-    usbInitEndpointI(usbp, USB_CDC_INTERRUPT_REQUEST_EP, &ep2config);
+    usbInitEndpointI(usbp, USBDX_DATA_REQUEST_EP, &ep1config);
+    usbInitEndpointI(usbp, USBDX_INTERRUPT_REQUEST_EP, &ep2config);
 
     /* Resetting the state of the CDC subsystem.*/
-    sduConfigureHookI(usbp);
+    sduConfigureHookI(&SDUX);
 
     chSysUnlockFromIsr();
     return;
@@ -345,7 +352,10 @@ static const USBConfig usbcfg = {
  * Serial over USB driver configuration.
  */
 static const SerialUSBConfig serusbcfg = {
-  &USBDX
+  &USBDX,
+  USBDX_DATA_REQUEST_EP,
+  USBDX_DATA_AVAILABLE_EP,
+  USBDX_INTERRUPT_REQUEST_EP
 };
 
 /*
@@ -370,17 +380,17 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 
   // Wait for USB active
   while (TRUE) {
-    if (SDU1.config->usbp->state == USB_ACTIVE)
+    if (SDUX.config->usbp->state == USB_ACTIVE)
       break;
     chThdSleepMilliseconds(10);
   }
 
-  chprintf((BaseSequentialStream *)&SDU1, "\r\nTesting Testing\r\n");
+  chprintf((BaseSequentialStream *)&SDUX, "\r\nTesting Testing\r\n");
 
   // Loop forever reading characters
   while (TRUE) {
     // Block while waiting for a single character
-    bytes_read = chSequentialStreamRead((BaseSequentialStream *)&SDU1, &c, 1);
+    bytes_read = chSequentialStreamRead((BaseSequentialStream *)&SDUX, &c, 1);
 
     if (bytes_read)
       sc_uart_revc_usb_byte(c);
@@ -412,7 +422,7 @@ static msg_t scSduSendThread(void *UNUSED(arg))
     chBSemSignal(&buf_sem);
 
     // FIXME: should support binary messages
-    chprintf((BaseSequentialStream *)&SDU1, (const char *)send_buf[previous_full]);
+    chprintf((BaseSequentialStream *)&SDUX, (const char *)send_buf[previous_full]);
 
   }
   return 0;
@@ -470,8 +480,8 @@ void sc_sdu_init(void)
   chSemInit(&send_sem, 0);
 
   // Initialize USB
-  sduObjectInit(&SDU1);
-  sduStart(&SDU1, &serusbcfg);
+  sduObjectInit(&SDUX);
+  sduStart(&SDUX, &serusbcfg);
 
   // Start a thread dedicated USB activating and reading messages
   chThdCreateStatic(sc_sdu_read_thread, sizeof(sc_sdu_read_thread),

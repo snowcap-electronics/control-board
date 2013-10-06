@@ -46,9 +46,7 @@ static PWMConfig pwmcfg1 = {
   },
   // HW dependent part
   0, // TIM CR2 register initialization data
-#if STM32_PWM_USE_ADVANCED
   0, // TIM BDTR (break & dead-time) register initialization data.
-#endif
 };
 
 static PWMConfig pwmcfg2 = {
@@ -64,9 +62,7 @@ static PWMConfig pwmcfg2 = {
   },
   // HW dependent part
   0, // TIM CR2 register initialization data
-#if STM32_PWM_USE_ADVANCED
   0, // TIM BDTR (break & dead-time) register initialization data.
-#endif
 };
 
 
