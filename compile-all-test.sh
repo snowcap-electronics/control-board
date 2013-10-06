@@ -2,7 +2,7 @@
 
 set -e
 
-PROJECTS="test pleco"
+PROJECTS="fps pleco test"
 BOARDS="SC_SNOWCAP_V1 SC_F4_DISCOVERY SC_F1_DISCOVERY"
 
 for project in $PROJECTS
