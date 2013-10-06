@@ -50,6 +50,7 @@ int main(void)
 
   // Start periodic ADC readings
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
+  // FIXME: Not tested
   sc_adc_start_conversion(3, 1000, ADC_SAMPLE_55P5);
 #else
   sc_adc_start_conversion(3, 1000, ADC_SAMPLE_56);
