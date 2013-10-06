@@ -35,7 +35,7 @@ struct gpio_list {
   uint8_t pin;
 };
 
-struct gpio_list gpio_list[] = {
+struct gpio_list gpio_list[SC_GPIO_MAX_PINS + 1] = {
   {0, 0},
   {GPIO1_PORT, GPIO1_PIN},
   {GPIO2_PORT, GPIO2_PIN},
@@ -81,4 +81,23 @@ void sc_gpio_off(uint8_t gpio)
 void sc_gpio_toggle(uint8_t gpio)
 {
   palTogglePad(gpio_list[gpio].port, gpio_list[gpio].pin);
+}
+
+
+
+/*
+ * Set the state of all GPIOs
+ */
+void sc_gpio_set_state_all(uint8_t gpios)
+{
+  uint8_t i;
+  for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
+	if (gpios & 1) {
+	  palSetPad(gpio_list[i].port, gpio_list[i].pin);
+	} else {
+	  palClearPad(gpio_list[i].port, gpio_list[i].pin);
+	}
+
+	gpios >>= 1;
+  }
 }

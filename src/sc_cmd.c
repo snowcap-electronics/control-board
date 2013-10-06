@@ -38,6 +38,7 @@ static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
 
 /*
@@ -138,6 +139,9 @@ static void parse_command(void)
   switch (command_buf[0]) {
   case 'g':
     parse_command_gpio(command_buf, found);
+    break;
+  case 'G':
+    parse_command_gpio_all(command_buf, found);
     break;
   case 'l':
     parse_command_led(command_buf, found);
@@ -291,6 +295,29 @@ static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len)
     // Invalid value, ignoring command
 	return;
   }
+}
+
+
+
+/*
+ * Parse gpio_all command (GXXXX)
+ */
+static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
+{
+  uint8_t gpio, gpios = 0;
+
+  // Command must have states of all GPIO pins, ignore otherwise
+  if (cmd_len < SC_GPIO_MAX_PINS + 1) {
+    return;
+  }
+
+  for (gpio = 0; gpio < SC_GPIO_MAX_PINS; ++gpio) {
+    if (cmd[1 + gpio] == '1') {
+      gpios |= (1 << gpio);
+    }
+  }
+
+  sc_gpio_set_state_all(gpios);
 }
 
 /* Emacs indentatation information

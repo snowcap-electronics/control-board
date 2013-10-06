@@ -29,9 +29,12 @@
 #ifndef SC_GPIO_H
 #define SC_GPIO_H
 
+#define SC_GPIO_MAX_PINS 4
+
 void sc_gpio_init(void);
 void sc_gpio_on(uint8_t gpio);
 void sc_gpio_off(uint8_t gpio);
 void sc_gpio_toggle(uint8_t gpio);
+void sc_gpio_set_state_all(uint8_t gpios);
 
 #endif
