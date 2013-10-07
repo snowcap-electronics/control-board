@@ -59,8 +59,13 @@ static uint8_t create_adc_msg(uint8_t *buf,
 
 int main(void)
 {
-  // Init SC framework
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_GPIO);
+  // Init SC framework, with USB if not F1 Discovery
+#if defined(BOARD_ST_STM32VL_DISCOVERY)
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO);
+#else
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO);
+  sc_uart_default_usb(TRUE);
+#endif
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
