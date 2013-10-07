@@ -50,8 +50,8 @@ struct gpio_list gpio_list[SC_GPIO_MAX_PINS + 1] = {
 void sc_gpio_init(void)
 {
   uint8_t i;
-  for (i = 0; i < 4; ++i) {
-	palSetPadMode(gpio_list[i].port, gpio_list[i].pin, PAL_MODE_OUTPUT_PUSHPULL);
+  for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
+	palSetPadMode(gpio_list[i + 1].port, gpio_list[i + 1].pin, PAL_MODE_OUTPUT_PUSHPULL);
   }
 }
 
@@ -60,6 +60,8 @@ void sc_gpio_init(void)
  */
 void sc_gpio_on(uint8_t gpio)
 {
+  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#1");
+
   palSetPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
 
@@ -70,6 +72,8 @@ void sc_gpio_on(uint8_t gpio)
  */
 void sc_gpio_off(uint8_t gpio)
 {
+  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#2");
+
   palClearPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
 
@@ -80,6 +84,8 @@ void sc_gpio_off(uint8_t gpio)
  */
 void sc_gpio_toggle(uint8_t gpio)
 {
+  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#3");
+
   palTogglePad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
 
@@ -93,9 +99,9 @@ void sc_gpio_set_state_all(uint8_t gpios)
   uint8_t i;
   for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
 	if (gpios & 1) {
-	  palSetPad(gpio_list[i].port, gpio_list[i].pin);
+	  palSetPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
 	} else {
-	  palClearPad(gpio_list[i].port, gpio_list[i].pin);
+	  palClearPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
 	}
 
 	gpios >>= 1;
