@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef SC_CONF_SNOWCAP_V1_H
-#define SC_CONF_SNOWCAP_V1_H
+#ifndef SC_CONF_F1_DISCOVERY_H
+#define SC_CONF_F1_DISCOVERY_H
 
 #ifndef USER_LED
 #define USER_LED            GPIOC_LED4
@@ -37,10 +37,10 @@
 #define USER_LED_PORT      GPIOC
 #endif
 
-// GPIO1 is PB4
+// GPIO1 is PD2
 #ifndef GPIO1_PIN
-#define GPIO1_PIN          4
-#define GPIO1_PORT         GPIOB
+#define GPIO1_PIN          2
+#define GPIO1_PORT         GPIOD
 #endif
 
 // GPIO2 is PB5
