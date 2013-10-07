@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef SC_CONF_SNOWCAP_V1_H
-#define SC_CONF_SNOWCAP_V1_H
+#ifndef SC_CONF_F4_DISCOVERY_H
+#define SC_CONF_F4_DISCOVERY_H
 
 #ifndef USER_LED
 #define USER_LED            GPIOD_LED4
