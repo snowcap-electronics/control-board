@@ -30,7 +30,7 @@
 #define SC_EVENT_H
 
 #include "sc_uart.h"
-#include <sc_utils.h>
+#include "sc_utils.h"
 
 // Event types
 typedef enum SC_EVENT_TYPE {
@@ -38,6 +38,7 @@ typedef enum SC_EVENT_TYPE {
   SC_EVENT_TYPE_PUSH_BYTE = 1,
   SC_EVENT_TYPE_ADC_AVAILABLE,
   SC_EVENT_TYPE_TEMP_AVAILABLE,
+  SC_EVENT_TYPE_9DOF_AVAILABLE,
   // SC internal types
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
@@ -53,16 +54,20 @@ typedef enum SC_EVENT_MSG_POST_FROM {
 typedef void (*sc_event_cb_handle_byte)(SC_UART uart, uint8_t byte);
 typedef void (*sc_event_cb_adc_available)(void);
 typedef void (*sc_event_cb_temp_available)(void);
+typedef void (*sc_event_cb_9dof_available)(void);
 
 void sc_event_loop_start(void);
-void sc_event_action(SC_EVENT_TYPE type);
 void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
 msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart);
 msg_t sc_event_msg_create_type(SC_EVENT_TYPE type);
 
 void sc_event_register_handle_byte(sc_event_cb_handle_byte func);
+// TODO: these could be generalized? E.g.:
+// void sc_event_register_data_available(SC_EVENT_TYPE, sc_event_cb_data_available func);
+// void sc_event_register_cb(SC_EVENT_TYPE type, sc_event_cb func);
 void sc_event_register_adc_available(sc_event_cb_adc_available func);
 void sc_event_register_temp_available(sc_event_cb_temp_available func);
+void sc_event_register_9dof_available(sc_event_cb_9dof_available func);
 
 #endif
 

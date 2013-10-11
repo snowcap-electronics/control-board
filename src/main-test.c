@@ -30,6 +30,7 @@
 #include "sc.h"
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
+static void cb_9dof_available(void);
 
 int main(void)
 {
@@ -46,8 +47,12 @@ int main(void)
 
   // Register callbacks.
   // These will be called from Event Loop thread. It's OK to do some
-  // calculations etc. time consuming there, but not to sleep or block.
+  // calculations etc. time consuming there, but not to sleep or block
+  // for longer periods of time.
   sc_event_register_handle_byte(cb_handle_byte);
+  sc_event_register_9dof_available(cb_9dof_available);
+
+  sc_9dof_init();
 
   // Loop forever waiting for callbacks
   while(1) {
@@ -69,6 +74,24 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
   sc_cmd_push_byte(byte);
 }
 
+
+
+static void cb_9dof_available(void)
+{
+  uint32_t ts;
+  int16_t acc[3];
+  int16_t magn[3];
+  int16_t gyro[3];
+  uint8_t msg[16] = {'9', 'd', 'o', 'f', ':', ' '};
+  int len = 6;
+
+  sc_9dof_get_data(&ts, acc, magn, gyro);
+
+  len += sc_itoa(acc[0], &msg[len], sizeof(msg) - len);
+  msg[len++] = '\r';
+  msg[len++] = '\n';
+  sc_uart_send_msg(SC_UART_LAST, msg, len);
+}
 
 
 

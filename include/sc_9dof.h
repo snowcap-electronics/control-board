@@ -1,6 +1,8 @@
-/*
+/***
+ * 9DoF functions
+ * Not a thread safe API.
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2013 Tuomas Kulvei, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,39 +27,30 @@
  *
  */
 
-#ifndef SC_H
-#define SC_H
+#ifndef SC_9DOF_H
+#define SC_9DOF_H
 
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
-
-/* Project includes */
 #include "sc_utils.h"
-#include "sc_event.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
-#include "sc_i2c.h"
-#include "sc_sdu.h"
-#include "sc_cmd.h"
-#include "sc_adc.h"
-#include "sc_gpio.h"
-#include "sc_spi.h"
-#include "sc_9dof.h"
 
-#define SC_INIT_UART1       0x0001
-#define SC_INIT_UART2       0x0002
-#define SC_INIT_UART3       0x0004
-#define SC_INIT_UART4       0x0008
-#define SC_INIT_PWM         0x0010
-#define SC_INIT_ICU         0x0020
-#define SC_INIT_I2C         0x0040
-#define SC_INIT_SDU         0x0080
-#define SC_INIT_ADC         0x0100
-#define SC_INIT_GPIO        0x0200
+/* Initialise and start reading sensors */
+void sc_9dof_init(void);
 
-void sc_init(uint32_t subsystems);
+/* Shutdown initialised sensors */
+void sc_9dof_shutdown(void);
+
+/* Get timestamp and latest values. Use NULL for skipping any of the sensors */
+void sc_9dof_get_data(uint32_t *ts,
+                      int16_t *acc,
+                      int16_t *magn,
+                      int16_t *gyro);
+
 
 #endif
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

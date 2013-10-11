@@ -30,6 +30,9 @@
 #include "sc_event.h"
 #include "sc_uart.h"
 
+/*
+ * Reserve bits for different kind of messages, msg_t == int32_t
+ */
 #define EVENT_MSG_BYTE_MASK  0x000000ff
 #define EVENT_MSG_UART_MASK  0x00000f00
 #define EVENT_MSG_TYPE_MASK  0x0000f000
@@ -59,6 +62,7 @@ MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
 static sc_event_cb_handle_byte    cb_handle_byte = NULL;
 static sc_event_cb_adc_available  cb_adc_available = NULL;
 static sc_event_cb_temp_available cb_temp_available = NULL;
+static sc_event_cb_9dof_available cb_9dof_available = NULL;
 
 /*
  * Setup a working area with a 256 byte stack for even loop thread
@@ -100,6 +104,11 @@ static msg_t eventLoopThread(void *UNUSED(arg))
     case SC_EVENT_TYPE_TEMP_AVAILABLE:
       if (cb_temp_available != NULL) {
         cb_temp_available();
+      }
+      break;
+    case SC_EVENT_TYPE_9DOF_AVAILABLE:
+      if (cb_9dof_available != NULL) {
+        cb_9dof_available();
       }
       break;
 
@@ -164,6 +173,7 @@ msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart)
   SC_EVENT_TYPE type = SC_EVENT_TYPE_PUSH_BYTE;
 
   // FIXME: assert if uart > 16?
+  // FIXME: assert if any of the values too large
   msg =
     (type << EVENT_MSG_TYPE_SHIFT) |
     (uart << EVENT_MSG_UART_SHIFT) |
@@ -181,6 +191,7 @@ msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
 {
   msg_t msg = 0;
 
+  // FIXME: asssert if type too large for the reserved bits
   msg = (type << EVENT_MSG_TYPE_SHIFT);
 
   return msg;
@@ -214,6 +225,16 @@ void sc_event_register_adc_available(sc_event_cb_adc_available func)
 void sc_event_register_temp_available(sc_event_cb_temp_available func)
 {
   cb_temp_available = func;
+}
+
+
+
+/*
+ * Register callback for new 9dof data available
+ */
+void sc_event_register_9dof_available(sc_event_cb_9dof_available func)
+{
+  cb_9dof_available = func;
 }
 
 

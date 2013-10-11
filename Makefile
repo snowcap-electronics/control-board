@@ -114,6 +114,7 @@ CSRC = $(PORTSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/chprintf.c \
+       drivers/sc_lis302dl.c \
        src/sc.c \
        src/sc_led.c \
        src/sc_pwm.c \
@@ -128,6 +129,8 @@ CSRC = $(PORTSRC) \
        src/sc_sdu.c \
        src/sc_adc.c \
        src/sc_gpio.c \
+       src/sc_spi.c \
+       src/sc_9dof.c \
        src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

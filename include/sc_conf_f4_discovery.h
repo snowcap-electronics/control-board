@@ -82,6 +82,19 @@
 #define USBDX              USBD1
 #endif
 
+#define SC_USE_LIS302DL
+#ifdef SC_USE_LIS302DL
+#define SC_LIS302DL_SPIN           SPID1
+#define SC_LIS302DL_CS_PORT        GPIOE
+#define SC_LIS302DL_CS_PIN         GPIOE_CS_SPI
+#define SC_LIS302DL_INT_DRDY_EXT   EXT_MODE_GPIOE
+#define SC_LIS302DL_INT_DRDY_PORT  GPIOE
+#define SC_LIS302DL_INT_DRDY_PIN   GPIOE_INT1
+#ifndef HAL_USE_SPI
+#error "lis302dl needs SPI"
+#endif
+#endif
+
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif
