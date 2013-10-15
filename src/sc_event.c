@@ -33,14 +33,18 @@
 /*
  * Reserve bits for different kind of messages, msg_t == int32_t
  */
-#define EVENT_MSG_BYTE_MASK  0x000000ff
-#define EVENT_MSG_UART_MASK  0x00000f00
-#define EVENT_MSG_TYPE_MASK  0x0000f000
+// FIXME: come up with a more sane logic
+#define EVENT_MSG_TYPE_MASK    0x000000ff // common
+#define EVENT_MSG_UART_MASK    0x00000f00 // handle_byte
+#define EVENT_MSG_BYTE_MASK    0x00ff0000 // handle_byte
+#define EVENT_MSG_PIN_MASK     0x0000ff00 // extint
 
-#define EVENT_MSG_BYTE_SHIFT          0
-#define EVENT_MSG_UART_SHIFT          8
-#define EVENT_MSG_TYPE_SHIFT         12
+#define EVENT_MSG_TYPE_SHIFT            0
+#define EVENT_MSG_UART_SHIFT            8
+#define EVENT_MSG_BYTE_SHIFT           16
+#define EVENT_MSG_PIN_SHIFT             8
 
+// FIXME: convert to cleaner macros
 #define EVENT_MSG_GET_TYPE(m)                                           \
   ((SC_EVENT_TYPE)((m & EVENT_MSG_TYPE_MASK) >> EVENT_MSG_TYPE_SHIFT))
 
@@ -49,6 +53,9 @@
 
 #define EVENT_MSG_GET_UART(m)                                     \
   ((SC_UART)((m & EVENT_MSG_UART_MASK) >> EVENT_MSG_UART_SHIFT))
+
+#define EVENT_MSG_GET_PIN(m)                                          \
+  ((uint8_t)((m & EVENT_MSG_PIN_MASK) >> EVENT_MSG_PIN_SHIFT))
 
 /* Action event mailbox used in event loop to pass data and action
  * from other threads and interrupt handlers to the main thread. */
@@ -60,6 +67,7 @@ MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
  * Callbacks
  */
 static sc_event_cb_handle_byte    cb_handle_byte = NULL;
+static sc_event_cb_extint         cb_extint[EXT_MAX_CHANNELS] = {NULL};
 static sc_event_cb_adc_available  cb_adc_available = NULL;
 static sc_event_cb_temp_available cb_temp_available = NULL;
 static sc_event_cb_9dof_available cb_9dof_available = NULL;
@@ -94,6 +102,14 @@ static msg_t eventLoopThread(void *UNUSED(arg))
         SC_UART uart = EVENT_MSG_GET_UART(msg);
         uint8_t byte = EVENT_MSG_GET_BYTE(msg);
         cb_handle_byte(uart, byte);
+      }
+      break;
+    case SC_EVENT_TYPE_EXTINT:
+      {
+        uint8_t pin = EVENT_MSG_GET_PIN(msg);
+        if (cb_extint[pin] != NULL) {
+          cb_extint[pin]();
+        }
       }
       break;
     case SC_EVENT_TYPE_ADC_AVAILABLE:
@@ -185,6 +201,25 @@ msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart)
 
 
 /*
+ * Create a mailbox message from external interrupt
+ */
+msg_t sc_event_msg_create_extint(uint8_t pin)
+{
+  msg_t msg = 0;
+  SC_EVENT_TYPE type = SC_EVENT_TYPE_EXTINT;
+
+  chDbgAssert(pin < EXT_MAX_CHANNELS, "EXT int pin number too large", "#1");
+
+  msg =
+    (type << EVENT_MSG_TYPE_SHIFT) |
+    (pin  << EVENT_MSG_PIN_SHIFT);
+
+  return msg;
+}
+
+
+
+/*
  * Create a mailbox message for event
  */
 msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
@@ -205,6 +240,18 @@ msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
 void sc_event_register_handle_byte(sc_event_cb_handle_byte func)
 {
   cb_handle_byte = func;
+}
+
+
+
+/*
+ * Register callback for external interrupt
+ */
+void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func)
+{
+  chDbgAssert(pin < EXT_MAX_CHANNELS,
+              "External interrupt pin number too large", "#1");
+  cb_extint[pin] = func;
 }
 
 

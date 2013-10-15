@@ -1,6 +1,7 @@
-/*
+/***
+ * External interrupt functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,40 +26,39 @@
  *
  */
 
-#ifndef SC_H
-#define SC_H
+#ifndef SC_EXTINT_H
+#define SC_EXTINT_H
 
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
-
-/* Project includes */
 #include "sc_utils.h"
-#include "sc_event.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
-#include "sc_i2c.h"
-#include "sc_sdu.h"
-#include "sc_cmd.h"
-#include "sc_adc.h"
-#include "sc_gpio.h"
-#include "sc_spi.h"
-#include "sc_9dof.h"
-#include "sc_extint.h"
 
-#define SC_INIT_UART1       0x0001
-#define SC_INIT_UART2       0x0002
-#define SC_INIT_UART3       0x0004
-#define SC_INIT_UART4       0x0008
-#define SC_INIT_PWM         0x0010
-#define SC_INIT_ICU         0x0020
-#define SC_INIT_I2C         0x0040
-#define SC_INIT_SDU         0x0080
-#define SC_INIT_ADC         0x0100
-#define SC_INIT_GPIO        0x0200
+#if HAL_USE_EXT
 
-void sc_init(uint32_t subsystems);
+typedef enum {
+  SC_EXTINT_EDGE_RISING  = 0x1,
+  SC_EXTINT_EDGE_FALLING = 0x2,
+  SC_EXTINT_EDGE_BOTH    = 0x3
+} SC_EXTINT_EDGE;
+
+
+
+void sc_extint_set_event(ioportid_t port,
+                         uint8_t pin,
+                         SC_EXTINT_EDGE mode);
+void sc_extint_set_isr_cb(ioportid_t port,
+                          uint8_t pin,
+                          SC_EXTINT_EDGE mode,
+                          extcallback_t cb);
+void sc_extint_clear(ioportid_t port, uint8_t pin);
+
+#endif /* HAL_USE_EXT */
 
 #endif
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
+
