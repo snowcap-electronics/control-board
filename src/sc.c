@@ -59,14 +59,6 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_I2C) {
-#if HAL_USE_I2C
-    sc_i2c_init(0);
-#else
-    chDbgAssert(0, "HAL_USE_I2C undefined", "#1");
-#endif
-  }
-
   /* Initializes a serial-over-USB CDC driver */
   if (subsystems & SC_INIT_SDU) {
 #if HAL_USE_SERIAL_USB

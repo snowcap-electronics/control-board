@@ -2,6 +2,7 @@
  * I²C functions
  *
  * Copyright 2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
+ * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,12 +34,19 @@
 
 #if HAL_USE_I2C
 
-void sc_i2c_init(uint32_t clock_speed);
-void sc_i2c_read(i2caddr_t addr, uint8_t *data, size_t bytes);
-void sc_i2c_transmit(i2caddr_t addr,
+/*
+ * Thread-safe API between i2c clients. Not guarded from trying to use
+ * an i2c client while shutting it down from a different thread.
+ */
+
+int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr);
+void sc_i2c_set_address(uint8_t i2cn, i2caddr_t addr);
+void sc_i2c_stop(uint8_t i2cn);
+void sc_i2c_read(uint8_t i2cn, uint8_t *data, size_t bytes);
+void sc_i2c_transmit(uint8_t i2cn,
                      uint8_t *tx, size_t tx_bytes,
                      uint8_t *rx, size_t rx_bytes);
-#define sc_i2c_write(addr, data, bytes) sc_i2c_transmit(addr, data, bytes, NULL, 0);
+#define sc_i2c_write(i2cn, data, bytes) sc_i2c_transmit(i2cn, data, bytes, NULL, 0);
 
 #endif /* HAL_USE_I2C */
 
