@@ -48,9 +48,9 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
 {
   int8_t i;
   I2CConfig i2c_cfg = {
-	OPMODE_I2C,
-	400000,
-	STD_DUTY_CYCLE
+    OPMODE_I2C,
+    400000,
+    STD_DUTY_CYCLE
   };
 
   chDbgAssert(i2cp != NULL, "I2C driver null", "#1");
@@ -60,25 +60,25 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
   // Check if I2CDx already activated for existing client
   for (i = 0; i < SC_I2C_MAX_CLIENTS; ++i) {
     if (i2c_conf[i].i2cp == i2cp) {
-	  break;
+      break;
     }
   }
 
   if (i < SC_I2C_MAX_CLIENTS) {
-	i2cStart(i2cp, &i2c_cfg);
+    i2cStart(i2cp, &i2c_cfg);
   }
 
   // Find empty slot for new I2C client
   for (i = 0; i < SC_I2C_MAX_CLIENTS; ++i) {
     if (i2c_conf[i].i2cp == NULL) {
-	  i2c_conf[i].i2cp = i2cp;
+      i2c_conf[i].i2cp = i2cp;
       i2c_conf[i].addr = addr;
-	  break;
+      break;
     }
   }
 
   if (i == SC_I2C_MAX_CLIENTS) {
-	chDbgAssert(0, "Too many I2C clients", "#1");
+    chDbgAssert(0, "Too many I2C clients", "#1");
   }
   chMtxUnlock();
 
@@ -112,12 +112,12 @@ void sc_i2c_stop(uint8_t i2cn)
   // Check if no clients are using I2CDx anymore
   for (i = 0; i < SC_I2C_MAX_CLIENTS; ++i) {
     if (i2c_conf[i].i2cp == i2cp) {
-	  break;
+      break;
     }
   }
 
   if (i == SC_I2C_MAX_CLIENTS) {
-	i2cStop(i2cp);
+    i2cStop(i2cp);
   }
 
   chMtxUnlock();
@@ -151,5 +151,12 @@ void sc_i2c_transmit(uint8_t i2cn,
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
 }
 
-
 #endif /* HAL_USE_I2C */
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
