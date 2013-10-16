@@ -32,6 +32,10 @@
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_9dof_available(void);
 
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+static void cb_button_changed(void);
+#endif
+
 int main(void)
 {
   // Init SC framework, with USB if not F1 Discovery
@@ -51,6 +55,12 @@ int main(void)
   // for longer periods of time.
   sc_event_register_handle_byte(cb_handle_byte);
   sc_event_register_9dof_available(cb_9dof_available);
+
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+  // Register user button on F4 discovery
+  sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
+  sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
+#endif
 
   sc_9dof_init();
 
@@ -93,6 +103,21 @@ static void cb_9dof_available(void)
   sc_uart_send_msg(SC_UART_LAST, msg, len);
 }
 
+
+
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+static void cb_button_changed(void)
+{
+  uint8_t msg[] = "d: button state: X\r\n";
+  uint8_t button_state;
+
+  button_state = palReadPad(GPIOA, GPIOA_BUTTON);
+
+  msg[17] = button_state + '0';
+
+  sc_uart_send_msg(SC_UART_LAST, msg, sizeof(msg));
+}
+#endif
 
 
 /* Emacs indentatation information
