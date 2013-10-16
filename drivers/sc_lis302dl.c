@@ -30,12 +30,14 @@
 #include "sc_utils.h"
 #include "sc_lis302dl.h"
 #include "sc_spi.h"
+#include "sc_extint.h"
 #include <string.h>    // memset
 
 #ifdef SC_USE_LIS302DL
 
 /* LIS302DL registers used in this file */
 #define LIS302DL_CTRL_REG1   0x20
+#define LIS302DL_CTRL_REG2   0x21
 #define LIS302DL_CTRL_REG3   0x22
 #define LIS302DL_STATUS_REG  0x27
 #define LIS302DL_OUTX        0x29
@@ -62,20 +64,14 @@ void sc_lis302dl_init(void)
 {
   uint8_t txbuf[2];
   int8_t spi_n;
-  EXTConfig extcfg;
 
   chBSemInit(&lis302dl_drdy_sem, FALSE);
 
   // Register data ready interrupt
-  memset(&extcfg, 0, sizeof(extcfg));
-  extcfg.channels[SC_LIS302DL_INT_DRDY_PIN].mode =
-    EXT_CH_MODE_RISING_EDGE |
-    EXT_CH_MODE_AUTOSTART |
-    SC_LIS302DL_INT_DRDY_EXT;
-  extcfg.channels[SC_LIS302DL_INT_DRDY_PIN].cb = lis302dl_drdy_cb;
-
-  // Start EXT (there's only one EXT)
-  extStart(&EXTD1, &extcfg);
+  sc_extint_set_isr_cb(SC_LIS302DL_INT_DRDY_PORT,
+                       SC_LIS302DL_INT_DRDY_PIN,
+                       SC_EXTINT_EDGE_RISING,
+                       lis302dl_drdy_cb);
 
   spi_n = sc_spi_init(&SC_LIS302DL_SPIN,
                       SC_LIS302DL_CS_PORT,
@@ -85,7 +81,7 @@ void sc_lis302dl_init(void)
 
   // Enable data ready interrupt
   txbuf[0] = LIS302DL_CTRL_REG3;
-  txbuf[1] = 0x4; // INT1 on data ready
+  txbuf[1] = 0x20; // INT2 on data ready
   sc_spi_send(spin, txbuf, sizeof(txbuf));
 
   // Enable measurements
