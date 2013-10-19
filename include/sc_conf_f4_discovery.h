@@ -70,10 +70,6 @@
 #define PWMDX2             PWMD4
 #endif
 
-#ifndef I2CDX
-#define I2CDX              I2CD3
-#endif
-
 #ifndef ADCDX
 #define ADCDX              ADCD1
 #endif
