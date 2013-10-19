@@ -50,7 +50,7 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
   I2CConfig i2c_cfg = {
     OPMODE_I2C,
     400000,
-    STD_DUTY_CYCLE
+    FAST_DUTY_CYCLE_2
   };
 
   chDbgAssert(i2cp != NULL, "I2C driver null", "#1");
@@ -126,13 +126,15 @@ void sc_i2c_stop(uint8_t i2cn)
 
 void sc_i2c_read(uint8_t i2cn, uint8_t *data, size_t bytes)
 {
+  msg_t ret;
 
   chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#4");
   chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#3");
 
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
-  i2cMasterReceive(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, data, bytes);
+  ret = i2cMasterReceive(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, data, bytes);
+  chDbgAssert(ret == RDY_OK, "i2cMasterReceive error", "#1");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
 }
@@ -141,12 +143,15 @@ void sc_i2c_transmit(uint8_t i2cn,
                      uint8_t *tx, size_t tx_bytes,
                      uint8_t *rx, size_t rx_bytes)
 {
+  msg_t ret;
+
   chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#5");
   chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#4");
 
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
-  i2cMasterTransmit(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, tx, tx_bytes, rx, rx_bytes);
+  ret = i2cMasterTransmit(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, tx, tx_bytes, rx, rx_bytes);
+  chDbgAssert(ret == RDY_OK, "i2cMasterTransmit error", "#1");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
 }
