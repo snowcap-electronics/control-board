@@ -85,13 +85,6 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
   return i;
 }
 
-void sc_i2c_set_address(uint8_t i2cn,  i2caddr_t addr)
-{
-  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#2");
-  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#1");
-
-  i2c_conf[i2cn].addr = addr;
-}
 
 
 void sc_i2c_stop(uint8_t i2cn)

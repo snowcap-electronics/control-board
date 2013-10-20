@@ -40,7 +40,6 @@
  */
 
 int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr);
-void sc_i2c_set_address(uint8_t i2cn, i2caddr_t addr);
 void sc_i2c_stop(uint8_t i2cn);
 void sc_i2c_read(uint8_t i2cn, uint8_t *data, size_t bytes);
 void sc_i2c_transmit(uint8_t i2cn,
