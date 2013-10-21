@@ -41,7 +41,7 @@
 #include "sc_sdu.h"
 #include "sc_event.h"
 
-#define MAX_SEND_BUF_LEN      32
+#define MAX_SEND_BUF_LEN      128
 #define MAX_CIRCULAR_BUFS     8
 
 static UARTDriver *last_uart = NULL;
