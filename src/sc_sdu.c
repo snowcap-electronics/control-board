@@ -364,6 +364,17 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   uint8_t c;
   uint8_t bytes_read;
 
+  /*
+   * Activates the USB driver and then the USB bus pull-up on D+.
+   * Note, a delay is inserted in order to not have to disconnect the cable
+   * after a reset.
+   */
+  usbDisconnectBus(serusbcfg.usbp);
+  // FIXME: would less than 1000ms be enough? While loop?
+  chThdSleepMilliseconds(1000);
+  usbStart(serusbcfg.usbp, &usbcfg);
+  usbConnectBus(serusbcfg.usbp);
+
   // Wait for USB active
   while (TRUE) {
     if (SDUX.config->usbp->state == USB_ACTIVE)
@@ -438,7 +449,11 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
   if (first_free == previous_full) {
     // No space, lose data
     chBSemSignal(&buf_sem);
-    chDbgAssert(0, "SDU send buffer full", "#1");
+
+    // XXX: There's a multisecond delay in starting the USB. Also the
+    // buffers seem to get full if nobody is reading the data.
+    // So not asserting here.
+    // chDbgAssert(0, "SDU send buffer full", "#1");
     return 1;
   }
 
@@ -474,17 +489,6 @@ void sc_sdu_init(void)
   // Initialize USB
   sduObjectInit(&SDUX);
   sduStart(&SDUX, &serusbcfg);
-
-  /*
-   * Activates the USB driver and then the USB bus pull-up on D+.
-   * Note, a delay is inserted in order to not have to disconnect the cable
-   * after a reset.
-   */
-  usbDisconnectBus(serusbcfg.usbp);
-  // FIXME: would less than 1000ms be enough? While loop?
-  chThdSleepMilliseconds(1000);
-  usbStart(serusbcfg.usbp, &usbcfg);
-  usbConnectBus(serusbcfg.usbp);
 
   // Start a thread dedicated USB activating and reading messages
   chThdCreateStatic(sc_sdu_read_thread, sizeof(sc_sdu_read_thread),
