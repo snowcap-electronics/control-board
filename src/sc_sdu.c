@@ -39,21 +39,18 @@
 
 #if HAL_USE_SERIAL_USB
 
-#define MAX_SEND_BUF_LEN      (32 + 1)
-#define MAX_SEND_BUFFERS      5
+/* Max message size, should match the sc_uart.c's MAX_SEND_BUF_LEN */
+#define MAX_SEND_BUF_LEN      (128 + 1)
+#define MAX_SEND_BUFFERS      4
 
 /*
- * Buffer for blocking send.
+ * Buffer for blocking send. First byte is the message length.
  */
 static uint8_t send_buf[MAX_SEND_BUFFERS][MAX_SEND_BUF_LEN];
 static BinarySemaphore buf_sem;
 static Semaphore send_sem;
 static uint8_t first_free = 0;
 static uint8_t previous_full = MAX_SEND_BUFFERS - 1;
-
-/* Max message size, should match the sc_uart.c's MAX_SEND_BUF_LEN */
-#define MAX_SDU_BUF_LEN      32
-
 
 static msg_t scSduReadThread(void *UNUSED(arg));
 static msg_t scSduSendThread(void *UNUSED(arg));
@@ -367,25 +364,12 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   uint8_t c;
   uint8_t bytes_read;
 
-  /*
-   * Activates the USB driver and then the USB bus pull-up on D+.
-   * Note, a delay is inserted in order to not have to disconnect the cable
-   * after a reset.
-   */
-  usbDisconnectBus(serusbcfg.usbp);
-  // FIXME: would less than 1000ms be enough? While loop?
-  chThdSleepMilliseconds(1000);
-  usbStart(serusbcfg.usbp, &usbcfg);
-  usbConnectBus(serusbcfg.usbp);
-
   // Wait for USB active
   while (TRUE) {
     if (SDUX.config->usbp->state == USB_ACTIVE)
       break;
     chThdSleepMilliseconds(10);
   }
-
-  chprintf((BaseSequentialStream *)&SDUX, "\r\nTesting Testing\r\n");
 
   // Loop forever reading characters
   while (TRUE) {
@@ -421,10 +405,12 @@ static msg_t scSduSendThread(void *UNUSED(arg))
     // Unlock send buffer
     chBSemSignal(&buf_sem);
 
-    // FIXME: should support binary messages
-    chprintf((BaseSequentialStream *)&SDUX, (const char *)send_buf[previous_full]);
-
+    // First byte of the buffer indicates the buffer length
+    chSequentialStreamWrite((BaseSequentialStream *)&SDUX,
+                            &send_buf[previous_full][1],
+                            send_buf[previous_full][0]);
   }
+
   return 0;
 }
 
@@ -435,6 +421,11 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
 {
   int i;
   msg_t ret;
+
+  if (len > MAX_SEND_BUF_LEN - 1) {
+    chDbgAssert(0, "Too long message", "#1");
+    len = MAX_SEND_BUF_LEN - 1;
+  }
 
   // Lock send buffer
   ret = chBSemWait(&buf_sem);
@@ -447,16 +438,17 @@ int sc_sdu_send_msg(uint8_t *msg, int len)
   if (first_free == previous_full) {
     // No space, lose data
     chBSemSignal(&buf_sem);
+    chDbgAssert(0, "SDU send buffer full", "#1");
     return 1;
   }
 
   // Store data
   for (i = 0; i < len; ++i) {
-    send_buf[first_free][i] = msg[i];
+    send_buf[first_free][i + 1] = msg[i];
   }
 
-  // FIXME: should support binary messages and not assuming null-termination
-  send_buf[first_free][len] = '\0';
+  // First byte indicates the buffer length
+  send_buf[first_free][0] = len;
 
   ++first_free;
   if (first_free == MAX_SEND_BUFFERS) {
@@ -482,6 +474,17 @@ void sc_sdu_init(void)
   // Initialize USB
   sduObjectInit(&SDUX);
   sduStart(&SDUX, &serusbcfg);
+
+  /*
+   * Activates the USB driver and then the USB bus pull-up on D+.
+   * Note, a delay is inserted in order to not have to disconnect the cable
+   * after a reset.
+   */
+  usbDisconnectBus(serusbcfg.usbp);
+  // FIXME: would less than 1000ms be enough? While loop?
+  chThdSleepMilliseconds(1000);
+  usbStart(serusbcfg.usbp, &usbcfg);
+  usbConnectBus(serusbcfg.usbp);
 
   // Start a thread dedicated USB activating and reading messages
   chThdCreateStatic(sc_sdu_read_thread, sizeof(sc_sdu_read_thread),
