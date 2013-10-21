@@ -35,30 +35,7 @@
 
 MUTEX_DECL(cfg_mtx);
 
-static EXTConfig extcfg = {
-  {
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-    {EXT_CH_MODE_DISABLED, NULL},
-  }
-};
+static EXTConfig extcfg;
 
 static void _extint_cb(EXTDriver *extp, expchannel_t channel)
 {
@@ -84,8 +61,12 @@ uint32_t _get_ext_from_port(ioportid_t port)
   GPIO2EXT(GPIOE);
   GPIO2EXT(GPIOF);
   GPIO2EXT(GPIOG);
+#ifdef GPIOH
   GPIO2EXT(GPIOH);
+#endif
+#ifdef GPIOI
   GPIO2EXT(GPIOI);
+#endif
 #undef GPIO2EXT
 
   chDbgAssert(0, "Invalid port", "#1");
