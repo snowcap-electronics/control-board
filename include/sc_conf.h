@@ -33,6 +33,8 @@
 
 #if defined(BOARD_SNOWCAP_V1)
 #include "sc_conf_snowcap_v1.h"
+#elif defined(BOARD_SNOWCAP_STM32F4_V1)
+#include "sc_conf_snowcap_stm32f4_v1.h"
 #elif defined(BOARD_ST_STM32F4_DISCOVERY)
 #include "sc_conf_f4_discovery.h"
 #elif defined(BOARD_ST_STM32VL_DISCOVERY)
