@@ -60,6 +60,16 @@ int main(void)
   // Register user button on F4 discovery
   sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
+
+#ifdef SC_USE_LSM9DS0
+  // I2C pinmux for optional lsm9ds0 board, interrupts are already ok by default
+  palSetPadMode(SC_LSM9DS0_I2CN_SDA_PORT,
+                SC_LSM9DS0_I2CN_SDA_PIN,
+                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
+  palSetPadMode(SC_LSM9DS0_I2CN_SCL_PORT,
+                SC_LSM9DS0_I2CN_SCL_PIN,
+                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
+#endif
 #endif
 
   sc_9dof_init();
@@ -92,15 +102,47 @@ static void cb_9dof_available(void)
   int16_t acc[3];
   int16_t magn[3];
   int16_t gyro[3];
-  uint8_t msg[16] = {'9', 'd', 'o', 'f', ':', ' '};
+  uint8_t msg[128] = {'9', 'd', 'o', 'f', ':', ' ', '\0'};
   int len = 6;
+  uint8_t i, s;
+  int16_t *sensors[3] = {&acc[0], &gyro[0], &magn[0]};
+  static uint8_t data_counter = 0;;
 
   sc_9dof_get_data(&ts, acc, magn, gyro);
 
-  len += sc_itoa(acc[0], &msg[len], sizeof(msg) - len);
-  msg[len++] = '\r';
-  msg[len++] = '\n';
-  sc_uart_send_msg(SC_UART_LAST, msg, len);
+  // Let's print only every 10th data
+  if (++data_counter == 10) {
+    data_counter = 0;
+
+    for (s = 0; s < 3; s++) {
+      for (i = 0; i < 3; i++) {
+        uint8_t l, m;
+        l = sc_itoa(sensors[s][i], &msg[len], sizeof(msg) - len);
+        len += l;
+
+        // Move right to align to 6 character columns
+        for (m = 0; m < 6; ++m) {
+          if (m < l) {
+            // Move
+            msg[len - 1 + (6 - l) - m] = msg[len - 1 - m];
+          } else {
+            // Clear
+            msg[len - 1 + (6 - l) - m] = ' ';
+          }
+        }
+
+        len += (6 - l);
+        msg[len++] = ',';
+        msg[len++] = ' ';
+      }
+    }
+
+    // Overwrite the last ", "
+    msg[len - 2] = '\r';
+    msg[len - 1] = '\n';
+    msg[len++]   = '\0';
+    sc_uart_send_msg(SC_UART_LAST, msg, len);
+  }
 }
 
 

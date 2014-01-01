@@ -1,6 +1,5 @@
 /***
- * 9DoF functions
- * Not a thread safe API.
+ * ST LSM9DS0 2D gyroscope driver
  *
  * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
@@ -27,23 +26,15 @@
  *
  */
 
-#ifndef SC_9DOF_H
-#define SC_9DOF_H
 
 #include "sc_utils.h"
 
-/* Initialise and start reading sensors */
-void sc_9dof_init(void);
+#ifndef SC_LSM9DS0_H
+#define SC_LSM9DS0_H
 
-/* Shutdown initialised sensors */
-void sc_9dof_shutdown(void);
-
-/* Get timestamp and latest values. Use NULL for skipping any of the sensors */
-void sc_9dof_get_data(uint32_t *ts,
-                      int16_t *acc,
-                      int16_t *magn,
-                      int16_t *gyro);
-
+void sc_lsm9ds0_init(void);
+void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro);
+void sc_lsm9ds0_shutdown(void);
 
 #endif
 

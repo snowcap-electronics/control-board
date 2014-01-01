@@ -78,16 +78,57 @@
 #define USBDX              USBD1
 #endif
 
-#define SC_USE_LIS302DL
+//#define SC_USE_LIS302DL
 #ifdef SC_USE_LIS302DL
 #define SC_LIS302DL_SPIN           SPID1
 #define SC_LIS302DL_CS_PORT        GPIOE
 #define SC_LIS302DL_CS_PIN         GPIOE_CS_SPI
-#define SC_LIS302DL_INT_DRDY_EXT   EXT_MODE_GPIOE
 #define SC_LIS302DL_INT_DRDY_PORT  GPIOE
 #define SC_LIS302DL_INT_DRDY_PIN   GPIOE_INT2
 #ifndef HAL_USE_SPI
 #error "lis302dl needs SPI"
+#endif
+#endif
+
+/* Snowcap CB v1
+I2C3
+INT2_XM = PA12 G5
+INT1_XM = PC8  G6
+INT_G   = PA1  3.3V <-- FIX to XB_RTS
+DRDY_G  = PA0  GND  <-- FIX to XB_CTS
+SDA     = PC9  IMU_SDA
+SCL     = PA8  IMU_SCL
+*/
+
+/* F4 Discovery
+I2C3
+INT2_XM = PA3
+INT1_XM = PA2
+INT_G   = PA1
+DRDY_G  = PC4
+SDA     = PC9
+SCL     = PA8
+*/
+#define SC_USE_LSM9DS0
+#ifdef SC_USE_LSM9DS0
+// PC9 == I2C3_SDA, PA8 == I2C3_SCL, AF 4
+#define SC_LSM9DS0_I2CN            I2CD3
+#define SC_LSM9DS0_I2CN_SDA_PORT   GPIOC
+#define SC_LSM9DS0_I2CN_SDA_PIN    GPIOC_PIN9
+#define SC_LSM9DS0_I2CN_SDA_AF     4
+#define SC_LSM9DS0_I2CN_SCL_PORT   GPIOA
+#define SC_LSM9DS0_I2CN_SCL_PIN    GPIOA_PIN8
+#define SC_LSM9DS0_I2CN_SCL_AF     4
+#define SC_LSM9DS0_ADDR_XM         (0x3C >> 1)
+#define SC_LSM9DS0_ADDR_G          (0xD4 >> 1)
+#define SC_LSM9DS0_INT1_XM_PORT    GPIOA
+#define SC_LSM9DS0_INT1_XM_PIN     GPIOA_PIN2
+#define SC_LSM9DS0_INT2_XM_PORT    GPIOA
+#define SC_LSM9DS0_INT2_XM_PIN     GPIOA_PIN3
+#define SC_LSM9DS0_DRDY_G_PORT     GPIOC
+#define SC_LSM9DS0_DRDY_G_PIN      GPIOC_PIN4
+#ifndef HAL_USE_I2C
+#error "lsm9ds0 needs I2C"
 #endif
 #endif
 

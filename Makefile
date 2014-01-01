@@ -115,6 +115,7 @@ CSRC = $(PORTSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/chprintf.c \
        drivers/sc_lis302dl.c \
+       drivers/sc_lsm9ds0.c \
        src/sc.c \
        src/sc_led.c \
        src/sc_pwm.c \

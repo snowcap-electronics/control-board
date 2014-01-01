@@ -31,6 +31,7 @@
 #include "sc_9dof.h"
 #include "sc_event.h"
 #include "drivers/sc_lis302dl.h"
+#include "drivers/sc_lsm9ds0.h"
 #include <string.h>
 
 static int running = 0;
@@ -52,6 +53,8 @@ static msg_t sc9dofThread(void *UNUSED(arg))
   // Init sensor(s)
 #ifdef SC_USE_LIS302DL
   sc_lis302dl_init();
+#elif defined(SC_USE_LSM9DS0)
+  sc_lsm9ds0_init();
 #else
   chDbgAssert(0, "No 9dof drivers included in the build", "#1");
 #endif
@@ -64,6 +67,8 @@ static msg_t sc9dofThread(void *UNUSED(arg))
     sc_lis302dl_read(tmp_acc);
     (void)tmp_magn;
     (void)tmp_gyro;
+#elif defined(SC_USE_LSM9DS0)
+    sc_lsm9ds0_read(tmp_acc, tmp_magn, tmp_gyro);
 #else
     chDbgAssert(0, "No 9dof drivers included in the build", "#3");
 #endif
@@ -82,6 +87,8 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 
 #ifdef SC_USE_LIS302DL
   sc_lis302dl_shutdown();
+#elif defined(SC_USE_LSM9DS0)
+  sc_lsm9ds0_shutdown();
 #else
   chDbgAssert(0, "No 9dof drivers included in the build", "#2");
 #endif
