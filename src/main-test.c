@@ -40,9 +40,9 @@ int main(void)
 {
   // Init SC framework, with USB if not F1 Discovery
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
 #else
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
   sc_uart_default_usb(TRUE);
 #endif
 
@@ -60,6 +60,8 @@ int main(void)
   // Register user button on F4 discovery
   sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
+#endif
+
 
 #ifdef SC_USE_LSM9DS0
   // I2C pinmux for optional lsm9ds0 board, interrupts are already ok by default
@@ -70,9 +72,10 @@ int main(void)
                 SC_LSM9DS0_I2CN_SCL_PIN,
                 PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
 #endif
-#endif
 
+#if defined(SC_USE_LSM9DS0) || defined(SC_USE_LIS302DL)
   sc_9dof_init();
+#endif
 
   // Loop forever waiting for callbacks
   while(1) {

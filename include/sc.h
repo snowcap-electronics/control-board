@@ -47,6 +47,7 @@
 #include "sc_spi.h"
 #include "sc_9dof.h"
 #include "sc_extint.h"
+#include "sc_led.h"
 
 #define SC_INIT_UART1       0x0001
 #define SC_INIT_UART2       0x0002
@@ -58,6 +59,7 @@
 #define SC_INIT_SDU         0x0080
 #define SC_INIT_ADC         0x0100
 #define SC_INIT_GPIO        0x0200
+#define SC_INIT_LED         0x0400
 
 void sc_init(uint32_t subsystems);
 

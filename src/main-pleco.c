@@ -36,9 +36,9 @@ int main(void)
 {
   // Init SC framework, with USB if not F1 Discovery
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
 #else
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO);
+  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
   sc_uart_default_usb(TRUE);
 #endif
 

@@ -76,6 +76,10 @@ void sc_init(uint32_t subsystems)
     sc_gpio_init();
   }
 
+  if (subsystems & SC_INIT_LED) {
+    sc_led_init();
+  }
+
 }
 
 /* Emacs indentatation information

@@ -29,6 +29,7 @@
 #ifndef SC_LED_H
 #define SC_LED_H
 
+void sc_led_init(void);
 void sc_led_on(void);
 void sc_led_off(void);
 void sc_led_toggle(void);

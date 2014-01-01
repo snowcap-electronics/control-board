@@ -30,6 +30,12 @@
 #include "sc_utils.h"
 #include "sc_led.h"
 
+void sc_led_init(void)
+{
+  palSetPadMode(USER_LED_PORT,
+                USER_LED,
+                PAL_MODE_OUTPUT_PUSHPULL);
+}
 
 /*
  * Turn the led on
