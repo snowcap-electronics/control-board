@@ -1,5 +1,5 @@
 /***
- * Snowcap project specific configurations
+ * Snowcap configurations
  *
  * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *

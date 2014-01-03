@@ -31,6 +31,7 @@
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_9dof_available(void);
+static void init(void);
 
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
 static void cb_button_changed(void);
@@ -38,13 +39,7 @@ static void cb_button_changed(void);
 
 int main(void)
 {
-  // Init SC framework, with USB if not F1 Discovery
-#if defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
-#else
-  sc_init(SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_SDU | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED);
-  sc_uart_default_usb(TRUE);
-#endif
+  init();
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -63,7 +58,7 @@ int main(void)
 #endif
 
 
-#ifdef SC_USE_LSM9DS0
+#ifdef SC_HAS_LSM9DS0
   // I2C pinmux for optional lsm9ds0 board, interrupts are already ok by default
   palSetPadMode(SC_LSM9DS0_I2CN_SDA_PORT,
                 SC_LSM9DS0_I2CN_SDA_PIN,
@@ -73,7 +68,7 @@ int main(void)
                 PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
 #endif
 
-#if defined(SC_USE_LSM9DS0) || defined(SC_USE_LIS302DL)
+#if defined(SC_HAS_LSM9DS0) || defined(SC_HAS_LIS302DL)
   sc_9dof_init();
 #endif
 
@@ -87,6 +82,27 @@ int main(void)
   return 0;
 }
 
+static void init(void)
+{
+  uint8_t use_usb = 1;
+  uint32_t subsystems = SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED;
+
+  // F1 Discovery doesn't support USB
+#if defined(BOARD_ST_STM32VL_DISCOVERY)
+  use_usb = 0;
+#endif
+
+
+  if (use_usb) {
+    subsystems |= SC_INIT_SDU;
+  }
+
+  sc_init(subsystems);
+
+  if (use_usb) {
+    sc_uart_default_usb(TRUE);
+  }
+}
 
 
 static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)

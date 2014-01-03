@@ -60,9 +60,20 @@ endif
 # Project, sources and paths
 #
 
+ifeq ($(wildcard local_config.mk),)
+  $(warning No local_config.mk)
+  $(warning You can create one with e.g. the following content:)
+  $(warning ====[clip]====)
+  $(warning SC_PROJECT = test)
+  $(warning SC_BOARD = SC_SNOWCAP_STM32F4_V1)
+  $(warning DDEFS += -DSC_HAS_LSM9DS0)
+  $(warning ====[clip]====)
+else
+  include local_config.mk
+endif
+
 ifeq ($(SC_PROJECT),)
-  SC_PROJECT = test
-  $(warning Defaulting project name to $(SC_PROJECT))
+  $(error SC_PROJECT not defined, use e.g. "test")
 endif
 
 

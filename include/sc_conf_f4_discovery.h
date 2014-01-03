@@ -78,8 +78,7 @@
 #define USBDX              USBD1
 #endif
 
-//#define SC_USE_LIS302DL
-#ifdef SC_USE_LIS302DL
+#ifdef SC_HAS_LIS302DL
 #define SC_LIS302DL_SPIN           SPID1
 #define SC_LIS302DL_CS_PORT        GPIOE
 #define SC_LIS302DL_CS_PIN         GPIOE_CS_SPI
@@ -109,8 +108,8 @@ DRDY_G  = PC4
 SDA     = PC9
 SCL     = PA8
 */
-#define SC_USE_LSM9DS0
-#ifdef SC_USE_LSM9DS0
+
+#ifdef SC_HAS_LSM9DS0
 // PC9 == I2C3_SDA, PA8 == I2C3_SCL, AF 4
 #define SC_LSM9DS0_I2CN            I2CD3
 #define SC_LSM9DS0_I2CN_SDA_PORT   GPIOC
