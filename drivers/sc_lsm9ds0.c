@@ -31,7 +31,6 @@
 #include "sc_lsm9ds0.h"
 #include "sc_i2c.h"
 #include "sc_extint.h"
-#include <string.h>    // memset
 
 #ifdef SC_HAS_LSM9DS0
 
