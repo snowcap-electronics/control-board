@@ -98,6 +98,38 @@
 #define USBDX              USBD1
 #endif
 
+/* LSM9DS0 minicap with Snowcap STM32F4 MCU Board v1
+I2C2
+INT2_XM = PC1
+INT1_XM = PC0
+INT_G   = PC4
+DRDY_G  = PC5
+SDA     = PB11
+SCL     = PB10
+*/
+
+#ifdef SC_HAS_LSM9DS0
+// PB11 == I2C2_SDA, PB10 == I2C2_SCL, AF 4
+#define SC_LSM9DS0_I2CN            I2CD2
+#define SC_LSM9DS0_I2CN_SDA_PORT   GPIOB
+#define SC_LSM9DS0_I2CN_SDA_PIN    GPIOB_PIN11
+#define SC_LSM9DS0_I2CN_SDA_AF     4
+#define SC_LSM9DS0_I2CN_SCL_PORT   GPIOB
+#define SC_LSM9DS0_I2CN_SCL_PIN    GPIOB_PIN10
+#define SC_LSM9DS0_I2CN_SCL_AF     4
+#define SC_LSM9DS0_ADDR_XM         (0x3C >> 1)
+#define SC_LSM9DS0_ADDR_G          (0xD4 >> 1)
+#define SC_LSM9DS0_INT1_XM_PORT    GPIOC
+#define SC_LSM9DS0_INT1_XM_PIN     GPIOC_PIN0
+#define SC_LSM9DS0_INT2_XM_PORT    GPIOC
+#define SC_LSM9DS0_INT2_XM_PIN     GPIOC_PIN1
+#define SC_LSM9DS0_DRDY_G_PORT     GPIOC
+#define SC_LSM9DS0_DRDY_G_PIN      GPIOC_PIN5
+#ifndef HAL_USE_I2C
+#error "lsm9ds0 needs I2C"
+#endif
+#endif
+
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif

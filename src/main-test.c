@@ -57,17 +57,6 @@ int main(void)
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
 #endif
 
-
-#ifdef SC_HAS_LSM9DS0
-  // I2C pinmux for optional lsm9ds0 board, interrupts are already ok by default
-  palSetPadMode(SC_LSM9DS0_I2CN_SDA_PORT,
-                SC_LSM9DS0_I2CN_SDA_PIN,
-                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
-  palSetPadMode(SC_LSM9DS0_I2CN_SCL_PORT,
-                SC_LSM9DS0_I2CN_SCL_PIN,
-                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
-#endif
-
 #if defined(SC_HAS_LSM9DS0) || defined(SC_HAS_LIS302DL)
   sc_9dof_init();
 #endif
@@ -91,7 +80,6 @@ static void init(void)
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
   use_usb = 0;
 #endif
-
 
   if (use_usb) {
     subsystems |= SC_INIT_SDU;

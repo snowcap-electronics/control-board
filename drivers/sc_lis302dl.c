@@ -33,7 +33,7 @@
 #include "sc_extint.h"
 #include <string.h>    // memset
 
-#ifdef SC_USE_LIS302DL
+#ifdef SC_HAS_LIS302DL
 
 /* LIS302DL registers used in this file */
 #define LIS302DL_CTRL_REG1   0x20

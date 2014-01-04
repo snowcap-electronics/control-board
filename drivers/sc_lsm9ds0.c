@@ -33,7 +33,7 @@
 #include "sc_extint.h"
 #include <string.h>    // memset
 
-#ifdef SC_USE_LSM9DS0
+#ifdef SC_HAS_LSM9DS0
 
 /* LSM9DS0 registers used in this file */
 #define LSM9DS0_CTRL_REG1_G        0x20
@@ -119,6 +119,23 @@ void sc_lsm9ds0_init(void)
   sensors_ready = 0;
   chMtxInit(&data_mtx);
   chBSemInit(&lsm9ds0_drdy_sem, FALSE);
+
+  // Pinmux
+  palSetPadMode(SC_LSM9DS0_INT1_XM_PORT,
+                SC_LSM9DS0_INT1_XM_PIN,
+                PAL_MODE_INPUT);
+  palSetPadMode(SC_LSM9DS0_INT2_XM_PORT,
+                SC_LSM9DS0_INT2_XM_PIN,
+                PAL_MODE_INPUT);
+  palSetPadMode(SC_LSM9DS0_DRDY_G_PORT,
+                SC_LSM9DS0_DRDY_G_PIN,
+                PAL_MODE_INPUT);
+  palSetPadMode(SC_LSM9DS0_I2CN_SDA_PORT,
+                SC_LSM9DS0_I2CN_SDA_PIN,
+                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
+  palSetPadMode(SC_LSM9DS0_I2CN_SCL_PORT,
+                SC_LSM9DS0_I2CN_SCL_PIN,
+                PAL_MODE_ALTERNATE(SC_LSM9DS0_I2CN_SDA_AF));
 
   // Register data ready interrupts
   sc_extint_set_isr_cb(SC_LSM9DS0_INT1_XM_PORT,
