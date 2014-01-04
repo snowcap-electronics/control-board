@@ -87,13 +87,12 @@ static void lsm9ds0_drdy_cb(EXTDriver *extp, expchannel_t channel)
   switch(channel) {
   case SC_LSM9DS0_INT1_XM_PIN:
 	  rdy = SENSOR_RDY_ACC;
-    rdy |= SENSOR_RDY_GYRO;
     break;
   case SC_LSM9DS0_INT2_XM_PIN:
 	  rdy = SENSOR_RDY_MAGN;
     break;
   case SC_LSM9DS0_DRDY_G_PIN:
-	  //rdy = SENSOR_RDY_GYRO;
+	  rdy = SENSOR_RDY_GYRO;
     break;
   default:
     chDbgAssert(0, "Invalid channel", "#1");
@@ -211,6 +210,7 @@ void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro)
   uint8_t txbuf[1];
   uint8_t rxbuf[6];
   uint8_t sensors_done = 0;
+  uint8_t sensors_ready_local = 0;
   uint8_t i;
   const uint8_t all_done = SENSOR_RDY_ACC | SENSOR_RDY_MAGN | SENSOR_RDY_GYRO;
 
@@ -219,12 +219,22 @@ void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro)
 
     // Wait for data ready signal
     chBSemWait(&lsm9ds0_drdy_sem);
-    //chThdSleepMilliseconds(1000);
-    //sensors_ready = (SENSOR_RDY_ACC | SENSOR_RDY_MAGN | SENSOR_RDY_GYRO);
 
-    while (sensors_ready && sensors_done != all_done) {
+    chMtxLock(&data_mtx);
+    sensors_ready_local = sensors_ready;
+    sensors_ready = 0;
+    chMtxUnlock();
 
-      if (sensors_ready & SENSOR_RDY_ACC) {
+#ifdef SC_WAR_ISSUE_1
+    // WAR for broken DRDY_G pin
+    if (sensors_ready_local & SENSOR_RDY_ACC) {
+      sensors_ready_local |= SENSOR_RDY_GYRO;
+    }
+#endif
+
+    while (sensors_ready_local) {
+
+      if (sensors_ready_local & SENSOR_RDY_ACC) {
         txbuf[0] = LSM9DS0_OUT_X_L_A | LSM9DS0_SUBADDR_AUTO_INC_BIT;
         sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
 
@@ -232,13 +242,11 @@ void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro)
           acc[i] = (int16_t)(rxbuf[2*i + 1] << 8 | rxbuf[2*i]);
         }
 
-        chMtxLock(&data_mtx);
-        sensors_ready &= ~SENSOR_RDY_ACC;
-        chMtxUnlock();
+        sensors_ready_local &= ~SENSOR_RDY_ACC;
         sensors_done |= SENSOR_RDY_ACC;
       }
 
-      if (sensors_ready & SENSOR_RDY_MAGN) {
+      if (sensors_ready_local & SENSOR_RDY_MAGN) {
         txbuf[0] = LSM9DS0_OUT_X_L_M | LSM9DS0_SUBADDR_AUTO_INC_BIT;
         sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
 
@@ -246,13 +254,11 @@ void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro)
           magn[i] = (int16_t)(rxbuf[2*i + 1] << 8 | rxbuf[2*i]);
         }
 
-        chMtxLock(&data_mtx);
-        sensors_ready &= ~SENSOR_RDY_MAGN;
-        chMtxUnlock();
+        sensors_ready_local &= ~SENSOR_RDY_MAGN;
         sensors_done |= SENSOR_RDY_MAGN;
       }
 
-      if (sensors_ready & SENSOR_RDY_GYRO) {
+      if (sensors_ready_local & SENSOR_RDY_GYRO) {
         txbuf[0] = LSM9DS0_OUT_X_L_G | LSM9DS0_SUBADDR_AUTO_INC_BIT;
         sc_i2c_transmit(i2cn_g, txbuf, 1, rxbuf, 6);
 
@@ -260,9 +266,7 @@ void sc_lsm9ds0_read(int16_t *acc, int16_t *magn, int16_t *gyro)
           gyro[i] = (int16_t)(rxbuf[2*i + 1] << 8 | rxbuf[2*i]);
         }
 
-        chMtxLock(&data_mtx);
-        sensors_ready &= ~SENSOR_RDY_GYRO;
-        chMtxUnlock();
+        sensors_ready_local &= ~SENSOR_RDY_GYRO;
         sensors_done |= SENSOR_RDY_GYRO;
       }
     }
