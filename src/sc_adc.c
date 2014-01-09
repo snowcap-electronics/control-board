@@ -41,13 +41,12 @@
 /* How many samples to read before processing */
 #define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
-
 static msg_t tempThread(void *UNUSED(arg));
 static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
+static systime_t adc_latest_ts = 0;
 static uint16_t interval_ms;
-static systime_t last_conversion_time;
-
+static Mutex adc_mtx;
 
 static ADCConversionGroup convCfg = {
   /* Circular buffer mode */
@@ -83,6 +82,7 @@ static WORKING_AREA(temp_thread, 256);
 static msg_t tempThread(void *UNUSED(arg))
 {
   msg_t msg;
+  systime_t last_conversion_time;
 
   msg = sc_event_msg_create_type(SC_EVENT_TYPE_ADC_AVAILABLE);
 
@@ -96,6 +96,8 @@ static msg_t tempThread(void *UNUSED(arg))
   // FIXME: is this needed only for internal temp, bat and vref ADCs?
   adcSTM32EnableTSVREFE();
 #endif
+
+  last_conversion_time = chTimeNow();
 
   while (thread_run) {
     msg_t retval;
@@ -123,10 +125,14 @@ static msg_t tempThread(void *UNUSED(arg))
       }
     }
 
+    chMtxLock(&adc_mtx);
     // .. and then dividing
     for (ch = 0; ch < convCfg.num_channels; ++ch) {
       adc_latest[ch] = (uint16_t)(total_adc[ch] >> SC_ADC_BUFFER_DEPTH_BITS);
     }
+
+    adc_latest_ts = last_conversion_time;
+    chMtxUnlock();
 
     // Announce that new ADC data is available
     sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
@@ -157,22 +163,17 @@ void sc_temp_thread_init(void)
 
 void sc_adc_init(void)
 {
-  // Nothing here
+  chMtxInit(&adc_mtx);
+
+#if defined(BOARD_SNOWCAP_V1)
+#elif defined(BOARD_SNOWCAP_STM32F4_V1)
+  palSetGroupMode(GPIOA, PAL_PORT_BIT(0), 0, PAL_MODE_INPUT_ANALOG);
+#endif
 }
 
 
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)
 {
-  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
-  // Control Board maps PC0, PC1, PC4, and PC5 to AN1-4
-  //
-  // PC0: ADC123_IN10
-  // PC1: ADC123_IN11
-  // PC4: ADC12_IN14
-  // PC5: ADC12_IN15
-  //
-  //
-
   // Set global interval time in milliseconds
   interval_ms = interval_in_ms;
 
@@ -183,6 +184,15 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     chDbgAssert(0, "Invalid amount of channels", "#1");
     return;
   }
+
+#if defined(BOARD_SNOWCAP_V1)
+  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
+  // SC Control Board v1 maps PC0, PC1, PC4, and PC5 to AN1-4
+  //
+  // PC0: ADC123_IN10
+  // PC1: ADC123_IN11
+  // PC4: ADC12_IN14
+  // PC5: ADC12_IN15
 
   switch(channels) {
   case 4: // Sampling time and channel for 4th pin
@@ -199,9 +209,34 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
   }
+#elif defined(BOARD_SNOWCAP_STM32F4_V1)
+  //
+  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
+  // SC STM32F4 MCU Board v1 maps PA0, PA1, PA2, and PA3 to AN1-4
+  //
+  // PA0: ADC123_IN0
+  // PA1: ADC123_IN1
+  // PA2: ADC123_IN2
+  // PA3: ADC123_IN3
+  //
 
+  switch(channels) {
+  case 4: // Sampling time and channel for 4th pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN3(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN3);
+  case 3: // Sampling time and channel for 3rd pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN2(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN2);
+  case 2: // Sampling time and channel for 2nd pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN1(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN1);
+  case 1: // Sampling time and channel for 1st pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN0(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN0);
+    break;
+  }
+#endif
   /* Start a thread dedicated to ADC conversion */
-  last_conversion_time = chTimeNow();
   thread_run = TRUE;
   chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
 }
@@ -212,9 +247,16 @@ void sc_adc_stop_conversion(void)
   thread_run = FALSE;
 }
 
-uint16_t sc_adc_channel_get(uint8_t channel)
+void sc_adc_channel_get(uint16_t *channels, systime_t *ts)
 {
-  return adc_latest[channel];
+  uint8_t ch;
+
+  chMtxLock(&adc_mtx);
+  for (ch = 0; ch < convCfg.num_channels; ++ch) {
+    channels[ch] = adc_latest[ch];
+  }
+  *ts = adc_latest_ts;
+  chMtxUnlock();
 }
 
 /* Emacs indentatation information

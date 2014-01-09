@@ -27,6 +27,23 @@
  *
  */
 
+/*
+
+The wiring for this test is as follows:
+
+ 3.3V - LDR----
+              |
+ A3 ----------+
+              |
+ GND - 10kR --
+
+The relative size of the LDR and normal resistor calibrates the level A1 reads.
+
+LDR ohms on my 22" IPS monitor:
+- white xterm: 7k
+- black xterm: 45k
+*/
+
 #include "sc.h"
 #include "sc_led.h"
 
@@ -38,7 +55,7 @@
 #define FPS_STATE_WHITE       2
 
 // Debug: and adc reading only
-#define FPS_SEND_ADC_ONLY     0
+#define FPS_SEND_ADC_ONLY     1
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
@@ -54,7 +71,8 @@ static uint8_t create_message(uint8_t *buf,
                               uint16_t dxdt);
 static uint8_t create_adc_msg(uint8_t *buf,
                               uint8_t max_len,
-                              uint16_t adc);
+                              uint16_t adc,
+                              uint32_t timestamp_ms);
 
 
 int main(void)
@@ -86,9 +104,9 @@ int main(void)
 
   // Loop forever waiting for callbacks
   while(1) {
-    //uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
+    uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    //sc_uart_send_msg(SC_UART_LAST, msg, 9);
+    sc_uart_send_msg(SC_UART_LAST, msg, 9);
   }
 
   return 0;
@@ -126,10 +144,7 @@ static void cb_adc_available(void)
 #endif
 
   // Get ADC reading for light sensor
-  // FIXME: need to have timestamp for the reading
-  adc_value = sc_adc_channel_get(0);
-
-  timestamp_ms = chTimeNow();
+  sc_adc_channel_get(&adc_value, &timestamp_ms);
 
   // Check if we missed an ADC reading
   ++timestamp_counter;
@@ -159,7 +174,7 @@ static void cb_adc_available(void)
     uint8_t len;
 
     if (send_adc_only) {
-      len = create_adc_msg(buf, 64, adc_value);
+      len = create_adc_msg(buf, 64, adc_value, timestamp_ms);
     } else {
       len = create_message(buf, 64,
                            timestamp_ms,
@@ -288,9 +303,20 @@ static uint8_t create_message(uint8_t *buf,
  */
 static uint8_t create_adc_msg(uint8_t *buf,
                               uint8_t max_len,
-                              uint16_t adc)
+                              uint16_t adc,
+                              uint32_t timestamp_ms)
 {
   uint8_t len = 0;
+
+  buf[len++] = 'a';
+  buf[len++] = 'd';
+  buf[len++] = 'c';
+  buf[len++] = ':';
+  buf[len++] = ' ';
+
+  len += sc_itoa(timestamp_ms, &buf[len], max_len - len);
+  buf[len++] = ',';
+
   len += sc_itoa(adc, &buf[len], max_len - len);
   buf[len++] = '\r';
   buf[len++] = '\n';
