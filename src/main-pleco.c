@@ -83,13 +83,15 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 
 static void cb_adc_available(void)
 {
-  uint16_t adc, converted;
+  uint32_t timestamp_ms;
+  uint16_t adc, adc_values[3], converted;
   uint8_t msg[16];
   int len;
 
   // Get ADC reading for the sonar pin
   // Vcc/512 per inch, 1 bit == 0.3175 cm
-  adc = sc_adc_channel_get(0);
+  sc_adc_channel_get(adc_values, &timestamp_ms);
+  adc = adc_values[0];
   converted = (uint16_t)(adc * 0.3175);
 
   len = 0;
@@ -108,7 +110,7 @@ static void cb_adc_available(void)
 
   // Get ADC reading for the battery voltage
   // Max 51.8V, 1bit == 0.012646484375 volts
-  adc = sc_adc_channel_get(1);
+  adc = adc_values[1];
   converted = (uint16_t)(adc * 12.646484375);
 
   len = 0;
@@ -127,7 +129,7 @@ static void cb_adc_available(void)
 
   // Get ADC reading for the current consumption in milliamps
   // Max 89.4A, 1bit == 0.021826171875 amps
-  adc = sc_adc_channel_get(2);
+  adc = adc_values[2];
   converted = (uint16_t)(adc * 21.826171875);
 
   len = 0;
