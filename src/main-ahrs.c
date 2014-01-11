@@ -1,5 +1,5 @@
 /*
- * Snowcap Control Board v1 firmware
+ * AHRS project
  *
  * Copyright 2011,2014 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
  *                     Tuomas Kulve, <tuomas.kulve@snowcap.fi>
@@ -30,6 +30,7 @@
 #include "sc.h"
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
+static void cb_9dof_available(void);
 static void init(void);
 
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
@@ -48,11 +49,16 @@ int main(void)
   // calculations etc. time consuming there, but not to sleep or block
   // for longer periods of time.
   sc_event_register_handle_byte(cb_handle_byte);
+  sc_event_register_9dof_available(cb_9dof_available);
 
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
   // Register user button on F4 discovery
   sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
+#endif
+
+#if defined(SC_HAS_LSM9DS0) || defined(SC_HAS_LIS302DL)
+  sc_9dof_init();
 #endif
 
   // Loop forever waiting for callbacks
@@ -93,6 +99,57 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
   // Push received byte to generic command parsing
   // FIXME: per uart
   sc_cmd_push_byte(byte);
+}
+
+
+
+static void cb_9dof_available(void)
+{
+  uint32_t ts;
+  int16_t acc[3];
+  int16_t magn[3];
+  int16_t gyro[3];
+  uint8_t msg[128] = {'9', 'd', 'o', 'f', ':', ' ', '\0'};
+  int len = 6;
+  uint8_t i, s;
+  int16_t *sensors[3] = {&acc[0], &gyro[0], &magn[0]};
+  static uint8_t data_counter = 0;;
+
+  sc_9dof_get_data(&ts, acc, magn, gyro);
+
+  // Let's print only every Nth data
+  if (++data_counter == 10) {
+    data_counter = 0;
+
+    for (s = 0; s < 3; s++) {
+      for (i = 0; i < 3; i++) {
+        uint8_t l, m;
+        l = sc_itoa(sensors[s][i], &msg[len], sizeof(msg) - len);
+        len += l;
+
+        // Move right to align to 6 character columns
+        for (m = 0; m < 6; ++m) {
+          if (m < l) {
+            // Move
+            msg[len - 1 + (6 - l) - m] = msg[len - 1 - m];
+          } else {
+            // Clear
+            msg[len - 1 + (6 - l) - m] = ' ';
+          }
+        }
+
+        len += (6 - l);
+        msg[len++] = ',';
+        msg[len++] = ' ';
+      }
+    }
+
+    // Overwrite the last ", "
+    msg[len - 2] = '\r';
+    msg[len - 1] = '\n';
+    msg[len++]   = '\0';
+    sc_uart_send_msg(SC_UART_LAST, msg, len);
+  }
 }
 
 

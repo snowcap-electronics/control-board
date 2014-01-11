@@ -78,6 +78,37 @@
 #define USBDX              USBD2
 #endif
 
+/* Snowcap CB v1
+I2C3
+INT2_XM = PA12 G5
+INT1_XM = PC8  G6
+INT_G   = PA1  3.3V <-- FIX to XB_RTS
+DRDY_G  = PA0  GND  <-- FIX to XB_CTS
+SDA     = PC9  IMU_SDA
+SCL     = PA8  IMU_SCL
+*/
+
+#ifdef SC_HAS_LSM9DS0
+// PC9 == I2C3_SDA, PA8 == I2C3_SCL, AF 4
+#define SC_LSM9DS0_I2CN            I2CD3
+#define SC_LSM9DS0_I2CN_SDA_PORT   GPIOC
+#define SC_LSM9DS0_I2CN_SDA_PIN    9
+#define SC_LSM9DS0_I2CN_SDA_AF     4
+#define SC_LSM9DS0_I2CN_SCL_PORT   GPIOA
+#define SC_LSM9DS0_I2CN_SCL_PIN    8
+#define SC_LSM9DS0_I2CN_SCL_AF     4
+#define SC_LSM9DS0_ADDR_XM         (0x3C >> 1)
+#define SC_LSM9DS0_ADDR_G          (0xD4 >> 1)
+#define SC_LSM9DS0_INT1_XM_PORT    GPIOC
+#define SC_LSM9DS0_INT1_XM_PIN     8
+#define SC_LSM9DS0_INT2_XM_PORT    GPIOA
+#define SC_LSM9DS0_INT2_XM_PIN     12
+#define SC_LSM9DS0_DRDY_G_PORT     GPIOA
+#define SC_LSM9DS0_DRDY_G_PIN      0
+#ifndef HAL_USE_I2C
+#error "lsm9ds0 needs I2C"
+#endif
+#endif
 
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 

@@ -89,16 +89,6 @@
 #endif
 #endif
 
-/* Snowcap CB v1
-I2C3
-INT2_XM = PA12 G5
-INT1_XM = PC8  G6
-INT_G   = PA1  3.3V <-- FIX to XB_RTS
-DRDY_G  = PA0  GND  <-- FIX to XB_CTS
-SDA     = PC9  IMU_SDA
-SCL     = PA8  IMU_SCL
-*/
-
 /* F4 Discovery
 I2C3
 INT2_XM = PA3
