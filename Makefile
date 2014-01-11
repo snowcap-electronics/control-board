@@ -277,6 +277,10 @@ ifeq ($(SC_PEDANTIC_COMPILER),1)
   USE_OPT += -Werror
 endif
 
+ifneq ($(SC_DEFINES),)
+  DDEFS += $(SC_DEFINES)
+endif
+
 ifeq ($(USE_FPU),yes)
   USE_OPT += -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fsingle-precision-constant
   DDEFS += -DCORTEX_USE_FPU=TRUE
