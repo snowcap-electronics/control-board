@@ -98,6 +98,13 @@
 #define USBDX              USBD1
 #endif
 
+#define SC_UART2_TX_PORT   GPIOA
+#define SC_UART2_TX_PIN    2
+#define SC_UART2_TX_AF     7
+#define SC_UART2_RX_PORT   GPIOA
+#define SC_UART2_RX_PIN    3
+#define SC_UART2_RX_AF     7
+
 /* LSM9DS0 minicap with Snowcap STM32F4 MCU Board v1
 I2C2
 INT2_XM = PC1

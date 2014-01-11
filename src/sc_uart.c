@@ -149,12 +149,20 @@ void sc_uart_init(SC_UART uart)
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
+#ifdef SC_UART1_TX_PORT
+	palSetPadMode(SC_UART1_TX_PORT, SC_UART1_TX_PIN, PAL_MODE_ALTERNATE(SC_UART1_TX_AF));
+	palSetPadMode(SC_UART1_RX_PORT, SC_UART1_RX_PIN, PAL_MODE_ALTERNATE(SC_UART1_RX_AF));
+#endif
 	uartStart(&UARTD1, &uart_cfg_1);
 	last_uart = &UARTD1;
 	break;
 #endif
 #if STM32_UART_USE_USART2
   case SC_UART_2:
+#ifdef SC_UART2_TX_PORT
+	palSetPadMode(SC_UART2_TX_PORT, SC_UART2_TX_PIN, PAL_MODE_ALTERNATE(SC_UART2_TX_AF));
+	palSetPadMode(SC_UART2_RX_PORT, SC_UART2_RX_PIN, PAL_MODE_ALTERNATE(SC_UART2_RX_AF));
+#endif
 	uartStart(&UARTD2, &uart_cfg_2);
 	last_uart = &UARTD2;
 	break;
