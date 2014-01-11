@@ -59,17 +59,17 @@ endif
 ##############################################################################
 # Project, sources and paths
 #
-
-ifeq ($(wildcard local_config.mk),)
-  $(warning No local_config.mk)
-  $(warning You can create one with e.g. the following content:)
-  $(warning ====[clip]====)
-  $(warning SC_PROJECT = test)
-  $(warning SC_BOARD = SC_SNOWCAP_STM32F4_V1)
-  $(warning DDEFS += -DSC_HAS_LSM9DS0)
-  $(warning ====[clip]====)
+ifneq ($(SC_PROJECT_CONFIG),)
+  include $(SC_PROJECT_CONFIG)
 else
-  include local_config.mk
+  ifneq ($(wildcard local_config.mk),)
+    include local_config.mk
+  else
+    $(warning Provide a config using either of the following methods:)
+    $(warning 1: Copy a project config from projects directory to local_config.mk)
+    $(warning 2: make SC_PROJECT_CONFIG=<path/to/config.mk>)
+    $(error No project config found)
+  endif
 endif
 
 ifeq ($(SC_PROJECT),)
@@ -232,8 +232,7 @@ CPPWARN = -Wall -Wextra
 #
 
 # List all default C defines here, like -D_DEBUG=1
-# DDEFS might be used already in the local_config.mk
-#DDEFS =
+DDEFS =
 
 # List all default ASM defines here, like -D_DEBUG=1
 DADEFS =
@@ -273,6 +272,10 @@ ULIBS =
 #
 # End of user defines
 ##############################################################################
+
+ifeq ($(SC_PEDANTIC_COMPILER),1)
+  USE_OPT += -Werror
+endif
 
 ifeq ($(USE_FPU),yes)
   USE_OPT += -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fsingle-precision-constant

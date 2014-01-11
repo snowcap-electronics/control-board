@@ -2,15 +2,12 @@
 
 set -e
 
-PROJECTS="fps pleco test"
-BOARDS="SC_SNOWCAP_V1 SC_SNOWCAP_STM32F4_V1 SC_F4_DISCOVERY SC_F1_DISCOVERY"
+CONFIGS="projects/*.mk"
 
-for project in $PROJECTS
+for cfg in projects/*.mk
 do
-  for board in $BOARDS
-  do
-    SC_PROJECT=$project SC_BOARD=$board make clean
-	echo "BUILDING PROJECT $project ON BOARD $board"
-    SC_PROJECT=$project SC_BOARD=$board make -j4
-  done
+
+  make SC_PROJECT_CONFIG=$cfg clean
+  echo "BUILDING PROJECT CONFIG $cfg"
+  make SC_PEDANTIC_COMPILER=1 SC_PROJECT_CONFIG=$cfg -j4
 done
