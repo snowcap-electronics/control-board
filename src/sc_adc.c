@@ -235,6 +235,9 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN0);
     break;
   }
+#else
+  (void)sample_time;
+  chDbgAssert(0, BOARD_NAME " is not supported in ADC yet. Please fix this logic. ", "#1");
 #endif
   /* Start a thread dedicated to ADC conversion */
   thread_run = TRUE;
