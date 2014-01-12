@@ -71,6 +71,7 @@ static sc_event_cb_extint         cb_extint[EXT_MAX_CHANNELS] = {NULL};
 static sc_event_cb_adc_available  cb_adc_available = NULL;
 static sc_event_cb_temp_available cb_temp_available = NULL;
 static sc_event_cb_9dof_available cb_9dof_available = NULL;
+static sc_event_cb_blob_available cb_blob_available = NULL;
 
 /*
  * Setup a working area with a 256 byte stack for even loop thread
@@ -125,6 +126,11 @@ static msg_t eventLoopThread(void *UNUSED(arg))
     case SC_EVENT_TYPE_9DOF_AVAILABLE:
       if (cb_9dof_available != NULL) {
         cb_9dof_available();
+      }
+      break;
+    case SC_EVENT_TYPE_BLOB_AVAILABLE:
+      if (cb_blob_available != NULL) {
+        cb_blob_available();
       }
       break;
 
@@ -282,6 +288,16 @@ void sc_event_register_temp_available(sc_event_cb_temp_available func)
 void sc_event_register_9dof_available(sc_event_cb_9dof_available func)
 {
   cb_9dof_available = func;
+}
+
+
+
+/*
+ * Register callback for new blob data available
+ */
+void sc_event_register_blob_available(sc_event_cb_blob_available func)
+{
+  cb_blob_available = func;
 }
 
 

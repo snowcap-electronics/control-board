@@ -39,6 +39,7 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
 
 /*
@@ -51,11 +52,23 @@ static uint8_t receive_buffer[MAX_RECV_BUF_LEN];
 static uint8_t recv_i = 0;
 
 /*
+ * Blob transfers
+ */
+#ifndef SC_BLOB_MAX_SIZE
+#define SC_BLOB_MAX_SIZE      256
+#endif
+static uint8_t blob_buf[SC_BLOB_MAX_SIZE];
+static uint16_t blob_len = 0;
+static uint16_t blob_i = 0;
+static Mutex blob_mtx;
+
+
+/*
  * Initialize command module
  */
 void sc_cmd_init(void)
 {
-  // Nothing
+  chMtxInit(&blob_mtx);
 }
 
 
@@ -67,6 +80,20 @@ void sc_cmd_init(void)
  */
 void sc_cmd_push_byte(uint8_t byte)
 {
+
+  // If in a middle of blob transfer, store raw data without interpretation
+  chMtxLock(&blob_mtx);
+  if (blob_i < blob_len) {
+    blob_buf[blob_i++] = byte;
+
+    if (blob_i == blob_len) {
+      msg_t drdy;
+      // Create and send blob ready notification
+      drdy = sc_event_msg_create_type(SC_EVENT_TYPE_BLOB_AVAILABLE);
+      sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
+    }
+  }
+  chMtxUnlock();
 
   // Convert all different types of newlines to single \n
   if (byte == '\r') {
@@ -137,6 +164,9 @@ static void parse_command(void)
   recv_i -= found;
 
   switch (command_buf[0]) {
+  case 'b':
+    parse_command_blob(command_buf, found);
+    break;
   case 'g':
     parse_command_gpio(command_buf, found);
     break;
@@ -320,6 +350,55 @@ static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
   sc_gpio_set_state_all(gpios);
 }
 
+
+
+/*
+ * Parse blob command (bXXXXX)
+ */
+static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
+{
+  uint16_t bytes;
+
+  bytes = sc_atoi(&cmd[1], cmd_len - 1);
+
+  if (bytes == 0) {
+    // Something went wrong, ignore
+    chDbgAssert(0, "Failed to parse blob size", "#1");
+  }
+
+  if (bytes >= SC_BLOB_MAX_SIZE) {
+    chDbgAssert(0, "Requested blob size too large", "#1");
+    return;
+  }
+
+  // Atomic operation, no locking
+  blob_len = bytes;
+}
+
+
+
+/*
+ * Return pointer to newly received binary blob
+ */
+uint16_t sc_cmd_blob_get(uint8_t **blob)
+{
+  uint16_t len = 0;
+
+  chMtxLock(&blob_mtx);
+  if (blob_len > 0 && blob_i == blob_len) {
+    len = blob_len;
+  }
+  chMtxUnlock();
+
+  // There might still be a small change that the blob gets restarted between the check above and returning below.
+  if (len) {
+    *blob = blob_buf;
+  } else {
+    chDbgAssert(0, "No binary blob available", "#1");
+    *blob = NULL;
+  }
+  return len;
+}
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil
