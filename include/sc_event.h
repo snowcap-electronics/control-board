@@ -74,7 +74,7 @@ void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func);
 void sc_event_register_adc_available(sc_event_cb_adc_available func);
 void sc_event_register_temp_available(sc_event_cb_temp_available func);
 void sc_event_register_9dof_available(sc_event_cb_9dof_available func);
-void sc_event_register_blob_available(sc_event_cb_9dof_available func);
+void sc_event_register_blob_available(sc_event_cb_blob_available func);
 
 #endif
 
