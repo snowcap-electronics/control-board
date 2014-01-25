@@ -39,7 +39,7 @@
 #include <sc_utils.h>
 
 /**
- * @brief   UART definitions. 
+ * @brief   UART definitions.
  */
 typedef enum SC_UART {
 #if STM32_UART_USE_USART1
@@ -63,7 +63,9 @@ typedef enum SC_UART {
   SC_UART_LAST = 64,
 } SC_UART;
 
+void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2, uint32_t cr3);
 void sc_uart_init(SC_UART uart);
+void sc_uart_stop(SC_UART uart);
 void sc_uart_default_usb(uint8_t enable);
 void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len);
 void sc_uart_send_str(SC_UART uart, char *msg);

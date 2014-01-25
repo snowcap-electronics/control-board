@@ -61,22 +61,27 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
 static void rxchar(uint16_t c, SC_UART uart);
 static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len);
+static void uart_set_enable(SC_UART uart, uint8_t enable);
+static uint8_t uart_is_enabled(UARTDriver *drv);
 
 /*
  * Circular buffer for sending.
  * TODO: Could be one per UART but for simplicity and saving memory there's
  * only one for now.
  */
+static uint8_t circular_init_done = 0;
 static uint8_t circular_buf[MAX_CIRCULAR_BUFS][MAX_SEND_BUF_LEN];
 static uint8_t circular_len[MAX_CIRCULAR_BUFS];
 static UARTDriver *circular_uart[MAX_CIRCULAR_BUFS];
 static int8_t circular_sending;
 static int8_t circular_free;
-static BinarySemaphore circular_sem;
+static Mutex circular_mtx;
 
 /* Boolean to tell if the last character was received from USB */
 /* FIXME: Quite a hack */
 static uint8_t uart_use_usb;
+
+static uint8_t uarts_enabled;
 
 /*
  * UART driver configuration structure for UART1
@@ -134,6 +139,37 @@ static UARTConfig uart_cfg_3 = {
 #endif
 
 
+void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2, uint32_t cr3)
+{
+  UARTConfig *cfg;
+
+  switch (uart) {
+#if STM32_UART_USE_USART1
+  case SC_UART_1:
+	cfg = &uart_cfg_1;
+	break;
+#endif
+#if STM32_UART_USE_USART2
+  case SC_UART_2:
+	cfg = &uart_cfg_2;
+	break;
+#endif
+#if STM32_UART_USE_USART3
+  case SC_UART_3:
+	cfg = &uart_cfg_3;
+	break;
+#endif
+  default:
+	// Invalid uart
+    chDbgAssert(0, "Invalid UART specified", "#2");
+	return;
+  }
+
+  cfg->speed = speed;
+  cfg->cr1 = cr1;
+  cfg->cr2 = cr2;
+  cfg->cr3 = cr3;
+}
 /**
  * @brief   Initialize an UART
  * @note    Several UARTs can be initialized with several calls. The lastly
@@ -146,6 +182,17 @@ void sc_uart_init(SC_UART uart)
 {
   int i;
 
+  if (!circular_init_done) {
+	// Initialize sending side circular buffer state
+	circular_init_done = 1;
+	circular_sending = -1;
+	circular_free = 0;
+	for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
+	  circular_len[i] = 0;
+	}
+	chMtxInit(&circular_mtx);
+  }
+
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
@@ -154,7 +201,10 @@ void sc_uart_init(SC_UART uart)
 	palSetPadMode(SC_UART1_RX_PORT, SC_UART1_RX_PIN, PAL_MODE_ALTERNATE(SC_UART1_RX_AF));
 #endif
 	uartStart(&UARTD1, &uart_cfg_1);
-	last_uart = &UARTD1;
+	if (last_uart == NULL) {
+	  last_uart = &UARTD1;
+	}
+	uart_set_enable(SC_UART_1, 1);
 	break;
 #endif
 #if STM32_UART_USE_USART2
@@ -164,13 +214,19 @@ void sc_uart_init(SC_UART uart)
 	palSetPadMode(SC_UART2_RX_PORT, SC_UART2_RX_PIN, PAL_MODE_ALTERNATE(SC_UART2_RX_AF));
 #endif
 	uartStart(&UARTD2, &uart_cfg_2);
-	last_uart = &UARTD2;
+	if (last_uart == NULL) {
+	  last_uart = &UARTD2;
+	}
+	uart_set_enable(SC_UART_2, 1);
 	break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
 	uartStart(&UARTD3, &uart_cfg_3);
-	last_uart = &UARTD3;
+	if (last_uart == NULL) {
+	  last_uart = &UARTD3;
+	}
+	uart_set_enable(SC_UART_3, 1);
 	break;
 #endif
   default:
@@ -178,15 +234,39 @@ void sc_uart_init(SC_UART uart)
     chDbgAssert(0, "Invalid UART specified", "#1");
 	return;
   }
-
-  // Initialize sending side circular buffer state
-  circular_sending = -1;
-  circular_free = 0;
-  for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
-	circular_len[i] = 0;
-  }
-  chBSemInit(&circular_sem, FALSE);
 }
+
+void sc_uart_stop(SC_UART uart)
+{
+  switch (uart) {
+#if STM32_UART_USE_USART1
+  case SC_UART_1:
+	uartStop(&UARTD1);
+	uart_set_enable(SC_UART_1, 0);
+	break;
+#endif
+#if STM32_UART_USE_USART2
+  case SC_UART_2:
+	uartStop(&UARTD2);
+	uart_set_enable(SC_UART_2, 0);
+	break;
+#endif
+#if STM32_UART_USE_USART3
+  case SC_UART_3:
+	uartStop(&UARTD3);
+	uart_set_enable(SC_UART_3, 0);
+	break;
+#endif
+  default:
+	// Invalid uart
+    chDbgAssert(0, "Invalid UART specified", "#3");
+	return;
+  }
+
+  // FIXME: should empty the queue messages for stopped UART
+}
+
+
 
 void sc_uart_default_usb(uint8_t enable)
 {
@@ -307,34 +387,40 @@ void sc_uart_send_str(SC_UART uart, char *msg)
  */
 void sc_uart_send_finished(void)
 {
-  chBSemWait(&circular_sem);
+  chMtxLock(&circular_mtx);
 
-  // Mark buffer as empty
-  circular_len[circular_sending] = 0;
+  while (1) {
+	// Mark buffer as empty
+	circular_len[circular_sending] = 0;
 
-  // If no free buffers, mark this one as free
-  if (circular_free == -1) {
-	circular_free = circular_sending;
+	// If no free buffers, mark this one as free
+	if (circular_free == -1) {
+	  circular_free = circular_sending;
+	}
+
+	// Advance the currently sending index
+	if (++circular_sending == MAX_CIRCULAR_BUFS) {
+	  circular_sending = 0;
+	}
+
+	// Check for buffer to send
+	if (circular_len[circular_sending] > 0) {
+	  if (!uart_is_enabled(circular_uart[circular_sending])) {
+		// UART not enabled, skip to next message in queue
+		continue;
+	  }
+	  uartStartSend(circular_uart[circular_sending],
+					circular_len[circular_sending],
+					circular_buf[circular_sending]);
+	  break;
+	} else {
+	  // Nothing to send
+	  circular_sending = -1;
+	  break;
+	}
   }
 
-  // Advance the currently sending index
-  if (++circular_sending == MAX_CIRCULAR_BUFS) {
-	circular_sending = 0;
-  }
-
-  // Check for buffer to send
-  if (circular_len[circular_sending] > 0) {
-
-	uartStartSend(circular_uart[circular_sending],
-				  circular_len[circular_sending],
-				  circular_buf[circular_sending]);
-
-  } else {
-	// Nothing to send
-	circular_sending = -1;
-  }
-
-  chBSemSignal(&circular_sem);
+  chMtxUnlock();
 }
 
 
@@ -444,11 +530,11 @@ static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len)
   int circular_current;
   int i;
 
-  chBSemWait(&circular_sem);
+  chMtxLock(&circular_mtx);
 
   // Lose message, if no space
   if (circular_free == -1) {
-	chBSemSignal(&circular_sem);
+	chMtxUnlock();
 	return;
   }
 
@@ -480,5 +566,53 @@ static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len)
 				  circular_buf[circular_current]);
   }
 
-  chBSemSignal(&circular_sem);
+  chMtxUnlock();
+}
+
+
+
+/*
+ * Set UART's enable status for circular buffers
+ */
+static void uart_set_enable(SC_UART uart, uint8_t enable)
+{
+
+  chMtxLock(&circular_mtx);
+
+  if (enable) {
+	uarts_enabled |= (1 << uart);
+  } else {
+	uarts_enabled &= ~(1 << uart);
+  }
+
+  chMtxUnlock();
+}
+
+
+
+/*
+ * Get UART's enable status
+ */
+static uint8_t uart_is_enabled(UARTDriver *drv)
+{
+  SC_UART uart = SC_UART_LAST;
+#if STM32_UART_USE_USART1
+  if (drv == &UARTD1) {
+	uart = SC_UART_1;
+  }
+#endif
+#if STM32_UART_USE_USART2
+  if (drv == &UARTD2) {
+	uart = SC_UART_2;
+  }
+#endif
+#if STM32_UART_USE_USART3
+  if (drv == &UARTD3) {
+	uart = SC_UART_3;
+  }
+#endif
+
+  chDbgAssert(uart != SC_UART_LAST, "Invalid UART driver", "#1");
+
+  return uarts_enabled & (1 << uart);
 }
