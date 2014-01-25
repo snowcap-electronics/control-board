@@ -1,6 +1,7 @@
-/*
+/***
+ * Logging functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2014 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,43 +26,53 @@
  *
  */
 
-#ifndef SC_H
-#define SC_H
-
-/* ChibiOS includes */
-#include "ch.h"
-#include "hal.h"
-
-/* Project includes */
 #include "sc_utils.h"
-#include "sc_event.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_user_thread.h"
-#include "sc_icu.h"
-#include "sc_i2c.h"
-#include "sc_sdu.h"
-#include "sc_cmd.h"
-#include "sc_adc.h"
-#include "sc_gpio.h"
-#include "sc_spi.h"
-#include "sc_9dof.h"
-#include "sc_extint.h"
-#include "sc_led.h"
 #include "sc_log.h"
 
-#define SC_INIT_UART1       0x0001
-#define SC_INIT_UART2       0x0002
-#define SC_INIT_UART3       0x0004
-#define SC_INIT_UART4       0x0008
-#define SC_INIT_PWM         0x0010
-#define SC_INIT_ICU         0x0020
-#define SC_INIT_I2C         0x0040
-#define SC_INIT_SDU         0x0080
-#define SC_INIT_ADC         0x0100
-#define SC_INIT_GPIO        0x0200
-#define SC_INIT_LED         0x0400
+#include <limits.h>
 
-void sc_init(uint32_t subsystems);
+#define SC_LOG_OUTPUT_NONE   0
+#define SC_LOG_OUTPUT_UART   1
 
-#endif
+static uint8_t log_output = SC_LOG_OUTPUT_NONE;
+static SC_UART output_uart;
+static SC_LOG_LVL output_lvl = SC_LOG_LVL_DEBUG;
+
+void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
+{
+  uint16_t len = 0;
+
+  // FIXME: implement module based filtering
+  (void)module;
+
+  if (lvl > output_lvl) {
+	// Too high log level, ignore the message
+	return;
+  }
+
+  if (log_output != SC_LOG_OUTPUT_NONE) {
+	while (len < USHRT_MAX) {
+	  if (msg[len] == '\0') {
+		break;
+	  }
+	  ++len;
+	}
+  }
+
+  if (log_output == SC_LOG_OUTPUT_UART) {
+	sc_uart_send_msg(output_uart, msg, len);
+  }
+}
+
+
+void sc_log_output_uart(SC_UART uart)
+{
+  log_output = SC_LOG_OUTPUT_UART;
+  output_uart = uart;
+}
+
+
+void sc_log_level(SC_LOG_LVL lvl)
+{
+  output_lvl = lvl;
+}

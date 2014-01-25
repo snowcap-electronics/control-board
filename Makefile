@@ -138,6 +138,7 @@ CSRC = $(PORTSRC) \
        drivers/sc_lsm9ds0.c \
        src/sc.c \
        src/sc_led.c \
+       src/sc_log.c \
        src/sc_pwm.c \
        src/sc_uart.c \
        src/sc_utils.c \
