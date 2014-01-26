@@ -25,6 +25,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
+#define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc_cmd.h"
 #include "sc_uart.h"
@@ -32,6 +33,7 @@
 #include "sc_led.h"
 #include "sc_gpio.h"
 #include "sc_event.h"
+#include "sc_log.h"
 
 static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
@@ -84,7 +86,18 @@ void sc_cmd_push_byte(uint8_t byte)
   // If in a middle of blob transfer, store raw data without interpretation
   chMtxLock(&blob_mtx);
   if (blob_i < blob_len) {
+
+    // FIXME: HACK: Assume \n is from the previous command and not
+    // part of the blob
+    if (blob_i == 0 && byte == '\n') {
+      return;
+    }
+
     blob_buf[blob_i++] = byte;
+
+    if (blob_i % 1024 == 0) {
+      SC_DBG("1K received\r\n");
+    }
 
     if (blob_i == blob_len) {
       msg_t drdy;
@@ -371,8 +384,10 @@ static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
     return;
   }
 
-  // Atomic operation, no locking
+  chMtxLock(&blob_mtx);
+  blob_i = 0;
   blob_len = bytes;
+  chMtxUnlock();
 }
 
 
