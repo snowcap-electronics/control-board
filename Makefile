@@ -154,6 +154,7 @@ CSRC = $(PORTSRC) \
        src/sc_spi.c \
        src/sc_9dof.c \
        src/sc_extint.c \
+       src/sc_radio.c \
        src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

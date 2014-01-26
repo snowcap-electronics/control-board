@@ -137,6 +137,14 @@ SCL     = PB10
 #endif
 #endif
 
+#ifdef SC_HAS_RBV2
+// PC2 == SBWTDIO/nRST, PC3 == SBWTCK/TEST
+#define SC_RADIO_NRST_PORT        GPIOC
+#define SC_RADIO_NRST_PIN         GPIOC_PIN2
+#define SC_RADIO_TEST_PORT        GPIOC
+#define SC_RADIO_TEST_PIN         GPIOC_PIN3
+#endif
+
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif

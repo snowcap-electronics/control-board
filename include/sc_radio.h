@@ -1,7 +1,7 @@
-/*
- * SC init
+/***
+ * Radio Board related functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2014 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,69 +25,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-
-#include "sc.h"
-
-void sc_init(uint32_t subsystems)
-{
-  /* Initialize ChibiOS HAL and core */
-  halInit();
-  chSysInit();
-
-  /* Initialize command parsing */
-  sc_cmd_init();
-
-  if (subsystems & SC_INIT_UART1) {
-    sc_uart_init(SC_UART_1);
-  }
-
-  if (subsystems & SC_INIT_UART2) {
-    sc_uart_init(SC_UART_2);
-  }
-
-  
-  if (subsystems & SC_INIT_PWM) {
-    sc_pwm_init();
-  }
-
-  /* Init ICU for reading xBee signal strength */
-  if (subsystems & SC_INIT_ICU) {
-#if HAL_USE_ICU
-    sc_icu_init(1);
-#else
-    chDbgAssert(0, "HAL_USE_ICU undefined", "#1");
-#endif
-  }
-
-  /* Initializes a serial-over-USB CDC driver */
-  if (subsystems & SC_INIT_SDU) {
-#if HAL_USE_SERIAL_USB
-    sc_sdu_init();
-#else
-    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined", "#1");
-#endif
-  }
-
-  if (subsystems & SC_INIT_ADC) {
-    sc_adc_init();
-  }
-
-  if (subsystems & SC_INIT_GPIO) {
-    sc_gpio_init();
-  }
-
-  if (subsystems & SC_INIT_LED) {
-    sc_led_init();
-  }
-
-  if (subsystems & SC_INIT_RADIO) {
 #ifdef SC_HAS_RBV2
-    sc_radio_init();
-#else
-    chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
+#ifndef SC_RADIO_H
+#define SC_RADIO_H
+
+void sc_radio_init(void);
+void sc_radio_set_reset(uint8_t enable);
+void sc_radio_set_test(uint8_t enable);
+void sc_radio_process_byte(uint8_t byte);
+void sc_radio_flash(void);
+void sc_radio_reset_normal(void);
+uint8_t sc_radio_reset_bsl(void);
+
 #endif
-  }
-}
+#endif
+
+
 
 /* Emacs indentatation information
    Local Variables:

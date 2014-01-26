@@ -49,6 +49,7 @@
 #include "sc_extint.h"
 #include "sc_led.h"
 #include "sc_log.h"
+#include "sc_radio.h"
 
 #define SC_INIT_UART1       0x0001
 #define SC_INIT_UART2       0x0002
@@ -61,6 +62,7 @@
 #define SC_INIT_ADC         0x0100
 #define SC_INIT_GPIO        0x0200
 #define SC_INIT_LED         0x0400
+#define SC_INIT_RADIO       0x0800
 
 void sc_init(uint32_t subsystems);
 

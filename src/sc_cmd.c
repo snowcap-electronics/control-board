@@ -27,13 +27,7 @@
  */
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
-#include "sc_cmd.h"
-#include "sc_uart.h"
-#include "sc_pwm.h"
-#include "sc_led.h"
-#include "sc_gpio.h"
-#include "sc_event.h"
-#include "sc_log.h"
+#include "sc.h"
 
 static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
@@ -42,6 +36,7 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
 
 /*
@@ -192,6 +187,9 @@ static void parse_command(void)
   case 'p':
     parse_command_pwm(command_buf, found);
     break;
+  case 'r':
+    parse_command_radio(command_buf, found);
+    break;
   default:
     // Invalid command, ignoring
     break;
@@ -336,7 +334,7 @@ static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len)
     break;
   default:
     // Invalid value, ignoring command
-	return;
+    break;
   }
 }
 
@@ -393,6 +391,48 @@ static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
 
 
 /*
+ * Parse radio related commands
+ */
+static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len)
+{
+  // Unused currently
+  (void)cmd_len;
+#ifndef SC_HAS_RBV2
+  (void)cmd;
+#else
+  switch (cmd[1]) {
+  case 'b':
+    sc_radio_reset_bsl();
+    break;
+  case 'f':
+    sc_radio_flash();
+    break;
+  case 'r':
+    if (cmd[2] == '1') {
+      sc_radio_set_reset(1);
+    } else {
+      sc_radio_set_reset(0);
+    }
+    break;
+  case 't':
+    if (cmd[2] == '1') {
+      sc_radio_set_test(1);
+    } else {
+      sc_radio_set_test(0);
+    }
+    break;
+  case 'n':
+    sc_radio_reset_normal();
+    break;
+  default:
+    // Invalid value, ignoring command
+    break;
+  }
+#endif
+}
+
+
+/*
  * Return pointer to newly received binary blob
  */
 uint16_t sc_cmd_blob_get(uint8_t **blob)
@@ -414,6 +454,9 @@ uint16_t sc_cmd_blob_get(uint8_t **blob)
   }
   return len;
 }
+
+
+
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil

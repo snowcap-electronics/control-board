@@ -28,17 +28,18 @@
  */
 
 #include "sc.h"
+#include "sc_radio.h"
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
-
-#if !defined(BOARD_SNOWCAP_STM32F4_V1)
-#error "Radio project only supports Snowcap STM32F4 MCU Board v1"
-#endif
+static void cb_blob_available(void);
+static void cb_pa0_changed(void);
 
 int main(void)
 {
-  sc_init(SC_INIT_UART2 | SC_INIT_GPIO | SC_INIT_LED | SC_INIT_SDU);
+  sc_init(SC_INIT_UART2 | SC_INIT_GPIO | SC_INIT_LED | SC_INIT_SDU | SC_INIT_RADIO);
   sc_uart_default_usb(TRUE);
+
+  sc_log_output_uart(SC_UART_USB);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -48,12 +49,15 @@ int main(void)
   // calculations etc. time consuming there, but not to sleep or block
   // for longer periods of time.
   sc_event_register_handle_byte(cb_handle_byte);
+  sc_event_register_blob_available(cb_blob_available);
+  sc_event_register_extint(0, cb_pa0_changed);
+  sc_extint_set_event(GPIOA, 0, SC_EXTINT_EDGE_BOTH);
 
   // Loop forever waiting for callbacks
   while(1) {
     uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    sc_uart_send_msg(SC_UART_USB, msg, 9);
+    sc_uart_send_msg(SC_UART_USB, msg, sizeof(msg));
   }
 
   return 0;
@@ -64,7 +68,8 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
 {
   switch (uart) {
   case SC_UART_2:
-    sc_uart_send_msg(SC_UART_USB, &byte, 1);
+    // Separate handling for all data coming from radio board
+    sc_radio_process_byte(byte);
     break;
   case SC_UART_USB:
     // Push received byte to generic command parsing
@@ -76,6 +81,36 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
 }
 
 
+static void cb_blob_available(void)
+{
+  uint8_t *blob;
+  uint16_t blob_len;
+
+  blob_len = sc_cmd_blob_get(&blob);
+
+  if (blob_len) {
+		uint8_t msg[] = "Blob received bytes:            \r\n";
+		uint8_t len = 21;
+
+		len += sc_itoa(blob_len, &msg[len], 6);
+		msg[len++] = '\r';
+		msg[len++] = '\n';
+    sc_uart_send_msg(SC_UART_USB, msg, len);
+  }
+}
+
+
+static void cb_pa0_changed(void)
+{
+  uint8_t msg[] = "pa0: state: X\r\n";
+  uint8_t button_state;
+
+  button_state = palReadPad(GPIOA, 0);
+
+  msg[12] = button_state + '0';
+
+  sc_uart_send_msg(SC_UART_USB, msg, sizeof(msg));
+}
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil
