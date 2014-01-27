@@ -31,6 +31,10 @@
 
 #include "hal.h"
 
+#ifndef SC_USE_9DOF
+#define SC_USE_9DOF FALSE
+#endif
+
 #if defined(BOARD_SNOWCAP_V1)
 #include "sc_conf_snowcap_v1.h"
 #elif defined(BOARD_SNOWCAP_STM32F4_V1)
