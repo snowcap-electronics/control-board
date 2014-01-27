@@ -47,7 +47,9 @@ typedef enum SC_LOG_MODULE {
 #define SC_DBG(msg) sc_log(SC_LOG_LVL_DEBUG, SC_LOG_MODULE_TAG, (uint8_t *)(msg))
 
 void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg);
+#if HAL_USE_UART
 void sc_log_output_uart(SC_UART uart);
+#endif
 void sc_log_level(SC_LOG_LVL lvl);
 
 

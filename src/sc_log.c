@@ -35,7 +35,9 @@
 #define SC_LOG_OUTPUT_UART   1
 
 static uint8_t log_output = SC_LOG_OUTPUT_NONE;
+#if HAL_USE_UART
 static SC_UART output_uart;
+#endif
 static SC_LOG_LVL output_lvl = SC_LOG_LVL_DEBUG;
 
 void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
@@ -59,17 +61,23 @@ void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
 	}
   }
 
+#if HAL_USE_UART
   if (log_output == SC_LOG_OUTPUT_UART) {
 	sc_uart_send_msg(output_uart, msg, len);
   }
+#endif
 }
 
 
+
+#if HAL_USE_UART
 void sc_log_output_uart(SC_UART uart)
 {
   log_output = SC_LOG_OUTPUT_UART;
   output_uart = uart;
 }
+#endif
+
 
 
 void sc_log_level(SC_LOG_LVL lvl)

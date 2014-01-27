@@ -24,7 +24,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-
+#if HAL_USE_UART
 /**
  * @file    include/sc_uart.h
  * @brief   UART spesific functions
@@ -74,3 +74,4 @@ void sc_uart_send_finished(void);
 void sc_uart_revc_usb_byte(uint8_t byte);
 
 #endif
+#endif // HAL_USE_UART

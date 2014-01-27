@@ -32,6 +32,9 @@
 #include "sc_event.h"
 #include "drivers/sc_lis302dl.h"
 #include "drivers/sc_lsm9ds0.h"
+
+#if SC_USE_9DOF
+
 #include <string.h>
 
 static int running = 0;
@@ -145,7 +148,7 @@ void sc_9dof_get_data(uint32_t *ret_ts,
   chMtxUnlock();
 }
 
-
+#endif // SC_USE_9DOF
 
 /* Emacs indentatation information
    Local Variables:

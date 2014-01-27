@@ -26,9 +26,10 @@
  *
  */
 
-
 #include "sc_utils.h"
 #include "sc_gpio.h"
+
+#if HAL_USE_PAL
 
 struct gpio_list {
   ioportid_t port;
@@ -107,3 +108,13 @@ void sc_gpio_set_state_all(uint8_t gpios)
 	gpios >>= 1;
   }
 }
+
+#endif // HAL_USE_PAL
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

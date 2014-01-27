@@ -59,16 +59,24 @@
 
 /* Action event mailbox used in event loop to pass data and action
  * from other threads and interrupt handlers to the main thread. */
+#ifndef EVENT_MB_SIZE
 #define EVENT_MB_SIZE 128
+#endif
 static msg_t event_mb_buffer[EVENT_MB_SIZE];
 MAILBOX_DECL(event_mb, event_mb_buffer, EVENT_MB_SIZE);
 
 /*
  * Callbacks
  */
+#if HAL_USE_UART
 static sc_event_cb_handle_byte    cb_handle_byte = NULL;
+#endif
+#if HAL_USE_EXT
 static sc_event_cb_extint         cb_extint[EXT_MAX_CHANNELS] = {NULL};
+#endif
+#if HAL_USE_ADC
 static sc_event_cb_adc_available  cb_adc_available = NULL;
+#endif
 static sc_event_cb_temp_available cb_temp_available = NULL;
 static sc_event_cb_9dof_available cb_9dof_available = NULL;
 static sc_event_cb_blob_available cb_blob_available = NULL;
@@ -98,6 +106,7 @@ static msg_t eventLoopThread(void *UNUSED(arg))
     switch(type) {
 
       // Application registrable events
+#if HAL_USE_UART
     case SC_EVENT_TYPE_PUSH_BYTE:
       if (cb_handle_byte != NULL) {
         SC_UART uart = EVENT_MSG_GET_UART(msg);
@@ -105,6 +114,8 @@ static msg_t eventLoopThread(void *UNUSED(arg))
         cb_handle_byte(uart, byte);
       }
       break;
+#endif
+#if HAL_USE_EXT
     case SC_EVENT_TYPE_EXTINT:
       {
         uint8_t pin = EVENT_MSG_GET_PIN(msg);
@@ -113,11 +124,14 @@ static msg_t eventLoopThread(void *UNUSED(arg))
         }
       }
       break;
+#endif
+#if HAL_USE_ADC
     case SC_EVENT_TYPE_ADC_AVAILABLE:
       if (cb_adc_available != NULL) {
         cb_adc_available();
       }
       break;
+#endif
     case SC_EVENT_TYPE_TEMP_AVAILABLE:
       if (cb_temp_available != NULL) {
         cb_temp_available();
@@ -135,9 +149,11 @@ static msg_t eventLoopThread(void *UNUSED(arg))
       break;
 
       // SC internal types
+#if HAL_USE_UART
     case SC_EVENT_TYPE_UART_SEND_FINISHED:
       sc_uart_send_finished();
       break;
+#endif
     default:
       chDbgAssert(0, "Unhandled event", "sc_event_loop");
       break;
@@ -186,6 +202,7 @@ void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from)
 
 
 
+#if HAL_USE_UART
 /*
  * Create a mailbox message from received byte
  */
@@ -203,9 +220,11 @@ msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart)
 
   return msg;
 }
+#endif
 
 
 
+#if HAL_USE_EXT
 /*
  * Create a mailbox message from external interrupt
  */
@@ -222,6 +241,7 @@ msg_t sc_event_msg_create_extint(uint8_t pin)
 
   return msg;
 }
+#endif
 
 
 
@@ -240,6 +260,7 @@ msg_t sc_event_msg_create_type(SC_EVENT_TYPE type)
 
 
 
+#if HAL_USE_UART
 /*
  * Register callback for new byte
  */
@@ -247,9 +268,11 @@ void sc_event_register_handle_byte(sc_event_cb_handle_byte func)
 {
   cb_handle_byte = func;
 }
+#endif
 
 
 
+#if HAL_USE_EXT
 /*
  * Register callback for external interrupt
  */
@@ -259,9 +282,11 @@ void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func)
               "External interrupt pin number too large", "#1");
   cb_extint[pin] = func;
 }
+#endif
 
 
 
+#if HAL_USE_ADC
 /*
  * Register callback for new ADC data available
  */
@@ -269,6 +294,7 @@ void sc_event_register_adc_available(sc_event_cb_adc_available func)
 {
   cb_adc_available = func;
 }
+#endif
 
 
 

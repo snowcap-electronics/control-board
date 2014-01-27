@@ -33,11 +33,11 @@
 #include "sc_cmd.h"
 #include "sc_led.h"
 
+#if HAL_USE_SERIAL_USB
+
 /* ChibiOS includes */
 //#include "usb_cdc.h"
 #include "chprintf.h"
-
-#if HAL_USE_SERIAL_USB
 
 /* Max message size, should match the sc_uart.c's MAX_SEND_BUF_LEN */
 #define MAX_SEND_BUF_LEN      (128 + 1)

@@ -53,7 +53,9 @@ typedef enum SC_EVENT_MSG_POST_FROM {
 } SC_EVENT_MSG_POST_FROM;
 
 // Callback function definitions
+#if HAL_USE_UART
 typedef void (*sc_event_cb_handle_byte)(SC_UART uart, uint8_t byte);
+#endif
 typedef void (*sc_event_cb_extint)(void);
 typedef void (*sc_event_cb_adc_available)(void);
 typedef void (*sc_event_cb_temp_available)(void);
@@ -62,11 +64,15 @@ typedef void (*sc_event_cb_blob_available)(void);
 
 void sc_event_loop_start(void);
 void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
+#if HAL_USE_UART
 msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart);
+#endif
 msg_t sc_event_msg_create_extint(uint8_t pin);
 msg_t sc_event_msg_create_type(SC_EVENT_TYPE type);
 
+#if HAL_USE_UART
 void sc_event_register_handle_byte(sc_event_cb_handle_byte func);
+#endif
 void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func);
 // TODO: these could be generalized? E.g.:
 // void sc_event_register_data_available(SC_EVENT_TYPE, sc_event_cb_data_available func);

@@ -27,11 +27,12 @@
  *
  */
 
-
 #include "sc_conf.h"
 #include "sc_utils.h"
 #include "sc_adc.h"
 #include "sc_event.h"
+
+#if HAL_USE_ADC
 
 /* Max number of pins to ADC */
 #define SC_ADC_MAX_CHANNELS           4
@@ -261,6 +262,8 @@ void sc_adc_channel_get(uint16_t *channels, systime_t *ts)
   *ts = adc_latest_ts;
   chMtxUnlock();
 }
+
+#endif // HAL_USE_ADC
 
 /* Emacs indentatation information
    Local Variables:

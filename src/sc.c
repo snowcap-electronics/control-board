@@ -38,16 +38,27 @@ void sc_init(uint32_t subsystems)
   sc_cmd_init();
 
   if (subsystems & SC_INIT_UART1) {
+#if HAL_USE_UART
     sc_uart_init(SC_UART_1);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
   }
 
   if (subsystems & SC_INIT_UART2) {
+#if HAL_USE_UART
     sc_uart_init(SC_UART_2);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
   }
 
-  
   if (subsystems & SC_INIT_PWM) {
+#if HAL_USE_PWM
     sc_pwm_init();
+#else
+    chDbgAssert(0, "HAL_USE_PWM undefined", "#1");
+#endif
   }
 
   /* Init ICU for reading xBee signal strength */
@@ -69,15 +80,27 @@ void sc_init(uint32_t subsystems)
   }
 
   if (subsystems & SC_INIT_ADC) {
+#if HAL_USE_ADC
     sc_adc_init();
+#else
+    chDbgAssert(0, "HAL_USE_ADC undefined", "#1");
+#endif
   }
 
   if (subsystems & SC_INIT_GPIO) {
+#if HAL_USE_PAL
     sc_gpio_init();
+#else
+    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+#endif
   }
 
   if (subsystems & SC_INIT_LED) {
+#if HAL_USE_PAL
     sc_led_init();
+#else
+    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+#endif
   }
 
   if (subsystems & SC_INIT_RADIO) {

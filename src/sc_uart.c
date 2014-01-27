@@ -41,6 +41,8 @@
 #include "sc_sdu.h"
 #include "sc_event.h"
 
+#if HAL_USE_UART
+
 #define MAX_SEND_BUF_LEN      128
 #define MAX_CIRCULAR_BUFS     8
 
@@ -616,3 +618,4 @@ static uint8_t uart_is_enabled(UARTDriver *drv)
 
   return uarts_enabled & (1 << uart);
 }
+#endif // HAL_USE_UART

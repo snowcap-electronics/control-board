@@ -26,6 +26,7 @@
  *
  */
 
+#if HAL_USE_PAL
 #ifndef SC_GPIO_H
 #define SC_GPIO_H
 
@@ -37,4 +38,5 @@ void sc_gpio_off(uint8_t gpio);
 void sc_gpio_toggle(uint8_t gpio);
 void sc_gpio_set_state_all(uint8_t gpios);
 
+#endif
 #endif

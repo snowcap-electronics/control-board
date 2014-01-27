@@ -27,6 +27,7 @@
  *
  */
 
+#if SC_USE_9DOF
 #ifndef SC_9DOF_H
 #define SC_9DOF_H
 
@@ -45,6 +46,7 @@ void sc_9dof_get_data(uint32_t *ts,
                       int16_t *gyro);
 
 
+#endif
 #endif
 
 /* Emacs indentatation information

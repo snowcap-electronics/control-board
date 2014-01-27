@@ -26,9 +26,10 @@
  *
  */
 
-
 #include "sc_utils.h"
 #include "sc_pwm.h"
+
+#if HAL_USE_PWM
 
 // Use 1MHz clock
 #define SC_PWM_CLOCK    1000000
@@ -145,3 +146,5 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
 #endif
   }
 }
+
+#endif // HAL_USE_PWM == TRUE

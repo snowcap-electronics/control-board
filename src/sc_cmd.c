@@ -29,12 +29,16 @@
 
 #include "sc.h"
 
+#if HAL_USE_PWM
 static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
+#endif
+#if HAL_USE_PAL
 static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
+#endif
 static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
@@ -43,9 +47,11 @@ static void parse_command(void);
  * Buffer for incoming commands.
  * FIXME: Separate handling for SPI/UART1-3?
  */
-#define MAX_RECV_BUF_LEN      16
+#ifndef SC_CMD_MAX_RECV_BUF_LEN
+#define SC_CMD_MAX_RECV_BUF_LEN      16
+#endif
 #define MIN_CMD_LEN           3        // 8 bit command, >=8 bit value, \n
-static uint8_t receive_buffer[MAX_RECV_BUF_LEN];
+static uint8_t receive_buffer[SC_CMD_MAX_RECV_BUF_LEN];
 static uint8_t recv_i = 0;
 
 /*
@@ -126,7 +132,7 @@ void sc_cmd_push_byte(uint8_t byte)
 
   // Discard all data in buffer if buffer is full.
   // This also discards commands in buffer that has not been handled yet.
-  if (recv_i == MAX_RECV_BUF_LEN) {
+  if (recv_i == SC_CMD_MAX_RECV_BUF_LEN) {
     recv_i = 0;
   }
 }
@@ -140,7 +146,7 @@ static void parse_command(void)
 {
   int i;
   int found = 0;
-  uint8_t command_buf[MAX_RECV_BUF_LEN];
+  uint8_t command_buf[SC_CMD_MAX_RECV_BUF_LEN];
 
   // FIXME: there can be only one command in buffer, so this is useless
   // Check for full command in the buffer
@@ -175,18 +181,22 @@ static void parse_command(void)
   case 'b':
     parse_command_blob(command_buf, found);
     break;
+#if HAL_USE_PAL
   case 'g':
     parse_command_gpio(command_buf, found);
     break;
   case 'G':
     parse_command_gpio_all(command_buf, found);
     break;
+#endif
   case 'l':
     parse_command_led(command_buf, found);
     break;
+#if HAL_USE_PWM
   case 'p':
     parse_command_pwm(command_buf, found);
     break;
+#endif
   case 'r':
     parse_command_radio(command_buf, found);
     break;
@@ -199,6 +209,7 @@ static void parse_command(void)
 
 
 
+#if HAL_USE_PWM
 /*
  * Parse PWM command
  */
@@ -280,6 +291,7 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 
   sc_uart_send_msg(SC_UART_LAST, str_duty, str_len);
 }
+#endif
 
 
 
@@ -310,6 +322,7 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
 
 
 
+#if HAL_USE_PAL
 /*
  * Parse gpio command
  */
@@ -360,6 +373,7 @@ static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
 
   sc_gpio_set_state_all(gpios);
 }
+#endif
 
 
 

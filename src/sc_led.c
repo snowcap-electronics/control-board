@@ -26,9 +26,10 @@
  *
  */
 
-
 #include "sc_utils.h"
 #include "sc_led.h"
+
+#if HAL_USE_PAL
 
 void sc_led_init(void)
 {
@@ -64,3 +65,16 @@ void sc_led_toggle(void)
 {
   palTogglePad(USER_LED_PORT, USER_LED);
 }
+
+#endif // HAL_USE_PAL
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
+
