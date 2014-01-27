@@ -5,7 +5,7 @@
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -O0 -ggdb -fno-omit-frame-pointer -falign-functions=16
+  USE_OPT = -falign-functions=16
 endif
 
 # C specific options here (added to USE_OPT).
@@ -91,7 +91,6 @@ include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F2xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
-include $(CHIBIOS)/test/test.mk
 else ifeq ($(SC_BOARD),SC_SNOWCAP_STM32F4_V1)
 LDSCRIPT= $(PORTLD)/STM32F405xG.ld
 MCU = cortex-m4
@@ -100,7 +99,6 @@ include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
-include $(CHIBIOS)/test/test.mk
 else ifeq ($(SC_BOARD),SC_F4_DISCOVERY)
 LDSCRIPT= $(PORTLD)/STM32F407xG.ld
 MCU = cortex-m4
@@ -109,7 +107,6 @@ include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
-include $(CHIBIOS)/test/test.mk
 else ifeq ($(SC_BOARD),SC_F1_DISCOVERY)
 LDSCRIPT= $(PORTLD)/STM32F100xB.ld
 MCU = cortex-m3
@@ -118,7 +115,6 @@ include $(CHIBIOS)/os/hal/platforms/STM32F1xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F1xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
-include $(CHIBIOS)/test/test.mk
 else
 $(error SC_BOARD not defined, supported: SC_SNOWCAP_V1, SC_SNOWCAP_STM32F4_V1, SC_F4_DISCOVERY, SC_F1_DISCOVERY)
 endif
@@ -273,6 +269,11 @@ ULIBS =
 #
 # End of user defines
 ##############################################################################
+ifeq ($(SC_BUILD_TYPE),release)
+  USE_OPT += -O3
+else
+  USE_OPT += -O0 -ggdb -fno-omit-frame-pointer
+endif
 
 ifeq ($(SC_PEDANTIC_COMPILER),1)
   USE_OPT += -Werror
