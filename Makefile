@@ -142,7 +142,6 @@ CSRC = $(PORTSRC) \
        src/sc_pwm.c \
        src/sc_uart.c \
        src/sc_utils.c \
-       src/sc_user_thread.c \
        src/sc_icu.c \
        src/sc_cmd.c \
        src/sc_i2c.c \
