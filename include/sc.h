@@ -37,7 +37,6 @@
 #include "sc_event.h"
 #include "sc_uart.h"
 #include "sc_pwm.h"
-#include "sc_user_thread.h"
 #include "sc_icu.h"
 #include "sc_i2c.h"
 #include "sc_sdu.h"
