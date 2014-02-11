@@ -103,7 +103,8 @@ static msg_t sc9dofThread(void *UNUSED(arg))
     memcpy(acc,  tmp_acc,  sizeof(tmp_acc));
     memcpy(magn, tmp_magn, sizeof(tmp_magn));
     memcpy(gyro, tmp_gyro, sizeof(tmp_gyro));
-    ts   = 0; // FIXME
+    chDbgAssert(CH_FREQUENCY == 1000, "Assuming ChTimeNow() returns milliseconds", "#1");
+    ts   = chTimeNow();
     chMtxUnlock();
 
     // Create and send data ready notification
