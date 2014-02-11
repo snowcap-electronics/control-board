@@ -58,7 +58,7 @@ int main(void)
 #endif
 
 #if defined(SC_HAS_LSM9DS0) || defined(SC_HAS_LIS302DL)
-  sc_9dof_init();
+  sc_9dof_init(128);
 #endif
 
   // Loop forever waiting for callbacks

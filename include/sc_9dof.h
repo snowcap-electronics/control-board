@@ -34,7 +34,7 @@
 #include "sc_utils.h"
 
 /* Initialise and start reading sensors */
-void sc_9dof_init(void);
+void sc_9dof_init(uint16_t calibration_samples);
 
 /* Shutdown initialised sensors */
 void sc_9dof_shutdown(void);
