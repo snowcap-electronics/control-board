@@ -35,6 +35,10 @@
 #define SC_USE_9DOF FALSE
 #endif
 
+#ifndef sc_float
+#define sc_float double
+#endif
+
 #if defined(BOARD_SNOWCAP_V1)
 #include "sc_conf_snowcap_v1.h"
 #elif defined(BOARD_SNOWCAP_STM32F4_V1)

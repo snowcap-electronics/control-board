@@ -106,17 +106,20 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 static void cb_9dof_available(void)
 {
   uint32_t ts;
-  int16_t acc[3];
-  int16_t magn[3];
-  int16_t gyro[3];
+  sc_float acc[3];
+  sc_float magn[3];
+  sc_float gyro[3];
+#if 0
   uint8_t msg[128] = {'9', 'd', 'o', 'f', ':', ' ', '\0'};
   int len = 6;
   uint8_t i, s;
   int16_t *sensors[3] = {&acc[0], &gyro[0], &magn[0]};
-  static uint8_t data_counter = 0;;
+  static uint8_t data_counter = 0;
+#endif
 
   sc_9dof_get_data(&ts, acc, magn, gyro);
-
+#if 0
+  // FIXME: printing is now broken as the values are floats
   // Let's print only every Nth data
   if (++data_counter == 10) {
     data_counter = 0;
@@ -150,6 +153,7 @@ static void cb_9dof_available(void)
     msg[len++]   = '\0';
     sc_uart_send_msg(SC_UART_LAST, msg, len);
   }
+#endif
 }
 
 

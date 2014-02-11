@@ -46,6 +46,9 @@
 
 #define LIS302DL_READ_BIT    0x80
 
+// By default lis302dl sensitivity is 18 mg/bit
+#define LIS302DL_SENSIVITY  0.018
+
 static uint8_t spin;
 static BinarySemaphore lis302dl_drdy_sem;
 
@@ -92,7 +95,7 @@ void sc_lis302dl_init(void)
 
 
 
-void sc_lis302dl_read(int16_t *acc)
+void sc_lis302dl_read(sc_float *acc)
 {
   uint8_t txbuf[2];
   uint8_t rxbuf[2];
@@ -103,20 +106,22 @@ void sc_lis302dl_read(int16_t *acc)
 
   // FIXME: why 16 bits instead of just 8?
 
+
+
   txbuf[0] = LIS302DL_READ_BIT | LIS302DL_OUTX;
   txbuf[1] = 0xff;
   sc_spi_exchange(spin, txbuf, rxbuf, sizeof(rxbuf));
-  acc[0] = rxbuf[1];
+  acc[0] = rxbuf[1] * LIS302DL_SENSIVITY;
 
   txbuf[0] = LIS302DL_READ_BIT | LIS302DL_OUTY;
   txbuf[1] = 0xff;
   sc_spi_exchange(spin, txbuf, rxbuf, sizeof(rxbuf));
-  acc[1] = rxbuf[1];
+  acc[1] = rxbuf[1] * LIS302DL_SENSIVITY;
 
   txbuf[0] = LIS302DL_READ_BIT | LIS302DL_OUTZ;
   txbuf[1] = 0xff;
   sc_spi_exchange(spin, txbuf, rxbuf, sizeof(rxbuf));
-  acc[2] = rxbuf[1];
+  acc[2] = rxbuf[1] * LIS302DL_SENSIVITY;
 }
 
 

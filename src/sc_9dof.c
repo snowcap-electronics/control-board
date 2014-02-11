@@ -38,9 +38,9 @@
 #include <string.h>
 
 static int running = 0;
-static int16_t acc[3];
-static int16_t magn[3];
-static int16_t gyro[3];
+static sc_float acc[3];
+static sc_float magn[3];
+static sc_float gyro[3];
 static uint32_t ts;
 
 static Mutex data_mtx;
@@ -48,9 +48,9 @@ static Mutex data_mtx;
 static WORKING_AREA(sc_9dof_thread, 512);
 static msg_t sc9dofThread(void *UNUSED(arg))
 {
-  int16_t tmp_acc[3]  = {0, 0, 0};
-  int16_t tmp_magn[3] = {0, 0, 0};
-  int16_t tmp_gyro[3] = {0, 0, 0};
+  sc_float tmp_acc[3]  = {0, 0, 0};
+  sc_float tmp_magn[3] = {0, 0, 0};
+  sc_float tmp_gyro[3] = {0, 0, 0};
   msg_t drdy;
 
   // Init sensor(s)
@@ -131,9 +131,9 @@ void sc_9dof_shutdown(void)
 
 
 void sc_9dof_get_data(uint32_t *ret_ts,
-                      int16_t *ret_acc,
-                      int16_t *ret_magn,
-                      int16_t *ret_gyro)
+                      sc_float *ret_acc,
+                      sc_float *ret_magn,
+                      sc_float *ret_gyro)
 {
   if (running == 0) {
     chDbgAssert(0, "9DoF not running", "#2");

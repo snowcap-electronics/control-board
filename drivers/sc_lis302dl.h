@@ -33,7 +33,7 @@
 #define SC_LIS302DL_H
 
 void sc_lis302dl_init(void);
-void sc_lis302dl_read(int16_t *acc);
+void sc_lis302dl_read(sc_float *acc);
 void sc_lis302dl_shutdown(void);
 
 #endif
