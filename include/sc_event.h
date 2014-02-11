@@ -41,6 +41,7 @@ typedef enum SC_EVENT_TYPE {
   SC_EVENT_TYPE_TEMP_AVAILABLE,
   SC_EVENT_TYPE_9DOF_AVAILABLE,
   SC_EVENT_TYPE_BLOB_AVAILABLE,
+  SC_EVENT_TYPE_AHRS_AVAILABLE,
   // SC internal types
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
@@ -61,6 +62,7 @@ typedef void (*sc_event_cb_adc_available)(void);
 typedef void (*sc_event_cb_temp_available)(void);
 typedef void (*sc_event_cb_9dof_available)(void);
 typedef void (*sc_event_cb_blob_available)(void);
+typedef void (*sc_event_cb_ahrs_available)(void);
 
 void sc_event_loop_start(void);
 void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
@@ -81,6 +83,7 @@ void sc_event_register_adc_available(sc_event_cb_adc_available func);
 void sc_event_register_temp_available(sc_event_cb_temp_available func);
 void sc_event_register_9dof_available(sc_event_cb_9dof_available func);
 void sc_event_register_blob_available(sc_event_cb_blob_available func);
+void sc_event_register_ahrs_available(sc_event_cb_9dof_available func);
 
 #endif
 
