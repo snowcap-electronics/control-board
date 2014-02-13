@@ -68,7 +68,7 @@ void sc_lis302dl_init(void)
   uint8_t txbuf[2];
   int8_t spi_n;
 
-  chBSemInit(&lis302dl_drdy_sem, FALSE);
+  chBSemInit(&lis302dl_drdy_sem, TRUE);
 
   // Register data ready interrupt
   sc_extint_set_isr_cb(SC_LIS302DL_INT_DRDY_PORT,
