@@ -83,9 +83,9 @@ static sc_event_cb_blob_available cb_blob_available = NULL;
 static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 
 /*
- * Setup a working area with a 256 byte stack for even loop thread
+ * Setup a working area with for the event loop thread
  */
-static WORKING_AREA(event_loop_thread, 256);
+static WORKING_AREA(event_loop_thread, 512);
 static msg_t eventLoopThread(void *UNUSED(arg))
 {
 
