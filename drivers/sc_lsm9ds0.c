@@ -69,11 +69,11 @@
 #define LSM9DS0_SUBADDR_AUTO_INC_BIT  0x80
 
 // +-2 g: 0.061 mg/bit
-#define LSM9DS0_ACC_SENSITIVITY    0.000061
-// +-2 gauss: 0.08 mgaus/bit
-#define LSM9DS0_MAGN_SENSITIVITY   0.00008
+#define LSM9DS0_ACC_SENSITIVITY    (0.061 / 1000)
+// +-4 gauss: 0.08 mgauss/bit
+#define LSM9DS0_MAGN_SENSITIVITY   (0.16 / 1000)
 // +-500 mdps: 17.50 mdps/bit
-#define LSM9DS0_GYRO_SENSITIVITY   0.01750
+#define LSM9DS0_GYRO_SENSITIVITY   (17.50 / 1000)
 
 static uint8_t i2cn_xm;
 static uint8_t i2cn_g;
@@ -124,7 +124,7 @@ void sc_lsm9ds0_init(void)
 
   sensors_ready = 0;
   chMtxInit(&data_mtx);
-  chBSemInit(&lsm9ds0_drdy_sem, FALSE);
+  chBSemInit(&lsm9ds0_drdy_sem, TRUE);
 
   // Pinmux
   palSetPadMode(SC_LSM9DS0_INT1_XM_PORT,
@@ -208,6 +208,7 @@ void sc_lsm9ds0_init(void)
   txbuf[0] = LSM9DS0_CTRL_REG4_G;
   txbuf[1] = 0x10; // FS0, 500 dps
   sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
+
   // Enable gyroscope (95Hz with 25 cutoff (FIXME: what?))
   txbuf[0] = LSM9DS0_CTRL_REG1_G;
   txbuf[1] = 0x3F; // XEN + YEN + ZEN + PD + BW
@@ -246,7 +247,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
 
         for (i = 0; i < 3; ++i) {
-          acc[i] = (((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i]) *
+          acc[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
             LSM9DS0_ACC_SENSITIVITY;
         }
 
@@ -261,7 +262,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
 
         for (i = 0; i < 3; ++i) {
-          magn[i] = (((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i]) *
+          magn[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
             LSM9DS0_MAGN_SENSITIVITY;
         }
 
@@ -276,7 +277,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sc_i2c_transmit(i2cn_g, txbuf, 1, rxbuf, 6);
 
         for (i = 0; i < 3; ++i) {
-          gyro[i] = (((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i]) *
+          gyro[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
             LSM9DS0_GYRO_SENSITIVITY;
         }
 
