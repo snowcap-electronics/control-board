@@ -46,6 +46,7 @@ static uint16_t calibration_total;
 static uint16_t calibration_i;
 
 static Mutex data_mtx;
+static Thread * sc_9dof_thread_ptr;
 
 static WORKING_AREA(sc_9dof_thread, 512);
 static msg_t sc9dofThread(void *UNUSED(arg))
@@ -55,6 +56,7 @@ static msg_t sc9dofThread(void *UNUSED(arg))
   sc_float tmp_gyro[3] = {0, 0, 0};
   sc_float gyro_calib[3] = {0, 0, 0};
   msg_t drdy;
+  uint8_t warmup = 64;
 
   // Init sensor(s)
 #ifdef SC_HAS_LIS302DL
@@ -78,6 +80,12 @@ static msg_t sc9dofThread(void *UNUSED(arg))
     chDbgAssert(0, "No 9dof drivers included in the build", "#3");
 #endif
 
+    // FIXME: for some reason the initial values might contain
+    // garbage. Ignore them. Why aren't they valid..?
+    if (warmup) {
+      --warmup;
+      continue;
+    }
 
     // Calculate average gyro offset
     if (calibration_i < calibration_total) {
@@ -88,9 +96,9 @@ static msg_t sc9dofThread(void *UNUSED(arg))
       if (++calibration_i < calibration_total) {
         continue;
       } else {
-        gyro_calib[0] /= (sc_float)calibration_total;
-        gyro_calib[1] /= (sc_float)calibration_total;
-        gyro_calib[2] /= (sc_float)calibration_total;
+        gyro_calib[0] /= calibration_total;
+        gyro_calib[1] /= calibration_total;
+        gyro_calib[2] /= calibration_total;
       }
     }
 
@@ -136,7 +144,11 @@ void sc_9dof_init(uint16_t calibration_samples)
   calibration_i = 0;
   running = 1;
 
-  chThdCreateStatic(sc_9dof_thread, sizeof(sc_9dof_thread), NORMALPRIO, sc9dofThread, NULL);
+  sc_9dof_thread_ptr = chThdCreateStatic(sc_9dof_thread,
+                                         sizeof(sc_9dof_thread),
+                                         NORMALPRIO,
+                                         sc9dofThread,
+                                         NULL);
 }
 
 
@@ -149,8 +161,9 @@ void sc_9dof_shutdown(void)
   }
 
   running = 0;
-  // FIXME: it will take a while for the sensor thread to actually
-  // exit due to shutting down sensors etc. Wait?
+
+  chThdWait(sc_9dof_thread_ptr);
+  sc_9dof_thread_ptr = NULL;
 }
 
 
