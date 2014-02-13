@@ -31,6 +31,7 @@
 #include "sc_9dof.h"
 #include "sc_ahrs.h"
 #ifdef SC_ALLOW_GPL
+#include "uimu_ahrs_glue.h"
 #endif
 
 #include <string.h>       // memcpy
@@ -49,11 +50,13 @@ static sc_float latest_roll;
 static sc_float latest_pitch;
 static sc_float latest_yaw;
 
+static Thread * sc_ahrs_thread_ptr;
 
-static WORKING_AREA(sc_ahrs_thread, 512);
+static WORKING_AREA(sc_ahrs_thread, 1024);
 static msg_t scAhrsThread(void *UNUSED(arg))
 {
   msg_t drdy;
+  uint8_t first = 1;
 
   // Create data ready notification
   drdy = sc_event_msg_create_type(SC_EVENT_TYPE_AHRS_AVAILABLE);
@@ -80,24 +83,29 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     chMtxUnlock();
 
 #ifdef SC_ALLOW_GPL
-    if (1/* FIXME: call AHRS algorithm*/) {
-
-      // FIXME: get euler
-
-      // Store latest values for later use
-      chMtxLock(&ahrs_mtx);
-      latest_ts = ts;
-      latest_roll = roll;
-      latest_pitch = pitch;
-      latest_yaw = yaw;
-      chMtxUnlock();
-
-      // Send data ready notification
-      sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
+    if (first) {
+      uimu_ahrs_glue_init(ts, acc, magn);
+      uimu_ahrs_glue_set_beta(0.2);
+      first = 0;
+      continue;
     }
+
+    uimu_ahrs_glue_iterate(ts, acc, magn, gyro);
+    uimu_ahrs_glue_get_euler(&roll, &pitch, &yaw);
 #else
-    chDbgAssert(0, "Only GPL licenced AHRS supported currently", "#1");
+    chDbgAssert(0, "Only GPL licensed AHRS supported currently", "#1");
 #endif
+
+    // Store latest values for later use
+    chMtxLock(&ahrs_mtx);
+    latest_ts = ts;
+    latest_roll = roll;
+    latest_pitch = pitch;
+    latest_yaw = yaw;
+    chMtxUnlock();
+
+    // Send data ready notification
+    sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
   }
   return 0;
 }
@@ -111,12 +119,16 @@ void sc_ahrs_init(void)
   }
 
   chMtxInit(&ahrs_mtx);
-  chBSemInit(&ahrs_new_data_sem, FALSE);
+  chBSemInit(&ahrs_new_data_sem, TRUE);
 
   running = 1;
 
   // Heavy math, setting low priority
-  chThdCreateStatic(sc_ahrs_thread, sizeof(sc_ahrs_thread), LOWPRIO, scAhrsThread, NULL);
+  sc_ahrs_thread_ptr = chThdCreateStatic(sc_ahrs_thread,
+                                         sizeof(sc_ahrs_thread),
+                                         LOWPRIO,
+                                         scAhrsThread,
+                                         NULL);
 }
 
 
@@ -132,7 +144,8 @@ void sc_ahrs_shutdown(void)
   running = 0;
   chBSemSignalI(&ahrs_new_data_sem);
 
-  chThdWait(&sc_ahrs_thread);
+  chThdWait(sc_ahrs_thread_ptr);
+  sc_ahrs_thread_ptr = NULL;
 }
 
 

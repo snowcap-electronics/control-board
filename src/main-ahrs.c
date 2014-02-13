@@ -61,7 +61,7 @@ int main(void)
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
 #endif
 
-  sc_9dof_init(128);
+  sc_9dof_init(64);
   sc_ahrs_init();
 
   // Loop forever waiting for callbacks
@@ -112,40 +112,38 @@ static void cb_9dof_available(void)
   sc_float acc[3];
   sc_float magn[3];
   sc_float gyro[3];
-#if 0
   uint8_t msg[128] = {'9', 'd', 'o', 'f', ':', ' ', '\0'};
   int len = 6;
   uint8_t i, s;
-  int16_t *sensors[3] = {&acc[0], &gyro[0], &magn[0]};
+  sc_float *sensors[3] = {acc, magn, gyro};
   static uint8_t data_counter = 0;
-#endif
 
   sc_9dof_get_data(&ts, acc, magn, gyro);
   sc_ahrs_push_9dof(ts, acc, magn, gyro);
-#if 0
-  // FIXME: printing is now broken as the values are floats
+
   // Let's print only every Nth data
-  if (++data_counter == 10) {
+  if (++data_counter == 1) {
     data_counter = 0;
 
     for (s = 0; s < 3; s++) {
       for (i = 0; i < 3; i++) {
         uint8_t l, m;
-        l = sc_itoa(sensors[s][i], &msg[len], sizeof(msg) - len);
+
+        l = sc_ftoa(sensors[s][i], 4, &msg[len], sizeof(msg) - len);
         len += l;
 
-        // Move right to align to 6 character columns
-        for (m = 0; m < 6; ++m) {
+        // Move right to align to 10 character columns
+        for (m = 0; m < 10; ++m) {
           if (m < l) {
             // Move
-            msg[len - 1 + (6 - l) - m] = msg[len - 1 - m];
+            msg[len - 1 + (10 - l) - m] = msg[len - 1 - m];
           } else {
             // Clear
-            msg[len - 1 + (6 - l) - m] = ' ';
+            msg[len - 1 + (10 - l) - m] = ' ';
           }
         }
 
-        len += (6 - l);
+        len += (10 - l);
         msg[len++] = ',';
         msg[len++] = ' ';
       }
@@ -157,7 +155,6 @@ static void cb_9dof_available(void)
     msg[len++]   = '\0';
     sc_uart_send_msg(SC_UART_LAST, msg, len);
   }
-#endif
 }
 
 static void cb_ahrs_available(void)
@@ -166,16 +163,11 @@ static void cb_ahrs_available(void)
   uint8_t msg[128] = {'a', 'h', 'r', 's', ':', ' ', '\0'};
   sc_float roll, pitch, yaw;
   static uint8_t data_counter = 0;;
-  int16_t roll_i, pitch_i, yaw_i;
-  int16_t *euler[3] = {&roll_i, &pitch_i, &yaw_i};
+  sc_float *euler[3] = {&roll, &pitch, &yaw};
   uint8_t i;
   int len = 6;
 
   sc_ahrs_get_orientation(&ts, &roll, &pitch, &yaw);
-
-  roll_i = (int16_t)(roll + 0.5);
-  pitch_i = (int16_t)(pitch + 0.5);
-  yaw_i = (int16_t)(yaw + 0.5);
 
   // Let's print only every Nth data
   if (++data_counter == 1) {
@@ -184,21 +176,21 @@ static void cb_ahrs_available(void)
 
     for (i = 0; i < 3; i++) {
       uint8_t l, m;
-      l = sc_itoa(*euler[i], &msg[len], sizeof(msg) - len);
+      l = sc_ftoa(*euler[i], 4, &msg[len], sizeof(msg) - len);
       len += l;
 
-      // Move right to align to 6 character columns
-      for (m = 0; m < 6; ++m) {
+      // Move right to align to 10 character columns
+      for (m = 0; m < 10; ++m) {
         if (m < l) {
           // Move
-          msg[len - 1 + (6 - l) - m] = msg[len - 1 - m];
+          msg[len - 1 + (10 - l) - m] = msg[len - 1 - m];
         } else {
           // Clear
-          msg[len - 1 + (6 - l) - m] = ' ';
+          msg[len - 1 + (10 - l) - m] = ' ';
         }
       }
 
-      len += (6 - l);
+      len += (10 - l);
       msg[len++] = ',';
       msg[len++] = ' ';
     }
