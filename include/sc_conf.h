@@ -35,6 +35,10 @@
 #define SC_USE_9DOF FALSE
 #endif
 
+#ifndef SC_USE_AHRS
+#define SC_USE_AHRS FALSE
+#endif
+
 #ifndef sc_float
 #define sc_float double
 #endif
