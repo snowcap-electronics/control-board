@@ -66,7 +66,7 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     sc_float acc[3];
     sc_float magn[3];
     sc_float gyro[3];
-    sc_float roll, pitch, yaw;
+    sc_float roll = 0, pitch = 0, yaw = 0;
 
     chBSemWait(&ahrs_new_data_sem);
 
@@ -93,6 +93,7 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     uimu_ahrs_glue_iterate(ts, acc, magn, gyro);
     uimu_ahrs_glue_get_euler(&roll, &pitch, &yaw);
 #else
+    (void)first;
     chDbgAssert(0, "Only GPL licensed AHRS supported currently", "#1");
 #endif
 
