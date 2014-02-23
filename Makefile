@@ -86,7 +86,7 @@ CHIBIOS = ChibiOS
 ifeq ($(SC_BOARD),SC_SNOWCAP_V1)
 LDSCRIPT= $(PORTLD)/STM32F205xB.ld
 MCU = cortex-m3
-include $(CHIBIOS)/boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
+include boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
 include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F2xx/port.mk
@@ -94,7 +94,7 @@ include $(CHIBIOS)/os/kernel/kernel.mk
 else ifeq ($(SC_BOARD),SC_SNOWCAP_STM32F4_V1)
 LDSCRIPT= $(PORTLD)/STM32F405xG.ld
 MCU = cortex-m4
-include $(CHIBIOS)/boards/SNOWCAP_STM32F4_V1/board.mk
+include boards/SNOWCAP_STM32F4_V1/board.mk
 include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
@@ -123,7 +123,6 @@ endif
 # setting.
 CSRC = $(PORTSRC) \
        $(KERNSRC) \
-       $(TESTSRC) \
        $(HALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
