@@ -49,6 +49,7 @@
 #include "sc_led.h"
 #include "sc_log.h"
 #include "sc_radio.h"
+#include "sc_pwr.h"
 
 #define SC_INIT_UART1       0x0001
 #define SC_INIT_UART2       0x0002

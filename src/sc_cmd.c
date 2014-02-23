@@ -41,6 +41,7 @@ static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
 #endif
 static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_power(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command(void);
 
 /*
@@ -180,6 +181,9 @@ static void parse_command(void)
   switch (command_buf[0]) {
   case 'b':
     parse_command_blob(command_buf, found);
+    break;
+  case 'c':
+    parse_command_power(command_buf, found);
     break;
 #if HAL_USE_PAL
   case 'g':
@@ -468,6 +472,28 @@ uint16_t sc_cmd_blob_get(uint8_t **blob)
   }
   return len;
 }
+
+
+
+/*
+ * Parse power command
+ */
+static void parse_command_power(uint8_t *cmd, uint8_t cmd_len)
+{
+
+  // Unused currently
+  (void)cmd_len;
+
+  switch (cmd[1]) {
+  case 'a':
+    sc_pwr_standby();
+    break;
+  default:
+    // Invalid value, ignoring command
+    return;
+  }
+}
+
 
 
 
