@@ -40,7 +40,7 @@
 #endif
 
 #ifndef sc_float
-#define sc_float double
+#define sc_float float
 #endif
 
 #if defined(BOARD_SNOWCAP_V1)
