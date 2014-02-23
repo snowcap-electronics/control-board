@@ -29,7 +29,6 @@
 #include "sc_utils.h"
 #include "sc_pwr.h"
 
-#if HAL_USE_RTC
 
 /*
  * Put the MCU to StandBy mode (all off except RTC)
@@ -40,13 +39,16 @@ void sc_pwr_standby(void)
 
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
   PWR->CR |= (PWR_CR_PDDS | PWR_CR_CSBF | PWR_CR_CWUF);
-  RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF | RTC_ISR_TAMP1F | RTC_ISR_TSOVF | RTC_ISR_TSF);
+  PWR->CSR |= PWR_CSR_EWUP;
 
+#if HAL_USE_RTC
+  RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF | RTC_ISR_TAMP1F | RTC_ISR_TSOVF | RTC_ISR_TSF);
+#endif
   __WFI();
 }
 
 
-
+#if HAL_USE_RTC
 /*
  * Set periodic wakeup.
  * Note that this seems to be cleared on reset (i.e. also in wake up from

@@ -26,13 +26,13 @@
  *
  */
 
-#if HAL_USE_PWR
 #ifndef SC_PWR_H
 #define SC_PWR_H
 
 void sc_pwr_standby(void);
+#if HAL_USE_RTC
 void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms);
 void sc_pwr_wakeup_clear(void);
-
 #endif
+
 #endif
