@@ -64,7 +64,7 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
     }
   }
 
-  if (i < SC_I2C_MAX_CLIENTS) {
+  if (i == SC_I2C_MAX_CLIENTS) {
     i2cStart(i2cp, &i2c_cfg);
   }
 
