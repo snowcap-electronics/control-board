@@ -51,6 +51,8 @@
 #include "sc_conf_f4_discovery.h"
 #elif defined(BOARD_ST_STM32VL_DISCOVERY)
 #include "sc_conf_f1_discovery.h"
+#elif defined(BOARD_RUUVITRACKERC2)
+#include "sc_conf_rt_c2.h"
 #else
 #error "Unknown board or board not defined."
 #endif

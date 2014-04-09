@@ -115,8 +115,16 @@ include $(CHIBIOS)/os/hal/platforms/STM32F1xx/platform.mk
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F1xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
+else ifeq ($(SC_BOARD),RT_C2)
+LDSCRIPT= $(PORTLD)/STM32F405xG.ld
+MCU = cortex-m4
+include boards/RT_C2/board.mk
+include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/hal.mk
+include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
+include $(CHIBIOS)/os/kernel/kernel.mk
 else
-$(error SC_BOARD not defined, supported: SC_SNOWCAP_V1, SC_SNOWCAP_STM32F4_V1, SC_F4_DISCOVERY, SC_F1_DISCOVERY)
+$(error SC_BOARD not defined or unknown)
 endif
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
