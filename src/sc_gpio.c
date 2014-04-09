@@ -52,7 +52,7 @@ void sc_gpio_init(void)
 {
   uint8_t i;
   for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
-	palSetPadMode(gpio_list[i + 1].port, gpio_list[i + 1].pin, PAL_MODE_OUTPUT_PUSHPULL);
+    palSetPadMode(gpio_list[i + 1].port, gpio_list[i + 1].pin, PAL_MODE_OUTPUT_PUSHPULL);
   }
 }
 
@@ -99,13 +99,13 @@ void sc_gpio_set_state_all(uint8_t gpios)
 {
   uint8_t i;
   for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
-	if (gpios & 1) {
-	  palSetPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
-	} else {
-	  palClearPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
-	}
+    if (gpios & 1) {
+      palSetPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
+    } else {
+      palClearPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
+    }
 
-	gpios >>= 1;
+    gpios >>= 1;
   }
 }
 
