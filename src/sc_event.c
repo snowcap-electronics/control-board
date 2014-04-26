@@ -85,7 +85,7 @@ static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 /*
  * Setup a working area with for the event loop thread
  */
-static WORKING_AREA(event_loop_thread, 512);
+static WORKING_AREA(event_loop_thread, 2048);
 static msg_t eventLoopThread(void *UNUSED(arg))
 {
 
