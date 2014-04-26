@@ -67,8 +67,8 @@ void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2
 void sc_uart_init(SC_UART uart);
 void sc_uart_stop(SC_UART uart);
 void sc_uart_default_usb(uint8_t enable);
-void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len);
-void sc_uart_send_str(SC_UART uart, char *msg);
+void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len);
+void sc_uart_send_str(SC_UART uart, const char *msg);
 void sc_uart_send_finished(void);
 /* Hackish way to receive characters from Serial USB */
 void sc_uart_revc_usb_byte(uint8_t byte);

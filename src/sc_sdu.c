@@ -441,7 +441,7 @@ static msg_t scSduSendThread(void *UNUSED(arg))
 
 
 
-int sc_sdu_send_msg(uint8_t *msg, int len)
+int sc_sdu_send_msg(const uint8_t *msg, int len)
 {
   int i;
   msg_t ret;

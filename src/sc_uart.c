@@ -62,7 +62,7 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 #endif
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
 static void rxchar(uint16_t c, SC_UART uart);
-static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len);
+static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len);
 static void uart_set_enable(SC_UART uart, uint8_t enable);
 static uint8_t uart_is_enabled(UARTDriver *drv);
 
@@ -282,7 +282,7 @@ void sc_uart_default_usb(uint8_t enable)
  * @param[in] msg       Message to send.
  * @param[in] len       Length of the message in bytes. 
  */
-void sc_uart_send_msg(SC_UART uart, uint8_t *msg, int len)
+void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 {
   UARTDriver *uartdrv;
 
@@ -366,7 +366,7 @@ void sc_uart_revc_usb_byte(uint8_t c)
  * @param[in] uart      UART to use.
  * @param[in] str       String to send. Must be \0 terminated.
  */
-void sc_uart_send_str(SC_UART uart, char *msg)
+void sc_uart_send_str(SC_UART uart, const char *msg)
 {
   int len = 0;
 
@@ -527,7 +527,7 @@ static void rxerr_cb(UNUSED(UARTDriver *uartp), UNUSED(uartflags_t e))
 /*
  * Queue message for sending (and start send, if currently idle)
  */
-static void circular_add_buffer(UARTDriver *uartdrv, uint8_t *msg, int len)
+static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len)
 {
   int circular_current;
   int i;

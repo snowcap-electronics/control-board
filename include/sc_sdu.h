@@ -34,7 +34,7 @@
 #if HAL_USE_SERIAL_USB
 
 void sc_sdu_init(void);
-int sc_sdu_send_msg(uint8_t *msg, int len);
+int sc_sdu_send_msg(const uint8_t *msg, int len);
 
 #endif /* HAL_USE_SERIAL_USB */
 
