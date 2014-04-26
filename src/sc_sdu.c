@@ -1,5 +1,6 @@
 /***
- * Copyright 2012 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2012-2014 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ *                     Seppo Takalo
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -364,12 +365,24 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   uint8_t c;
   uint8_t bytes_read;
 
+  usbDisconnectBus(serusbcfg.usbp);
+
+#ifdef SC_FORCE_USB_REDETECT
+  /*
+   * Force HOST re-detect device after e.g. DFU flashing by
+   * pulling D+ low so host assumes that device is disconnected.
+   */
+  palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_OUTPUT_PUSHPULL);
+  palClearPad(SC_USB_DP_PORT, SC_USB_DP_PIN);
+  chThdSleepMilliseconds(1000);
+  palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_ALTERNATE(SC_USB_DP_AF));
+#endif
+
   /*
    * Activates the USB driver and then the USB bus pull-up on D+.
    * Note, a delay is inserted in order to not have to disconnect the cable
    * after a reset.
    */
-  usbDisconnectBus(serusbcfg.usbp);
   // FIXME: would less than 1000ms be enough? While loop?
   chThdSleepMilliseconds(1000);
   usbStart(serusbcfg.usbp, &usbcfg);
