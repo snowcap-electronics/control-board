@@ -53,6 +53,14 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
+  if (subsystems & SC_INIT_UART3) {
+#if HAL_USE_UART
+    sc_uart_init(SC_UART_3);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
+  }
+
   if (subsystems & SC_INIT_PWM) {
 #if HAL_USE_PWM
     sc_pwm_init();
