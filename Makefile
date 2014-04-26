@@ -134,8 +134,10 @@ CSRC = $(PORTSRC) \
        $(HALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
+       $(CHIBIOS)/os/various/memstreams.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/chprintf.c \
+       $(CHIBIOS)/os/various/chrtclib.c \
        drivers/sc_lis302dl.c \
        drivers/sc_lsm9ds0.c \
        src/sc.c \

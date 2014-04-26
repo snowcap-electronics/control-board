@@ -30,6 +30,7 @@
 #define SC_LOG_H
 
 #include "sc_uart.h"
+#include <stdarg.h>
 
 typedef enum SC_LOG_LVL {
   SC_LOG_LVL_VERBOSE   = 1,
@@ -43,9 +44,12 @@ typedef enum SC_LOG_MODULE {
 } SC_LOG_MODULE;
 
 // Conveniency macros
+#define SC_LOG_PRINTF(...) sc_log_printf(SC_LOG_LVL_VERBOSE, SC_LOG_MODULE_TAG, __VA_ARGS__)
+#define SC_DBG_PRINTF(...) sc_log_printf(SC_LOG_LVL_DEBUG, SC_LOG_MODULE_TAG, __VA_ARGS__)
 #define SC_LOG(msg) sc_log(SC_LOG_LVL_VERBOSE, SC_LOG_MODULE_TAG, (uint8_t *)(msg))
 #define SC_DBG(msg) sc_log(SC_LOG_LVL_DEBUG, SC_LOG_MODULE_TAG, (uint8_t *)(msg))
 
+void sc_log_printf(SC_LOG_LVL lvl, SC_LOG_MODULE module, const char* fmt, ...);
 void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg);
 #if HAL_USE_UART
 void sc_log_output_uart(SC_UART uart);
