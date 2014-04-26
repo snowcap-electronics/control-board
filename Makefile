@@ -140,6 +140,7 @@ CSRC = $(PORTSRC) \
        $(CHIBIOS)/os/various/chrtclib.c \
        drivers/sc_lis302dl.c \
        drivers/sc_lsm9ds0.c \
+       drivers/gsm.c \
        src/sc.c \
        src/sc_led.c \
        src/sc_log.c \

@@ -91,4 +91,9 @@
 #define SC_UART3_RX_PIN    GPIOB_GSM_RXD
 #define SC_UART3_RX_AF     7
 
+#define SC_FORCE_USB_REDETECT 1
+#define SC_USB_DP_PORT     GPIOA
+#define SC_USB_DP_PIN      GPIOA_USB_DP
+#define SC_USB_DP_AF       10
+
 #endif
