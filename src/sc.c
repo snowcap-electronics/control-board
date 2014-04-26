@@ -120,6 +120,30 @@ void sc_init(uint32_t subsystems)
   }
 }
 
+/* libc stub */
+int _getpid(void) {return 1;}
+/* libc stub */
+void _exit(int i) {(void)i;}
+/* libc stub */
+#include <errno.h>
+#undef errno
+extern int errno;
+int _kill(int pid, int sig) {
+  (void)pid;
+  (void)sig;
+  errno = EINVAL;
+  return -1;
+}
+/* libc stub*/
+int _gettimeofday(void *tv, void *tz)
+{
+  (void)tv;
+  (void)tz;
+  errno = EINVAL;
+  return -1;
+}
+
+
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil
