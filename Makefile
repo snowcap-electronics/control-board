@@ -157,6 +157,16 @@ CSRC = $(PORTSRC) \
        src/sc_extint.c \
        src/sc_radio.c \
        src/sc_ahrs.c \
+       src/nmea/context.c \
+       src/nmea/generate.c \
+       src/nmea/generator.c \
+       src/nmea/gmath.c \
+       src/nmea/info.c \
+       src/nmea/parse.c \
+       src/nmea/parser.c \
+       src/nmea/sentence.c \
+       src/nmea/time.c \
+       src/nmea/tok.c \
        src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
