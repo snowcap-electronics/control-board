@@ -38,7 +38,7 @@ void sc_init(uint32_t subsystems)
   sc_cmd_init();
 
   if (subsystems & SC_INIT_UART1) {
-#if HAL_USE_UART
+#if STM32_UART_USE_USART1 && HAL_USE_UART
     sc_uart_init(SC_UART_1);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
@@ -46,7 +46,7 @@ void sc_init(uint32_t subsystems)
   }
 
   if (subsystems & SC_INIT_UART2) {
-#if HAL_USE_UART
+#if STM32_UART_USE_USART2 && HAL_USE_UART
     sc_uart_init(SC_UART_2);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
@@ -54,7 +54,7 @@ void sc_init(uint32_t subsystems)
   }
 
   if (subsystems & SC_INIT_UART3) {
-#if HAL_USE_UART
+#if STM32_UART_USE_USART3 && HAL_USE_UART
     sc_uart_init(SC_UART_3);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
