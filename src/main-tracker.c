@@ -62,7 +62,7 @@ int main(void)
   // Set UART config for GSM
   sc_uart_set_config(SC_UART_3, 115200, 0, 0, 0);
 
-  sc_init(SC_INIT_UART1 | SC_INIT_UART2 | SC_INIT_UART3 | SC_INIT_GPIO | SC_INIT_LED | SC_INIT_SDU);
+  sc_init(SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SDU);
   sc_uart_default_usb(TRUE);
 
   sc_log_output_uart(SC_UART_USB);

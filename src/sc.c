@@ -37,7 +37,7 @@ void sc_init(uint32_t subsystems)
   /* Initialize command parsing */
   sc_cmd_init();
 
-  if (subsystems & SC_INIT_UART1) {
+  if (subsystems & SC_MODULE_UART1) {
 #if STM32_UART_USE_USART1 && HAL_USE_UART
     sc_uart_init(SC_UART_1);
 #else
@@ -45,7 +45,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_UART2) {
+  if (subsystems & SC_MODULE_UART2) {
 #if STM32_UART_USE_USART2 && HAL_USE_UART
     sc_uart_init(SC_UART_2);
 #else
@@ -53,7 +53,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_UART3) {
+  if (subsystems & SC_MODULE_UART3) {
 #if STM32_UART_USE_USART3 && HAL_USE_UART
     sc_uart_init(SC_UART_3);
 #else
@@ -61,7 +61,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_PWM) {
+  if (subsystems & SC_MODULE_PWM) {
 #if HAL_USE_PWM
     sc_pwm_init();
 #else
@@ -70,7 +70,7 @@ void sc_init(uint32_t subsystems)
   }
 
   /* Init ICU for reading xBee signal strength */
-  if (subsystems & SC_INIT_ICU) {
+  if (subsystems & SC_MODULE_ICU) {
 #if HAL_USE_ICU
     sc_icu_init(1);
 #else
@@ -79,7 +79,7 @@ void sc_init(uint32_t subsystems)
   }
 
   /* Initializes a serial-over-USB CDC driver */
-  if (subsystems & SC_INIT_SDU) {
+  if (subsystems & SC_MODULE_SDU) {
 #if HAL_USE_SERIAL_USB
     sc_sdu_init();
 #else
@@ -87,7 +87,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_ADC) {
+  if (subsystems & SC_MODULE_ADC) {
 #if HAL_USE_ADC
     sc_adc_init();
 #else
@@ -95,7 +95,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_GPIO) {
+  if (subsystems & SC_MODULE_GPIO) {
 #if HAL_USE_PAL
     sc_gpio_init();
 #else
@@ -103,7 +103,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_LED) {
+  if (subsystems & SC_MODULE_LED) {
 #if HAL_USE_PAL
     sc_led_init();
 #else
@@ -111,7 +111,7 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  if (subsystems & SC_INIT_RADIO) {
+  if (subsystems & SC_MODULE_RADIO) {
 #ifdef SC_HAS_RBV2
     sc_radio_init();
 #else

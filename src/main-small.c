@@ -30,7 +30,7 @@
 
 int main(void)
 {
-  sc_init(SC_INIT_LED);
+  sc_init(SC_MODULE_LED);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();

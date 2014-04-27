@@ -36,7 +36,7 @@ static void cb_pa0_changed(void);
 
 int main(void)
 {
-  sc_init(SC_INIT_UART2 | SC_INIT_GPIO | SC_INIT_LED | SC_INIT_SDU | SC_INIT_RADIO);
+  sc_init(SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SDU | SC_MODULE_RADIO);
   sc_uart_default_usb(TRUE);
 
   sc_log_output_uart(SC_UART_USB);

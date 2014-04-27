@@ -68,7 +68,7 @@ int main(void)
 static void init(void)
 {
   uint8_t use_usb = 1;
-  uint32_t subsystems = SC_INIT_UART1 | SC_INIT_PWM | SC_INIT_ADC | SC_INIT_GPIO | SC_INIT_LED;
+  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
 
   // F1 Discovery doesn't support USB
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
@@ -76,7 +76,7 @@ static void init(void)
 #endif
 
   if (use_usb) {
-    subsystems |= SC_INIT_SDU;
+    subsystems |= SC_MODULE_SDU;
   }
 
   sc_init(subsystems);
