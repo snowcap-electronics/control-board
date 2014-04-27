@@ -123,7 +123,7 @@ void sc_init(uint32_t subsystems)
 /* libc stub */
 int _getpid(void) {return 1;}
 /* libc stub */
-void _exit(int i) {(void)i;}
+void _exit(int i) {(void)i;for(;;){}}
 /* libc stub */
 #include <errno.h>
 #undef errno
