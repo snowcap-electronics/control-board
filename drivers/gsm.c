@@ -26,6 +26,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "sc_utils.h"
+#ifdef SC_USE_GSM
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
@@ -33,7 +35,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "slre.h"
 #include "gsm.h"
 #include "ch.h"
 #include "hal.h"
@@ -153,8 +154,9 @@ static msg_t scGsmThread(void *UNUSED(arg));
 /* URC message */
 typedef struct Message Message;
 struct Message {
-    const char *msg;			    /* Message string */
-    enum State next_state;	/* Automatic state transition */
+    const char *msg;        /* Message string */
+    uint8_t msg_len;        /* Message length */
+    enum State next_state;  /* Automatic state transition */
     void (*func)(uint8_t *line, uint8_t len);/* Function to call on message */
 };
 
@@ -201,9 +203,7 @@ static void handle_call_ended(uint8_t *line, uint8_t len);
 static void handle_network(uint8_t *line, uint8_t len);
 static void handle_sapbr(uint8_t *line, uint8_t len);
 static void handle_sms_in(uint8_t *line, uint8_t len);
-//static void socket_receive(uint8_t *line, uint8_t len);
 static void handle_pdp_off(uint8_t *line, uint8_t len);
-//static void socket_closed(uint8_t *line, uint8_t len);
 
 /* Other prototypes */
 static void gsm_enable_hw_flow(void);
@@ -215,24 +215,24 @@ static Message urc_messages[] = {
     /* User defined reply, MUST BE the first */
     { "", .func = handle_user_defined },
     /* Unsolicited Result Codes (URC messages) */
-    { "RDY",                    .next_state=STATE_BOOTING },
-    { "NORMAL POWER DOWN",      .next_state=STATE_OFF },
-    { "^\\+CPIN: NOT INSERTED", .next_state=STATE_ERROR,        .func = handle_no_sim },
-    { "\\+CPIN: NOT READY",     .next_state=STATE_WAIT_NETWORK, .func = handle_sim_not_ready },
-    { "\\+CPIN: READY",         .next_state=STATE_WAIT_NETWORK, .func = handle_sim_inserted },
-    { "\\+CPIN: SIM PIN",       .next_state=STATE_ASK_PIN,      .func = handle_sim_inserted },
-    { "\\+CFUN:",                                               .func = handle_cfun },
-    { "Call Ready",             .next_state=STATE_READY,        .func = handle_call_ready },
-    { "GPS Ready",       .func = handle_gpsready },
-    { "\\+COPS:",        .func = handle_network },
-    { "\\+SAPBR:",       .func = handle_sapbr },
-    { "\\+PDP: DEACT",   .func = handle_pdp_off },
+    { "RDY",                  .next_state=STATE_BOOTING },
+    { "NORMAL POWER DOWN",    .next_state=STATE_OFF },
+    { "^+CPIN: NOT INSERTED", .next_state=STATE_ERROR,        .func = handle_no_sim },
+    { "+CPIN: NOT READY",     .next_state=STATE_WAIT_NETWORK, .func = handle_sim_not_ready },
+    { "+CPIN: READY",         .next_state=STATE_WAIT_NETWORK, .func = handle_sim_inserted },
+    { "+CPIN: SIM PIN",       .next_state=STATE_ASK_PIN,      .func = handle_sim_inserted },
+    { "+CFUN:",                                               .func = handle_cfun },
+    { "Call Ready",           .next_state=STATE_READY,        .func = handle_call_ready },
+    { "GPS Ready",    .func = handle_gpsready },
+    { "+COPS:",       .func = handle_network },
+    { "+SAPBR:",      .func = handle_sapbr },
+    { "+PDP: DEACT",  .func = handle_pdp_off },
     /* Return codes */
     { "OK",           .func = handle_ok },
     { "FAIL",         .func = handle_fail },
     { "ERROR",        .func = handle_error },
-    { "\\+CME ERROR", .func = handle_error },
-    { "\\+CMS ERROR", .func = handle_error },                       /* TODO: handle */
+    { "+CME ERROR",   .func = handle_error },
+    { "+CMS ERROR",   .func = handle_error },                       /* TODO: handle */
     /* During Call */
     { "NO CARRIER",   .func = handle_call_ended }, /* This is general end-of-call */
     { "NO DIALTONE",  .func = handle_call_ended },
@@ -240,10 +240,7 @@ static Message urc_messages[] = {
     { "NO ANSWER",    .func = handle_fail },
     { "RING",         .func = handle_incoming_call },
     /* SMS */
-    { "\\+CMTI:",     .func = handle_sms_in },
-    /* SOCKET */
-//	{ "\\+RECEIVE",      .func = socket_receive },
-//	{ "\\d, CLOSED",    .func = socket_closed },
+    { "+CMTI:",       .func = handle_sms_in },
     { NULL } /* Table must end with NULL */
 };
 
@@ -355,16 +352,14 @@ uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
 static Message *lookup_urc_message(const uint8_t *line, uint8_t len)
 {
     int n;
+    (void)len;
     for(n=0; urc_messages[n].msg; n++) {
         if (urc_messages[n].msg[0] != '\0') {
-            if (slre_match(0, urc_messages[n].msg, (char *)line, len) == 0) {
+            if (strncmp(urc_messages[n].msg, (char *)line, urc_messages[n].msg_len) == 0) {
                 return &urc_messages[n];
             }
         }
     }
-
-    
-    //chDbgAssert(0, "Unknown message from GSM", line);
 
     return NULL;
 }
@@ -639,6 +634,7 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     _DEBUG("wait=%s\r\n", pattern);
 
     urc_messages[0].msg = (const char*)pattern;
+    urc_messages[0].msg_len = strlen((char*)pattern);
 
     wait_limit = chTimeNow() + timeout;
 
@@ -647,9 +643,7 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
 
         ret = chBSemWaitTimeout(&gsm.waiting_reply, 1000);
         if (ret == RDY_OK) {
-            const char *err;
-            err = slre_match(0, (const char *)pattern, (const char *)gsm.buf, gsm.buf_len);
-            if (err == NULL) {
+            if (strncmp((const char *)pattern, (const char *)gsm.buf, gsm.buf_len) == 0) {
                 found = 1;
                 break;
             }
@@ -661,6 +655,7 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     }
 
     urc_messages[0].msg = "";
+    urc_messages[0].msg_len = 0;
 
     D_EXIT();
     return found;
@@ -739,7 +734,7 @@ static void gsm_enable_hw_flow()
     uint8_t sleep[]  = "AT+CSCLK=1\r\n"; /* Allow module to sleep */
     uint8_t verbose[] = "AT+CMEE=2\r\n"; /* Verbose errors */
     uint8_t ret = AT_OK;
-    return;
+
     D_ENTER();
     while(gsm.state < STATE_BOOTING) {
         _DEBUG("Waiting for booting state\r\n");
@@ -905,6 +900,12 @@ static WORKING_AREA(sc_gsm_thread, 1024);
 static msg_t scGsmThread(void *arg)
 {
     (void)arg;
+    uint8_t i;
+
+    // Initialise the length of the URC messages
+    for (i = 0; urc_messages[i].msg != NULL; ++i) {
+        urc_messages[i].msg_len = strlen(urc_messages[i].msg);
+    }
 
     if (palReadPad(GPIOC, GPIOC_ENABLE_GSM_VBAT) == PAL_LOW) {
         // Power off GSM
@@ -1005,6 +1006,8 @@ void gsm_stop(void)
         chDbgAssert(0, "GSM thread not running", "#1");
     }
 }
+
+#endif // SC_USE_GSM
 
 /* Emacs indentatation information
    Local Variables:

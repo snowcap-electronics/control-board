@@ -28,6 +28,9 @@
  * THE SOFTWARE.
  */
 
+#include "sc_utils.h"
+#ifdef SC_USE_GSM
+
 #ifndef _GSM_H
 #define _GSM_H
 
@@ -57,4 +60,5 @@ void gsm_state_parser(uint8_t c);
 /* Send AT command to modem. Returns 1 if the function call is queued for the GSM, 0 otherwise */
 uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len);
 
-#endif	/* GSM_H */
+#endif /* GSM_H */
+#endif /* SC_USE_GSM */
