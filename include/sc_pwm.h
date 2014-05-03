@@ -30,6 +30,7 @@
 #define SC_PWM_H
 
 void sc_pwm_init(void);
+void sc_pwm_deinit(void);
 void sc_pwm_set_freq(uint16_t freq);
 void sc_pwm_stop(int pwm);
 void sc_pwm_set_duty(int pwm, uint16_t duty);

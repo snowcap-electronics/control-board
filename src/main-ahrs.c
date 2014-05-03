@@ -88,6 +88,8 @@ static void init(void)
     subsystems |= SC_MODULE_SDU;
   }
 
+  halInit();
+
   sc_init(subsystems);
 
   if (use_usb) {

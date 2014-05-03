@@ -36,6 +36,7 @@
 
 // Common includes for all source files
 #include <stdint.h>
+#include <stdbool.h>
 
 #if defined __GNUC__
 # define UNUSED(x) x __attribute__ ((unused))

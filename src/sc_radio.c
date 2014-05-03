@@ -666,6 +666,16 @@ void sc_radio_init(void)
 
 
 
+/*
+ * Deinit radio
+ */
+void sc_radio_deinit(void)
+{
+  // Nothing to do here.
+}
+
+
+
 void sc_radio_set_reset(uint8_t enable)
 {
   uint8_t msg[] = "R: R_\r\n";
@@ -748,7 +758,7 @@ uint8_t sc_radio_reset_bsl(void)
       palSetPadMode(SC_UART2_TX_PORT, SC_UART2_TX_PIN, PAL_MODE_ALTERNATE(SC_UART2_TX_AF));
       // Set 9600, 8 data bits, 9th bit as even parity bit
       sc_uart_set_config(SC_UART_2, 9600, USART_CR1_PCE | USART_CR1_M, 0/*USART_CR2_LINEN*/, 0);
-      sc_uart_init(SC_UART_2);
+      sc_uart_start(SC_UART_2);
 
       radio_state = SC_RADIO_STATE_FLASH_SYNC_UART_READY;
       return 1;
@@ -785,7 +795,7 @@ void sc_radio_reset_normal(void)
 
   // Set 115200, 8 data bits, no parity bit
   sc_uart_set_config(SC_UART_2, 115200, 0, USART_CR2_LINEN, 0);
-  sc_uart_init(SC_UART_2);
+  sc_uart_start(SC_UART_2);
 
   radio_state = SC_RADIO_STATE_NORMAL;
 }

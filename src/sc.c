@@ -30,16 +30,19 @@
 
 void sc_init(uint32_t subsystems)
 {
-  /* Initialize ChibiOS HAL and core */
-  halInit();
+  /* Initialize ChibiOS core */
   chSysInit();
 
   /* Initialize command parsing */
   sc_cmd_init();
 
+  if (subsystems & (SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3) ) {
+    sc_uart_init();
+  }
+
   if (subsystems & SC_MODULE_UART1) {
 #if STM32_UART_USE_USART1 && HAL_USE_UART
-    sc_uart_init(SC_UART_1);
+    sc_uart_start(SC_UART_1);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
 #endif
@@ -47,7 +50,7 @@ void sc_init(uint32_t subsystems)
 
   if (subsystems & SC_MODULE_UART2) {
 #if STM32_UART_USE_USART2 && HAL_USE_UART
-    sc_uart_init(SC_UART_2);
+    sc_uart_start(SC_UART_2);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
 #endif
@@ -55,7 +58,7 @@ void sc_init(uint32_t subsystems)
 
   if (subsystems & SC_MODULE_UART3) {
 #if STM32_UART_USE_USART3 && HAL_USE_UART
-    sc_uart_init(SC_UART_3);
+    sc_uart_start(SC_UART_3);
 #else
     chDbgAssert(0, "HAL_USE_UART undefined", "#1");
 #endif
@@ -69,7 +72,6 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  /* Init ICU for reading xBee signal strength */
   if (subsystems & SC_MODULE_ICU) {
 #if HAL_USE_ICU
     sc_icu_init(1);
@@ -78,7 +80,6 @@ void sc_init(uint32_t subsystems)
 #endif
   }
 
-  /* Initializes a serial-over-USB CDC driver */
   if (subsystems & SC_MODULE_SDU) {
 #if HAL_USE_SERIAL_USB
     sc_sdu_init();
@@ -118,6 +119,99 @@ void sc_init(uint32_t subsystems)
     chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
 #endif
   }
+}
+
+
+void sc_deinit(uint32_t subsystems)
+{
+
+  if (subsystems & SC_MODULE_RADIO) {
+#ifdef SC_HAS_RBV2
+    sc_radio_deinit();
+#else
+    chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_LED) {
+#if HAL_USE_PAL
+    sc_led_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_GPIO) {
+#if HAL_USE_PAL
+    sc_gpio_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_ADC) {
+#if HAL_USE_ADC
+    sc_adc_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_ADC undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_SDU) {
+#if HAL_USE_SERIAL_USB
+    sc_sdu_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_ICU) {
+#if HAL_USE_ICU
+    sc_icu_deinit(1);
+#else
+    chDbgAssert(0, "HAL_USE_ICU undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_PWM) {
+#if HAL_USE_PWM
+    sc_pwm_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_PWM undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_UART3) {
+#if STM32_UART_USE_USART3 && HAL_USE_UART
+    sc_uart_stop(SC_UART_3);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_UART2) {
+#if STM32_UART_USE_USART2 && HAL_USE_UART
+    sc_uart_stop(SC_UART_2);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
+  }
+
+  if (subsystems & SC_MODULE_UART1) {
+#if STM32_UART_USE_USART1 && HAL_USE_UART
+    sc_uart_stop(SC_UART_1);
+#else
+    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+#endif
+  }
+
+  if (subsystems & (SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3) ) {
+    sc_uart_deinit();
+  }
+
+  /* Initialize command parsing */
+  sc_cmd_deinit();
+
 }
 
 /* libc stub */

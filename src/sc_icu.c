@@ -49,13 +49,27 @@ static ICUConfig icucfg = {
 
 /*
  * Initialize the ICU unit with given channel
+ * FIXME: Maybe init + start + stop + deinit would be more consistent?
  */
 void sc_icu_init(int channel)
 {
   // FIXME: ChibiOS supports only channel 1
   if (channel == 1) {
+	// FIXME: use sc_conf.h to select ICUDx
 	icuStart(&ICUD4, &icucfg);
 	icuEnable(&ICUD4);
+  }
+}
+
+/*
+ * Deinitialize the ICU unit with given channel
+ */
+void sc_icu_deinit(int channel)
+{
+  // FIXME: ChibiOS supports only channel 1
+  if (channel == 1) {
+	icuDisable(&ICUD4);
+	icuStop(&ICUD4);
   }
 }
 

@@ -36,6 +36,7 @@
 typedef enum SC_EVENT_TYPE {
   // Application registrable events
   SC_EVENT_TYPE_PUSH_BYTE = 1,
+  SC_EVENT_TYPE_NOP,
   SC_EVENT_TYPE_EXTINT,
   SC_EVENT_TYPE_ADC_AVAILABLE,
   SC_EVENT_TYPE_TEMP_AVAILABLE,
@@ -65,6 +66,7 @@ typedef void (*sc_event_cb_blob_available)(void);
 typedef void (*sc_event_cb_ahrs_available)(void);
 
 void sc_event_loop_start(void);
+void sc_event_loop_stop(void);
 void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from);
 #if HAL_USE_UART
 msg_t sc_event_msg_create_recv_byte(uint8_t byte, SC_UART uart);

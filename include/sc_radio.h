@@ -30,6 +30,7 @@
 #define SC_RADIO_H
 
 void sc_radio_init(void);
+void sc_radio_deinit(void);
 void sc_radio_set_reset(uint8_t enable);
 void sc_radio_set_test(uint8_t enable);
 void sc_radio_process_byte(uint8_t byte);

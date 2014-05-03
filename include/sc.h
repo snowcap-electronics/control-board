@@ -65,5 +65,6 @@
 #define SC_MODULE_RADIO       0x0800
 
 void sc_init(uint32_t subsystems);
+void sc_deinit(uint32_t subsystems);
 
 #endif

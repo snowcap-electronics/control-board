@@ -32,6 +32,7 @@
 #include <sc_utils.h>
 
 void sc_cmd_init(void);
+void sc_cmd_deinit(void);
 void sc_cmd_push_byte(uint8_t byte);
 uint16_t sc_cmd_blob_get(uint8_t **blob);
 

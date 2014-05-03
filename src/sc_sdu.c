@@ -53,6 +53,8 @@ static Semaphore send_sem;
 static uint8_t first_free = 0;
 static uint8_t previous_full = MAX_SEND_BUFFERS - 1;
 
+static Thread *sdu_send_thread = NULL;
+static Thread *sdu_read_thread = NULL;
 static msg_t scSduReadThread(void *UNUSED(arg));
 static msg_t scSduSendThread(void *UNUSED(arg));
 
@@ -396,7 +398,7 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   }
 
   // Loop forever reading characters
-  while (TRUE) {
+  while (!chThdShouldTerminate()) {
     // Block while waiting for a single character
     bytes_read = chSequentialStreamRead((BaseSequentialStream *)&SDUX, &c, 1);
 
@@ -413,10 +415,14 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 static WORKING_AREA(sc_sdu_send_thread, 256);
 static msg_t scSduSendThread(void *UNUSED(arg))
 {
-  while (TRUE) {
+  while (!chThdShouldTerminate()) {
 
     // Wait for data to be send
     chSemWait(&send_sem);
+
+    if (chThdShouldTerminate()) {
+      break;
+    }
 
     // Lock send buffer
     chBSemWait(&buf_sem);
@@ -503,13 +509,39 @@ void sc_sdu_init(void)
   sduObjectInit(&SDUX);
   sduStart(&SDUX, &serusbcfg);
 
+  chDbgAssert(sdu_read_thread == NULL, "SDU read thread already running", "#1");
   // Start a thread dedicated USB activating and reading messages
-  chThdCreateStatic(sc_sdu_read_thread, sizeof(sc_sdu_read_thread),
-                    NORMALPRIO, scSduReadThread, NULL);
+  sdu_read_thread = chThdCreateStatic(sc_sdu_read_thread,
+                                      sizeof(sc_sdu_read_thread),
+                                      NORMALPRIO, scSduReadThread, NULL);
 
+  chDbgAssert(sdu_send_thread == NULL, "SDU send thread already running", "#1");
   // Start a thread dedicated to sending messages
-  chThdCreateStatic(sc_sdu_send_thread, sizeof(sc_sdu_send_thread),
-                    NORMALPRIO, scSduSendThread, NULL);
+  sdu_send_thread = chThdCreateStatic(sc_sdu_send_thread,
+                                      sizeof(sc_sdu_send_thread),
+                                      NORMALPRIO, scSduSendThread, NULL);
+}
+
+
+void sc_sdu_deinit(void)
+{
+
+  chDbgAssert(sdu_send_thread != NULL, "SDU send thread not running", "#1");
+  chThdTerminate(sdu_send_thread);
+  chSemSignal(&send_sem);
+  chThdWait(sdu_send_thread);
+  sdu_send_thread = NULL;
+
+  chDbgAssert(sdu_read_thread != NULL, "SDU read thread not running", "#1");
+  chThdTerminate(sdu_read_thread);
+  // FIXME: can't wait yet as there's no way to signal chSequentialStreamRead
+  //chThdWait(sdu_read_thread);
+  sdu_read_thread = NULL;
+
+  // Deinitialize USB
+  sduStop(&SDUX);
+  usbDisconnectBus(serusbcfg.usbp);
+  usbStop(serusbcfg.usbp);
 }
 
 

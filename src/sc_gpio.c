@@ -56,6 +56,18 @@ void sc_gpio_init(void)
   }
 }
 
+
+
+/*
+ * Deinit
+ */
+void sc_gpio_deinit(void)
+{
+  // Nothing to do here.
+}
+
+
+
 /*
  * Turn the led on
  */

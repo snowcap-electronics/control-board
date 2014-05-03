@@ -79,6 +79,17 @@ void sc_cmd_init(void)
 
 
 /*
+ * Deinitialize command module
+ */
+void sc_cmd_deinit(void)
+{
+  // Nothing to do here.
+}
+
+
+
+
+/*
  * Receive byte. This can be called only from the main thread.
  * FIXME: per uart buffers. Now we happily mix all uarts together.
  */
@@ -486,7 +497,10 @@ static void parse_command_power(uint8_t *cmd, uint8_t cmd_len)
 
   switch (cmd[1]) {
   case 'a':
-    sc_pwr_standby();
+    sc_pwr_mode_standby(true, true);
+    break;
+  case 'o':
+    sc_pwr_mode_stop(true);
     break;
   default:
     // Invalid value, ignoring command

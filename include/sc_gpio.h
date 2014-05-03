@@ -33,6 +33,7 @@
 #define SC_GPIO_MAX_PINS 4
 
 void sc_gpio_init(void);
+void sc_gpio_deinit(void);
 void sc_gpio_on(uint8_t gpio);
 void sc_gpio_off(uint8_t gpio);
 void sc_gpio_toggle(uint8_t gpio);

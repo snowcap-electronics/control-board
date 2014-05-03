@@ -38,6 +38,15 @@ void sc_led_init(void)
                 PAL_MODE_OUTPUT_PUSHPULL);
 }
 
+
+
+void sc_led_deinit(void)
+{
+  // Nothing to do here.
+}
+
+
+
 /*
  * Turn the led on
  */

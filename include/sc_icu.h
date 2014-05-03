@@ -34,6 +34,7 @@
 #if HAL_USE_ICU
 
 void sc_icu_init(int channel);
+void sc_icu_deinit(int channel);
 int sc_icu_get_width(int channel);
 int sc_icu_get_period(int channel);
 

@@ -34,6 +34,8 @@ static void cb_adc_available(void);
 
 int main(void)
 {
+  halInit();
+
   // Init SC framework, with USB if not F1 Discovery
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
   sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);

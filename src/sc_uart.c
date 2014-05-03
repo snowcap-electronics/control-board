@@ -172,29 +172,52 @@ void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2
   cfg->cr2 = cr2;
   cfg->cr3 = cr3;
 }
+
 /**
  * @brief   Initialize an UART
- * @note    Several UARTs can be initialized with several calls. The lastly
- *          initialized UART will be used when sending data using the
- *          SC_UART_LAST.
- *
- * @param[in] uart      UART to initialize
  */
-void sc_uart_init(SC_UART uart)
+void sc_uart_init(void)
 {
   int i;
 
-  if (!circular_init_done) {
-	// Initialize sending side circular buffer state
-	circular_init_done = 1;
-	circular_sending = -1;
-	circular_free = 0;
-	for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
-	  circular_len[i] = 0;
-	}
-	chMtxInit(&circular_mtx);
-  }
+  chDbgAssert(!circular_init_done, "uart already initialized", "#1");
 
+  // Initialize sending side circular buffer state
+  circular_init_done = 1;
+  circular_sending = -1;
+  circular_free = 0;
+  for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
+	circular_len[i] = 0;
+  }
+  chMtxInit(&circular_mtx);
+}
+
+
+
+void sc_uart_deinit(void)
+{
+#if STM32_UART_USE_USART1
+  chDbgAssert(uart_is_enabled(&UARTD1) == 0, "Uart 1 still enabled in deinit", "#1");
+#endif
+#if STM32_UART_USE_USART2
+  chDbgAssert(uart_is_enabled(&UARTD2) == 0, "Uart 2 still enabled in deinit", "#1");
+#endif
+#if STM32_UART_USE_USART3
+  chDbgAssert(uart_is_enabled(&UARTD3) == 0, "Uart 3 still enabled in deinit", "#1");
+#endif
+
+  circular_init_done = 0;
+}
+
+
+
+/**
+ * @brief   Start an UART
+ *
+ * @param[in] uart      UART to start
+ */
+void sc_uart_start(SC_UART uart)
+{
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:

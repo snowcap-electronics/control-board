@@ -30,6 +30,8 @@
 
 int main(void)
 {
+  halInit();
+
   sc_init(SC_MODULE_LED);
 
   // Start event loop. This will start a new thread and return

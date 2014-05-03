@@ -162,7 +162,7 @@ void sc_temp_thread_init(void)
   chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
 }
 
-void sc_adc_init(void)
+void sc_adc_deinit(void)
 {
   chMtxInit(&adc_mtx);
 
@@ -171,6 +171,14 @@ void sc_adc_init(void)
   palSetGroupMode(GPIOA, PAL_PORT_BIT(0), 0, PAL_MODE_INPUT_ANALOG);
 #endif
 }
+
+
+
+void sc_adc_deinit(void)
+{
+  // Nothing to do here.
+}
+
 
 
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)

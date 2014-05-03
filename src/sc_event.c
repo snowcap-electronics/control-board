@@ -82,6 +82,8 @@ static sc_event_cb_9dof_available cb_9dof_available = NULL;
 static sc_event_cb_blob_available cb_blob_available = NULL;
 static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 
+static Thread *event_thread = NULL;
+
 /*
  * Setup a working area with for the event loop thread
  */
@@ -89,13 +91,18 @@ static WORKING_AREA(event_loop_thread, 2048);
 static msg_t eventLoopThread(void *UNUSED(arg))
 {
 
-  while (TRUE) {
+  while (!chThdShouldTerminate()) {
     msg_t msg;
     msg_t ret;
     SC_EVENT_TYPE type;
 
     // Wait for action
     ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
+
+    if (chThdShouldTerminate()) {
+      break;
+    }
+
     chDbgAssert(ret == RDY_OK, "chMBFetch failed", "#1");
     if (ret != RDY_OK) {
       continue;
@@ -172,12 +179,36 @@ static msg_t eventLoopThread(void *UNUSED(arg))
 
 
 /*
- * Start a user thread
+ * Start a event loop thread
  */
 void sc_event_loop_start(void)
 {
+
+  chDbgAssert(event_thread == NULL, "Event thread already running", "#1");
+
   // Start a thread dedicated to event loop
-  chThdCreateStatic(event_loop_thread, sizeof(event_loop_thread), NORMALPRIO, eventLoopThread, NULL);
+  event_thread = chThdCreateStatic(event_loop_thread, sizeof(event_loop_thread),
+                                   NORMALPRIO, eventLoopThread, NULL);
+}
+
+
+/*
+ * Stop a event loop thread
+ */
+void sc_event_loop_stop(void)
+{
+  msg_t nop;
+
+  chDbgAssert(event_thread != NULL, "Event thread not running", "#1");
+
+  chThdTerminate(event_thread);
+
+  // Send an event to wake up the thread
+  nop = sc_event_msg_create_type(SC_EVENT_TYPE_NOP);
+  sc_event_msg_post(nop, SC_EVENT_MSG_POST_FROM_NORMAL);
+
+  chThdWait(event_thread);
+  event_thread = NULL;
 }
 
 

@@ -81,6 +81,19 @@ void sc_pwm_init(void)
 }
 
 
+/*
+ * Deinitialize PWM
+ */
+void sc_pwm_deinit(void)
+{
+  pwmStop(&PWMDX1);
+
+#ifdef PWMDX2
+  pwmStop(&PWMDX2);
+#endif
+}
+
+
 
 /*
  * Set frequency in Hz (e.g. 50 for standard servo/ESC, 400 for fast servo/ESC)
