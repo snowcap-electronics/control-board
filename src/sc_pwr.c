@@ -28,43 +28,96 @@
 
 #include "sc_utils.h"
 #include "sc_pwr.h"
+#include "sc_extint.h"
 
 
 /*
  * Put the MCU to StandBy mode (all off except RTC)
  */
-void sc_pwr_standby(void)
+void sc_pwr_mode_standby(bool wake_on_pa0, bool wake_on_rtc)
 {
-  chSysLock();
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    PWR->CR |= (PWR_CR_PDDS/* | PWR_CR_FPDS*/ | PWR_CR_CSBF | PWR_CR_CWUF);
+    PWR->CSR |= PWR_CSR_EWUP;
 
-  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-  PWR->CR |= (PWR_CR_PDDS | PWR_CR_CSBF | PWR_CR_CWUF);
-  PWR->CSR |= PWR_CSR_EWUP;
+    if (wake_on_pa0) {
+        PWR->CSR |= PWR_CSR_EWUP;
+    }
 
+    if (wake_on_rtc) {
 #if HAL_USE_RTC
-  RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF | RTC_ISR_TAMP1F | RTC_ISR_TSOVF | RTC_ISR_TSF);
+        RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF | RTC_ISR_TAMP1F | RTC_ISR_TSOVF | RTC_ISR_TSF);
+#else
+        chDbgAssert(0, "RTC not enabled", "#1");
 #endif
-  __WFI();
+    }
+    __WFI();
 }
+
+
+
+void sc_pwr_mode_stop(bool wake_on_rtc)
+{
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    PWR->CR |= (PWR_CR_LPDS/* | PWR_CR_FPDS*/ | PWR_CR_CSBF | PWR_CR_CWUF);
+    PWR->CR &= ~PWR_CR_PDDS;
+
+    if (wake_on_rtc) {
+#if HAL_USE_RTC
+        // RTC wake from stop mode needs EXTI line 22 configured to rising edge
+        sc_extint_set_event(GPIOA, 22, SC_EXTINT_EDGE_RISING);
+
+        RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF | RTC_ISR_TAMP1F | RTC_ISR_TSOVF | RTC_ISR_TSF);
+#else
+        chDbgAssert(0, "RTC not enabled", "#1");
+#endif
+    }
+
+    __WFI();
+}
+
+
+void sc_pwr_mode_clear(void)
+{
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+    PWR->CSR &= ~PWR_CSR_EWUP;
+    PWR->CR &= ~(PWR_CR_PDDS | PWR_CR_LPDS | PWR_CR_FPDS);
+}
+
+
+void sc_pwr_chibios_stop(void)
+{
+    // http://www.chibios.org/dokuwiki/doku.php?id=chibios:howtos:stop_os
+    // FIXME: What's a system timer? How to stop it?
+
+    chSysEnable();
+}
+
+
+
+void sc_pwr_chibios_start(void)
+{
+    chSysDisable();
+}
+
 
 
 #if HAL_USE_RTC
 /*
  * Set periodic wakeup.
  * Note that this seems to be cleared on reset (i.e. also in wake up from
- * stand by).
+ * standby).
  */
-void sc_pwr_wakeup_set(uint32_t sec, UNUSED(uint32_t ms))
+void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms)
 {
-  RTCWakeup wakeupspec;
+    RTCWakeup wakeupspec;
+    (void)ms;
+    /* select 1 Hz clock source */
+    wakeupspec.wakeup = ((uint32_t)4) << 16;
+    wakeupspec.wakeup |= sec;
 
-  /* FIXME: faster clock source for millisecond sleeps? */
-  wakeupspec.wakeup = ((uint32_t)4) << 16; /* select 1 Hz clock source */
-
-  /* FIXME: No idea why this doesn't match to 1Hz */
-  wakeupspec.wakeup |= 30 * sec;
-
-  rtcSetPeriodicWakeup_v2(&RTCD1, &wakeupspec);
+    // FIXME: should not use hard coded RTCD1?
+    rtcSetPeriodicWakeup_v2(&RTCD1, &wakeupspec);
 }
 
 
@@ -74,6 +127,16 @@ void sc_pwr_wakeup_set(uint32_t sec, UNUSED(uint32_t ms))
  */
 void sc_pwr_wakeup_clear(void)
 {
-  rtcSetPeriodicWakeup_v2(&RTCD1, NULL);
+    // FIXME: should not use hard coded RTCD1?
+    rtcSetPeriodicWakeup_v2(&RTCD1, NULL);
 }
 #endif
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:4
+   c-basic-offset:4
+   End:
+*/
