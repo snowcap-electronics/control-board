@@ -149,7 +149,7 @@ int nmea_scanf(const char *buff, int buff_sz, const char *format, ...)
             beg_fmt = format;
             tok_type = NMEA_TOKS_WIDTH;
         case NMEA_TOKS_WIDTH:
-            if(isdigit(*format))
+		  if(isdigit((int)*format))
                 break;
             {
                 tok_type = NMEA_TOKS_TYPE;

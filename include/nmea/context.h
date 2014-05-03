@@ -34,7 +34,7 @@ typedef struct _nmeaPROPERTY
 
 } nmeaPROPERTY;
 
-nmeaPROPERTY * nmea_property();
+nmeaPROPERTY * nmea_property(void);
 
 void nmea_trace(const char *str, ...);
 void nmea_trace_buff(const char *buff, int buff_size);

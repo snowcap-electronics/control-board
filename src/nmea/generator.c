@@ -123,6 +123,8 @@ int nmea_generate_from(
 
 int nmea_igen_noise_init(nmeaGENERATOR *gen, nmeaINFO *info)
 {
+    (void)gen;
+    (void)info;
     return 1;
 }
 
@@ -130,6 +132,8 @@ int nmea_igen_noise_loop(nmeaGENERATOR *gen, nmeaINFO *info)
 {
     int it;
     int in_use;
+
+    (void)gen;
 
     info->sig = (int)nmea_random(1, 3);
     info->PDOP = nmea_random(0, 9);
@@ -165,6 +169,8 @@ int nmea_igen_noise_loop(nmeaGENERATOR *gen, nmeaINFO *info)
 
 int nmea_igen_noise_reset(nmeaGENERATOR *gen, nmeaINFO *info)
 {
+    (void)gen;
+    (void)info;
     return 1;
 }
 
@@ -174,12 +180,14 @@ int nmea_igen_noise_reset(nmeaGENERATOR *gen, nmeaINFO *info)
 
 int nmea_igen_static_loop(nmeaGENERATOR *gen, nmeaINFO *info)
 {
+    (void)gen;
     nmea_time_now(&info->utc);
     return 1;
 };
 
 int nmea_igen_static_reset(nmeaGENERATOR *gen, nmeaINFO *info)
 {
+    (void)gen;
     info->satinfo.inuse = 4;
     info->satinfo.inview = 4;
 
@@ -231,6 +239,8 @@ int nmea_igen_rotate_loop(nmeaGENERATOR *gen, nmeaINFO *info)
     double deg = 360 / (count?count:1);
     double srt = (count?(info->satinfo.sat[0].azimuth):0) + 5;
 
+    (void)gen;
+
     nmea_time_now(&info->utc);
 
     for(it = 0; it < count; ++it)
@@ -248,6 +258,8 @@ int nmea_igen_rotate_reset(nmeaGENERATOR *gen, nmeaINFO *info)
     int it;
     double deg = 360 / 8;
     double srt = 0;
+
+    (void)gen;
 
     info->satinfo.inuse = 8;
     info->satinfo.inview = 8;
@@ -281,6 +293,8 @@ int nmea_igen_rotate_init(nmeaGENERATOR *gen, nmeaINFO *info)
 
 int nmea_igen_pos_rmove_init(nmeaGENERATOR *gen, nmeaINFO *info)
 {    
+    (void)gen;
+
     info->sig = 3;
     info->fix = 3;
     info->direction = info->declination = 0;
@@ -291,6 +305,8 @@ int nmea_igen_pos_rmove_init(nmeaGENERATOR *gen, nmeaINFO *info)
 int nmea_igen_pos_rmove_loop(nmeaGENERATOR *gen, nmeaINFO *info)
 {
     nmeaPOS crd;
+
+    (void)gen;
 
     info->direction += nmea_random(-10, 10);
     info->speed += nmea_random(-2, 3);
@@ -316,6 +332,8 @@ int nmea_igen_pos_rmove_loop(nmeaGENERATOR *gen, nmeaINFO *info)
 
 int nmea_igen_pos_rmove_destroy(nmeaGENERATOR *gen)
 {
+    (void)gen;
+
     return 1;
 };
 
