@@ -31,6 +31,7 @@
 
 #include <limits.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #define SC_LOG_OUTPUT_NONE   0
 #define SC_LOG_OUTPUT_UART   1
@@ -48,7 +49,7 @@ void sc_log_printf(SC_LOG_LVL lvl, SC_LOG_MODULE module, const char* fmt, ...)
   va_list args;
 
   va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
+  vsnprintf((char *)buf, sizeof(buf), fmt, args);
   va_end(args);
 
   sc_log(lvl, module, buf);
