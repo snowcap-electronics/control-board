@@ -74,6 +74,10 @@ static sc_event_cb_handle_byte    cb_handle_byte = NULL;
 #if HAL_USE_EXT
 static sc_event_cb_extint         cb_extint[EXT_MAX_CHANNELS] = {NULL};
 #endif
+
+static sc_event_cb_gsm_state_changed cb_gsm_state_changed = NULL;
+static sc_event_cb_gsm_cmd_done   cb_gsm_cmd_done = NULL;
+
 #if HAL_USE_ADC
 static sc_event_cb_adc_available  cb_adc_available = NULL;
 #endif
@@ -133,6 +137,16 @@ static msg_t eventLoopThread(void *UNUSED(arg))
       }
       break;
 #endif
+    case SC_EVENT_TYPE_GSM_STATE_CHANGED:
+      if (cb_gsm_state_changed != NULL) {
+        cb_gsm_state_changed();
+      }
+      break;
+    case SC_EVENT_TYPE_GSM_CMD_DONE:
+      if (cb_gsm_cmd_done != NULL) {
+        cb_gsm_cmd_done();
+      }
+      break;
 #if HAL_USE_ADC
     case SC_EVENT_TYPE_ADC_AVAILABLE:
       if (cb_adc_available != NULL) {
@@ -321,7 +335,21 @@ void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func)
 }
 #endif
 
+/*
+ * Register callback for GSM state changed
+ */
+void sc_event_register_gsm_state_changed(sc_event_cb_gsm_state_changed func)
+{
+  cb_gsm_state_changed = func;
+}
 
+/*
+ * Register callback for GSM command done
+ */
+void sc_event_register_gsm_cmd_done(sc_event_cb_gsm_cmd_done func)
+{
+  cb_gsm_cmd_done = func;
+}
 
 #if HAL_USE_ADC
 /*

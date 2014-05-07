@@ -38,6 +38,8 @@ typedef enum SC_EVENT_TYPE {
   SC_EVENT_TYPE_PUSH_BYTE = 1,
   SC_EVENT_TYPE_NOP,
   SC_EVENT_TYPE_EXTINT,
+  SC_EVENT_TYPE_GSM_STATE_CHANGED,
+  SC_EVENT_TYPE_GSM_CMD_DONE,
   SC_EVENT_TYPE_ADC_AVAILABLE,
   SC_EVENT_TYPE_TEMP_AVAILABLE,
   SC_EVENT_TYPE_9DOF_AVAILABLE,
@@ -59,6 +61,8 @@ typedef enum SC_EVENT_MSG_POST_FROM {
 typedef void (*sc_event_cb_handle_byte)(SC_UART uart, uint8_t byte);
 #endif
 typedef void (*sc_event_cb_extint)(void);
+typedef void (*sc_event_cb_gsm_state_changed)(void);
+typedef void (*sc_event_cb_gsm_cmd_done)(void);
 typedef void (*sc_event_cb_adc_available)(void);
 typedef void (*sc_event_cb_temp_available)(void);
 typedef void (*sc_event_cb_9dof_available)(void);
@@ -81,6 +85,8 @@ void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func);
 // TODO: these could be generalized? E.g.:
 // void sc_event_register_data_available(SC_EVENT_TYPE, sc_event_cb_data_available func);
 // void sc_event_register_cb(SC_EVENT_TYPE type, sc_event_cb func);
+void sc_event_register_gsm_state_changed(sc_event_cb_gsm_state_changed func);
+void sc_event_register_gsm_cmd_done(sc_event_cb_gsm_cmd_done func);
 void sc_event_register_adc_available(sc_event_cb_adc_available func);
 void sc_event_register_temp_available(sc_event_cb_temp_available func);
 void sc_event_register_9dof_available(sc_event_cb_9dof_available func);
