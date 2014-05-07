@@ -43,8 +43,13 @@
 
 #if HAL_USE_UART
 
-#define MAX_SEND_BUF_LEN      128
-#define MAX_CIRCULAR_BUFS     8
+#ifndef UART_MAX_SEND_BUF_LEN
+#define UART_MAX_SEND_BUF_LEN      128
+#endif
+
+#ifndef UART_MAX_CIRCULAR_BUFS
+#define UART_MAX_CIRCULAR_BUFS     8
+#endif
 
 static UARTDriver *last_uart = NULL;
 
@@ -72,9 +77,9 @@ static uint8_t uart_is_enabled(UARTDriver *drv);
  * only one for now.
  */
 static uint8_t circular_init_done = 0;
-static uint8_t circular_buf[MAX_CIRCULAR_BUFS][MAX_SEND_BUF_LEN];
-static uint8_t circular_len[MAX_CIRCULAR_BUFS];
-static UARTDriver *circular_uart[MAX_CIRCULAR_BUFS];
+static uint8_t circular_buf[UART_MAX_CIRCULAR_BUFS][UART_MAX_SEND_BUF_LEN];
+static uint8_t circular_len[UART_MAX_CIRCULAR_BUFS];
+static UARTDriver *circular_uart[UART_MAX_CIRCULAR_BUFS];
 static int8_t circular_sending;
 static int8_t circular_free;
 static Mutex circular_mtx;
@@ -186,7 +191,7 @@ void sc_uart_init(void)
   circular_init_done = 1;
   circular_sending = -1;
   circular_free = 0;
-  for (i = 0; i < MAX_CIRCULAR_BUFS; ++i) {
+  for (i = 0; i < UART_MAX_CIRCULAR_BUFS; ++i) {
 	circular_len[i] = 0;
   }
   chMtxInit(&circular_mtx);
@@ -308,6 +313,8 @@ void sc_uart_default_usb(uint8_t enable)
 void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 {
   UARTDriver *uartdrv;
+  int bytes_done = 0;
+  int bytes_left = len;
 
 #if HAL_USE_SERIAL_USB
   // If last byte received from Serial USB, send message using Serial USB
@@ -341,20 +348,23 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
     chDbgAssert(0, "Invalid UART specified", "#1");
 	return;
   }
-  
-  // Check for oversized message
-  if (len > MAX_SEND_BUF_LEN) {
-    chDbgAssert(0, "Oversized message", "#1");
-	return;
-  }
 
-  // Check for free buffers
-  if (circular_free == -1) {
-    chDbgAssert(0, "Circular buffer full", "#1");
-	return;
-  }
+  while (bytes_left) {
+	int tmplen = bytes_left;
+	if (bytes_left > UART_MAX_SEND_BUF_LEN) {
+	  tmplen = UART_MAX_SEND_BUF_LEN;
+	}
 
-  circular_add_buffer(uartdrv, msg, len);
+	// Check for free buffers
+	if (circular_free == -1) {
+	  chDbgAssert(0, "Circular buffer full", "#1");
+	  return;
+	}
+
+	circular_add_buffer(uartdrv, &msg[bytes_done], tmplen);
+	bytes_done += tmplen;
+	bytes_left -= tmplen;
+  }
 }
 
 
@@ -424,7 +434,7 @@ void sc_uart_send_finished(void)
 	}
 
 	// Advance the currently sending index
-	if (++circular_sending == MAX_CIRCULAR_BUFS) {
+	if (++circular_sending == UART_MAX_CIRCULAR_BUFS) {
 	  circular_sending = 0;
 	}
 
@@ -574,7 +584,7 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
   circular_current = circular_free;
 
   // Check for buffer wrapping
-  if (++circular_free == MAX_CIRCULAR_BUFS) {
+  if (++circular_free == UART_MAX_CIRCULAR_BUFS) {
 	circular_free = 0;
   }
 
