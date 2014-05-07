@@ -326,8 +326,6 @@ int nmea_parse_GPRMC(const char *buff, int buff_sz, nmeaGPRMC *pack)
         return 0;
     }
 
-    if(pack->utc.year < 90)
-        pack->utc.year += 100;
     pack->utc.mon -= 1;
 
     return 1;
