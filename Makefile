@@ -160,6 +160,7 @@ CSRC = $(PORTSRC) \
        src/sc_extint.c \
        src/sc_radio.c \
        src/sc_ahrs.c \
+       src/sha1.c \
        src/nmea/context.c \
        src/nmea/generate.c \
        src/nmea/generator.c \
