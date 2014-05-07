@@ -37,7 +37,7 @@
 void sc_pwr_mode_standby(bool wake_on_pa0, bool wake_on_rtc)
 {
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-    PWR->CR |= (PWR_CR_PDDS/* | PWR_CR_FPDS*/ | PWR_CR_CSBF | PWR_CR_CWUF);
+    PWR->CR |= (PWR_CR_PDDS | PWR_CR_CSBF | PWR_CR_CWUF);
     PWR->CSR |= PWR_CSR_EWUP;
 
     if (wake_on_pa0) {
@@ -82,6 +82,7 @@ void sc_pwr_mode_clear(void)
     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
     PWR->CSR &= ~PWR_CSR_EWUP;
     PWR->CR &= ~(PWR_CR_PDDS | PWR_CR_LPDS | PWR_CR_FPDS);
+    sc_extint_clear(GPIOA, 22);
 }
 
 
@@ -97,6 +98,7 @@ void sc_pwr_chibios_stop(void)
 
 void sc_pwr_chibios_start(void)
 {
+    stm32_clock_init();
     chSysDisable();
 }
 
