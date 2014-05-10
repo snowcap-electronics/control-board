@@ -181,6 +181,9 @@ static msg_t eventLoopThread(void *UNUSED(arg))
       sc_uart_send_finished();
       break;
 #endif
+    case SC_EVENT_TYPE_NOP:
+      // Do nothing
+      break;
     default:
       chDbgAssert(0, "Unhandled event", "sc_event_loop");
       break;
