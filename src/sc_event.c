@@ -91,7 +91,10 @@ static Thread *event_thread = NULL;
 /*
  * Setup a working area with for the event loop thread
  */
-static WORKING_AREA(event_loop_thread, 2048);
+#ifndef SC_EVENT_LOOP_THREAD_WA
+#define SC_EVENT_LOOP_THREAD_WA 2048
+#endif
+static WORKING_AREA(event_loop_thread, SC_EVENT_LOOP_THREAD_WA);
 static msg_t eventLoopThread(void *UNUSED(arg))
 {
 
