@@ -376,14 +376,17 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   usbDisconnectBus(serusbcfg.usbp);
 
 #ifdef SC_FORCE_USB_REDETECT
-  /*
-   * Force HOST re-detect device after e.g. DFU flashing by
-   * pulling D+ low so host assumes that device is disconnected.
-   */
-  palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_OUTPUT_PUSHPULL);
-  palClearPad(SC_USB_DP_PORT, SC_USB_DP_PIN);
-  chThdSleepMilliseconds(1000);
-  palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_ALTERNATE(SC_USB_DP_AF));
+  // Don't force on wakeu-p to avoid confusing the PC on frequent wake-ups
+  if (!(PWR->CR & PWR_CR_CWUF)) {
+    /*
+     * Force HOST re-detect device after e.g. DFU flashing by
+     * pulling D+ low so host assumes that device is disconnected.
+     */
+    palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_OUTPUT_PUSHPULL);
+    palClearPad(SC_USB_DP_PORT, SC_USB_DP_PIN);
+    chThdSleepMilliseconds(1000);
+    palSetPadMode(SC_USB_DP_PORT, SC_USB_DP_PIN, PAL_MODE_ALTERNATE(SC_USB_DP_AF));
+  }
 #endif
 
   /*
