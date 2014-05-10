@@ -81,7 +81,7 @@ void sc_pwr_mode_clear(void)
 {
     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
     PWR->CSR &= ~PWR_CSR_EWUP;
-    PWR->CR &= ~(PWR_CR_PDDS | PWR_CR_LPDS | PWR_CR_FPDS);
+    PWR->CR &= ~(PWR_CR_PDDS | PWR_CR_LPDS/* | PWR_CR_FPDS*/);
     sc_extint_clear(GPIOA, 22);
 }
 
