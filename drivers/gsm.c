@@ -658,8 +658,8 @@ static void gsm_toggle_power_pin(uint8_t wait_status)
 
 static void sleep_enable(void)
 {
-    //_DEBUG("sleep_enable\r\n");
-    //palSetPad(DTR_PORT, DTR_PIN);
+    _DEBUG("sleep_enable\r\n");
+    palSetPad(DTR_PORT, DTR_PIN);
 }
 
 static void sleep_disable(void)
@@ -684,8 +684,6 @@ static uint8_t gsm_cmd_internal(const uint8_t *cmd, uint8_t len)
 {
     uint8_t retry;
 
-    sleep_disable();
-
     /* Reset semaphore so we are sure that next time it is signalled
      * it is reply to this command */
     chBSemReset(&gsm.waiting_reply, TRUE);
@@ -703,7 +701,6 @@ static uint8_t gsm_cmd_internal(const uint8_t *cmd, uint8_t len)
         _DEBUG("'%s' failed (%d)\r\n", cmd, gsm.reply);
     }
 
-    sleep_enable();
     if (retry == 3) {             /* Modem not responding */
         _DEBUG("Modem not responding!\r\n");
         return AT_TIMEOUT;
@@ -842,7 +839,7 @@ static void gsm_enable_hw_flow()
     }
 
     if (ret == AT_OK) {
-        //ret = gsm_cmd_internal(sleep, sizeof(sleep));
+        ret = gsm_cmd_internal(sleep, sizeof(sleep));
     }
 
     if (ret != AT_OK) {
@@ -865,7 +862,6 @@ static void gsm_set_power_state(enum Power_mode mode)
             gsm_toggle_power_pin(PAL_HIGH);
 
             gsm_enable_hw_flow();
-            gsm_gprs_enable();
 
         } else {
             /* Modem already powered */
@@ -1018,8 +1014,6 @@ static msg_t scGsmThread(void *arg)
         palSetPad(GPIOC, GPIOC_ENABLE_GSM_VBAT);
         chThdSleepMilliseconds(2000);
     }
-
-    sleep_disable();
 #endif
 
     // Power on GSM if not on already
@@ -1039,6 +1033,8 @@ static msg_t scGsmThread(void *arg)
             break;
         }
 
+        sleep_disable();
+
         _DEBUG("scGsmThread: waiting for api_data_mtx.\r\n");
         chMtxLock(&api.api_data_mtx);
 
@@ -1049,10 +1045,15 @@ static msg_t scGsmThread(void *arg)
             gsm_cmd_internal(api.gsm_cmd.cmd, api.gsm_cmd.len);
             break;
         case API_CALL_HTTP:
-            gsm_http_handle(api.http.method,
-                            api.http.url, api.http.url_len,
-                            api.http.data, api.http.data_len,
-                            api.http.content_type, api.http.type_len);
+            if (gsm_gprs_enable() == AT_OK) {
+                gsm_http_handle(api.http.method,
+                                api.http.url, api.http.url_len,
+                                api.http.data, api.http.data_len,
+                                api.http.content_type, api.http.type_len);
+                gsm_gprs_disable();
+            } else {
+                _DEBUG("scGsmThread: failed to enable gprs, skipped http call.\r\n");
+            }
             break;
         case API_CALL_UNKNOWN:
             chDbgAssert(0, "Unexpected API_CALL_UNKNOWN\r\n", "#1");
@@ -1064,6 +1065,8 @@ static msg_t scGsmThread(void *arg)
 
         api.api_call = API_CALL_UNKNOWN;
         chMtxUnlock();
+
+        sleep_enable();
 
         sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
     }
@@ -1080,7 +1083,6 @@ static void gsm_set_serial_flow_control(int enabled)
     if (enabled) {
         gsm.flags |= HW_FLOW_ENABLED;
         sc_uart_set_config(SC_UART_3, 115200, 0, USART_CR2_LINEN, USART_CR3_RTSE | USART_CR3_CTSE);
-        sleep_enable();
     } else {
         gsm.flags &= ~HW_FLOW_ENABLED;
         sc_uart_set_config(SC_UART_3, 115200, 0, USART_CR2_LINEN, 0);
@@ -1118,7 +1120,7 @@ void gsm_stop(bool power_off)
         chThdTerminate(gsm_thread);
         chBSemSignal(&api.new_call_sem);
         chThdWait(gsm_thread);
-       gsm_thread = NULL;
+        gsm_thread = NULL;
     } else {
         chDbgAssert(0, "GSM thread not running", "#1");
     }
@@ -1165,7 +1167,6 @@ static int gsm_http_init(const uint8_t *url, uint8_t url_len)
 static void gsm_http_clean(void)
 {    uint8_t httpterm[] = "AT+HTTPTERM\r\n";
     gsm_cmd_internal(httpterm, sizeof(httpterm));
-    //gsm_gprs_disable();
 }
 
 static int gsm_http_send_content_type(const uint8_t *content_type, uint8_t len)
