@@ -16,8 +16,8 @@ SC_DEFINES += -DCHPRINTF_USE_FLOAT=TRUE
 # Increase the size of maximum UART message
 SC_DEFINES += -DUART_MAX_SEND_BUF_LEN=254
 
-# Increase the event queue size
-SC_DEFINES += -DEVENT_MB_SIZE=512
+# Increase the event queue size and the event loop thread's work area
+SC_DEFINES += -DEVENT_MB_SIZE=512 -DSC_EVENT_LOOP_THREAD_WA=4096
 
 # Increase the number of USB serial send buffers
 SC_DEFINES += -DSDU_MAX_SEND_BUFFERS=8
