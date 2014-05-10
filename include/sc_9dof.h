@@ -32,7 +32,7 @@
 
 #include "sc_utils.h"
 
-#if SC_USE_9DOF
+#ifdef SC_USE_9DOF
 
 /* Initialise and start reading sensors */
 void sc_9dof_init(uint16_t calibration_samples);

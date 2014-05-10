@@ -33,7 +33,7 @@
 #include "drivers/sc_lis302dl.h"
 #include "drivers/sc_lsm9ds0.h"
 
-#if SC_USE_9DOF
+#ifdef SC_USE_9DOF
 
 #include <string.h>
 
