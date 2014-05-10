@@ -162,7 +162,7 @@ void sc_temp_thread_init(void)
   chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
 }
 
-void sc_adc_deinit(void)
+void sc_adc_init(void)
 {
   chMtxInit(&adc_mtx);
 
