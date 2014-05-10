@@ -284,8 +284,11 @@ ULIBS =
 ##############################################################################
 ifeq ($(SC_BUILD_TYPE),release)
   USE_OPT += -O3
+  DDEFS += -DCORTEX_ENABLE_WFI_IDLE=TRUE
+  DDEFS += -DRELEASE_BUILD=TRUE
 else
   USE_OPT += -O0 -ggdb -fno-omit-frame-pointer
+  DDEFS += -DRELEASE_BUILD=FALSE
 endif
 
 ifeq ($(SC_PEDANTIC_COMPILER),1)
