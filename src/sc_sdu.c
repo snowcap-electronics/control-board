@@ -25,6 +25,8 @@
  *
  */
 
+#define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
+
 /* Mostly copied from ChibiOS/testhal/STM32F4xx/USB_CDC/main.c */
 
 /* Snowcap includes */
@@ -33,6 +35,7 @@
 #include "sc_uart.h"
 #include "sc_cmd.h"
 #include "sc_led.h"
+#include "sc_log.h"
 
 #if HAL_USE_SERIAL_USB
 
@@ -368,8 +371,7 @@ static const SerialUSBConfig serusbcfg = {
 static WORKING_AREA(sc_sdu_read_thread, 256);
 static msg_t scSduReadThread(void *UNUSED(arg))
 {
-  uint8_t c;
-  uint8_t bytes_read;
+  int retval;
 
   usbDisconnectBus(serusbcfg.usbp);
 
@@ -403,11 +405,11 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 
   // Loop forever reading characters
   while (!chThdShouldTerminate()) {
-    // Block while waiting for a single character
-    bytes_read = chSequentialStreamRead((BaseSequentialStream *)&SDUX, &c, 1);
 
-    if (bytes_read)
-      sc_uart_revc_usb_byte(c);
+    retval = chnGetTimeout((BaseChannel *)&SDUX, 100/*TIME_IMMEDIATE*/);
+    if (retval >= 0) {
+      sc_uart_revc_usb_byte((uint8_t)retval);
+    }
   }
 
   return 0;
@@ -545,13 +547,13 @@ void sc_sdu_deinit(void)
 
   chDbgAssert(sdu_read_thread != NULL, "SDU read thread not running", "#1");
   chThdTerminate(sdu_read_thread);
-  // FIXME: can't wait yet as there's no way to signal chSequentialStreamRead
-  //chThdWait(sdu_read_thread);
+  chThdWait(sdu_read_thread);
   sdu_read_thread = NULL;
 
-  // Deinitialize USB
   sduStop(&SDUX);
   usbDisconnectBus(serusbcfg.usbp);
+
+  // Deinitialize USB
   usbStop(serusbcfg.usbp);
 }
 
