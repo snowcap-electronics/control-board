@@ -46,9 +46,11 @@ void sc_init(uint32_t subsystems)
   /* Initialize command parsing */
   sc_cmd_init();
 
+#if HAL_USE_UART
   if (subsystems & (SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3) ) {
     sc_uart_init();
   }
+#endif
 
   if (subsystems & SC_MODULE_UART1) {
 #if STM32_UART_USE_USART1 && HAL_USE_UART
@@ -215,9 +217,11 @@ void sc_deinit(uint32_t subsystems)
 #endif
   }
 
+#if HAL_USE_UART
   if (subsystems & (SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3) ) {
     sc_uart_deinit();
   }
+#endif
 
   /* Initialize command parsing */
   sc_cmd_deinit();
