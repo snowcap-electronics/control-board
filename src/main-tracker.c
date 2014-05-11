@@ -32,16 +32,29 @@
  * TRACKER CONFIGURATION
  */
 
-#define API_SECRET                  "ruuvitracker"
-#define TRACKER_CODE                "RuuviTracker"
+/*
+ *  Uncomment and set these to match the server information
+ */
+//#define TRACKER_API_SECRET          ""
+//#define TRACKER_CODE                ""
+
+/*
+ * Uncomment and set APN of the SIM card operator
+ */
+//#define TRACKER_SIM_APN             ""
 
 /*
  * Seconds to sleep between sending GPS positions to the server
  */
-#define TRACKER_SLEEP_SEC   10
+#define TRACKER_SLEEP_SEC           30
 
-// FIXME: why "== TRUE" is needed?
-#if RELEASE_BUILD == TRUE
+/*
+ * Add offset to coordinates to "anonymize" location when developing
+ */
+#define DBG_LOCATION_OFFSET_LON     0.0
+#define DBG_LOCATION_OFFSET_LAT     0.0
+
+#ifdef RELEASE_BUILD
 #define USE_USB 0
 #else
 #define USE_USB 1
@@ -50,8 +63,12 @@
 /*
  * TRACKER IMPLEMENTATION
  */
+#if !defined(TRACKER_API_SECRET) || !defined(TRACKER_CODE) || !defined(TRACKER_SIM_APN)
+#error "TRACKER_API_SECRET, TRACKER_CODE and TRACKER_SIM_APN must be defined"
+#endif
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
+
 
 #include "sc.h"
 #include "sha1.h"
@@ -252,13 +269,13 @@ static void send_event(void)
 
   buf_p = &buf[buf_i];
   buf_i += chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
-                      "%f,N", (float)6446.8000/*info.lat*/);
+                      "%f", nmea.lat + DBG_LOCATION_OFFSET_LAT);
   json[buf_i++] = '\0';
   js_replace("latitude", buf_p);
 
   buf_p = &buf[buf_i];
   buf_i += chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
-                      "%f,E", (float)2521.0000/*info.lon*/);
+                      "%f", nmea.lon + DBG_LOCATION_OFFSET_LON);
   json[buf_i++] = '\0';
   js_replace("longitude", buf_p);
 
@@ -278,7 +295,7 @@ static void send_event(void)
 
   chDbgAssert(buf_i < sizeof(buf), "Attribute buffer full", "#1");
 
-  calculate_mac(API_SECRET);
+  calculate_mac(TRACKER_API_SECRET);
   json_len = js_tostr(json, sizeof(json));
 
   chDbgAssert(json_len < sizeof(json), "JSON buffer full", "#1");
@@ -299,7 +316,7 @@ static void send_event(void)
 static WORKING_AREA(main_worker_thread, 4096);
 static msg_t mainWorkerThread(void *UNUSED(arg))
 {
-  uint8_t apn[] = "prepaid.dna.fi";
+  uint8_t apn[] = TRACKER_SIM_APN;
   systime_t wait_limit;
 
   gsm_cmd_idle = true;
@@ -331,7 +348,6 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
         SC_LOG_PRINTF("Not sending location: has_fix: %d, "
                       "gsm_ready: %d, gsm_cmd_idle: %d\r\n",
                       has_fix, gsm_ready, gsm_cmd_idle);
-        SC_LOG_PRINTF("DBGMCU_CR 0x%08x\n", *(uint32_t*)0xe0042004);
       }
 
       sc_led_toggle();
@@ -393,16 +409,6 @@ int main(void)
   subsystems |= SC_MODULE_SDU;
 #endif
 
-#if RELEASE_BUILD == FALSE
-  {
-    uint32_t cr;
-    // Enable GDB with WFI
-    cr = *(uint32_t*)0xe0042004; /* DBGMCU_CR */
-    cr |= 0x7; /* DBG_STANDBY | DBG_STOP | DBG_SLEEP */
-    *(uint32_t*)0xe0042004 = cr;
-  }
-#endif
-
   halInit();
   while (1) {
 
@@ -459,15 +465,13 @@ int main(void)
 #endif
 
 
-#if RELEASE_BUILD == FALSE
-    if (1) {
+#ifndef RELEASE_BUILD
+    {
       int i, j;
-      int a;
-
       // WFI does not cause sleep in debug mode so fake a short sleep
-      for (i = 0; i < 10000; ++i) {
-        for (j = 0; j < 1000; ++j) {
-          a = j;
+      for (j = 0; j < TRACKER_SLEEP_SEC; ++j) {
+        for (i = 0; i < 2000000; ++i) {
+          // Nop
         }
       }
     }
