@@ -218,6 +218,7 @@ LD   = $(TRGT)gcc
 CP   = $(TRGT)objcopy
 AS   = $(TRGT)gcc -x assembler-with-cpp
 OD   = $(TRGT)objdump
+SZ   = $(TRGT)size
 HEX  = $(CP) -O ihex
 BIN  = $(CP) -O binary
 
@@ -284,11 +285,9 @@ ULIBS =
 ##############################################################################
 ifeq ($(SC_BUILD_TYPE),release)
   USE_OPT += -O3
-  DDEFS += -DCORTEX_ENABLE_WFI_IDLE=TRUE
-  DDEFS += -DRELEASE_BUILD=TRUE
+  DDEFS += -DRELEASE_BUILD
 else
   USE_OPT += -O0 -ggdb -fno-omit-frame-pointer
-  DDEFS += -DRELEASE_BUILD=FALSE
 endif
 
 ifeq ($(SC_PEDANTIC_COMPILER),1)
