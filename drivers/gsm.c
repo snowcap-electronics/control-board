@@ -73,7 +73,7 @@
 #define ENABLE_PORT GPIOC
 
 
-#define BUFF_SIZE	64
+#define BUFF_SIZE	256
 
 #define TIMEOUT_MS       5000        /* Default timeout */
 #define TIMEOUT_GPRS_MS 30000        /* GPRS timeout */
@@ -98,9 +98,9 @@ struct gsm_modem {
     int last_sms_index;
     uint8_t ap_name[64];
     uint8_t buf[BUFF_SIZE+1];
-    uint8_t buf_len;
+    size_t buf_len;
     uint8_t incoming_buf[BUFF_SIZE+1];
-    uint8_t incoming_i;
+    size_t incoming_i;
 };
 
 static struct gsm_modem gsm = {		/* Initial status */
@@ -241,7 +241,7 @@ static Message urc_messages[] = {
 void gsm_state_parser(uint8_t c)
 {
     Message *m;
-    uint8_t i;
+    size_t i;
     bool state_changed = false;
 
     //_DEBUG("recv byte: '%d'\r\n", c);
