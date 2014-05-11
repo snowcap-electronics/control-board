@@ -30,6 +30,16 @@
 
 void sc_init(uint32_t subsystems)
 {
+
+#if !defined(RELEASE_BUILD) || defined(SC_ENABLE_WFI_SWD)
+  {
+    uint32_t cr;
+    cr = *(uint32_t*)0xe0042004; /* DBGMCU_CR */
+    cr |= 0x7; /* DBG_STANDBY | DBG_STOP | DBG_SLEEP */
+    *(uint32_t*)0xe0042004 = cr;
+  }
+#endif
+
   /* Initialize ChibiOS core */
   chSysInit();
 
