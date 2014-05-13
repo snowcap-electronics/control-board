@@ -29,6 +29,15 @@
 #define _CHCONF_H_
 
 /*
+ * Disable debug options in release builds
+ */
+#ifdef RELEASE_BUILD
+#define TRUE_FOR_DEBUG FALSE
+#else
+#define TRUE_FOR_DEBUG TRUE
+#endif
+
+/*
  * Increase stack size
  */
 #ifndef PORT_INT_REQUIRED_STACK
@@ -364,7 +373,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH_DBG_SYSTEM_STATE_CHECK) || defined(__DOXYGEN__)
-#define CH_DBG_SYSTEM_STATE_CHECK       TRUE
+#define CH_DBG_SYSTEM_STATE_CHECK       TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -375,7 +384,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH_DBG_ENABLE_CHECKS) || defined(__DOXYGEN__)
-#define CH_DBG_ENABLE_CHECKS            TRUE
+#define CH_DBG_ENABLE_CHECKS            TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -387,7 +396,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH_DBG_ENABLE_ASSERTS) || defined(__DOXYGEN__)
-#define CH_DBG_ENABLE_ASSERTS           TRUE
+#define CH_DBG_ENABLE_ASSERTS           TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -398,7 +407,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH_DBG_ENABLE_TRACE) || defined(__DOXYGEN__)
-#define CH_DBG_ENABLE_TRACE             TRUE
+#define CH_DBG_ENABLE_TRACE             TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -412,7 +421,7 @@
  *          @p panic_msg variable set to @p NULL.
  */
 #if !defined(CH_DBG_ENABLE_STACK_CHECK) || defined(__DOXYGEN__)
-#define CH_DBG_ENABLE_STACK_CHECK       TRUE
+#define CH_DBG_ENABLE_STACK_CHECK       TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -424,7 +433,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH_DBG_FILL_THREADS) || defined(__DOXYGEN__)
-#define CH_DBG_FILL_THREADS             TRUE
+#define CH_DBG_FILL_THREADS             TRUE_FOR_DEBUG
 #endif
 
 /**
@@ -437,7 +446,7 @@
  *          some test cases into the test suite.
  */
 #if !defined(CH_DBG_THREADS_PROFILING) || defined(__DOXYGEN__)
-#define CH_DBG_THREADS_PROFILING        TRUE
+#define CH_DBG_THREADS_PROFILING        TRUE_FOR_DEBUG
 #endif
 
 /** @} */
