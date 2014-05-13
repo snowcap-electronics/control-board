@@ -35,24 +35,69 @@
 /*
  *  Uncomment and set these to match the server information
  */
-//#define TRACKER_API_SECRET          ""
-//#define TRACKER_CODE                ""
+//#define TRACKER_API_SECRET            ""
+//#define TRACKER_CODE                  ""
 
 /*
  * Uncomment and set APN of the SIM card operator
  */
-//#define TRACKER_SIM_APN             ""
+//#define TRACKER_SIM_APN               ""
 
 /*
- * Seconds to sleep between sending GPS positions to the server
+ * In continuous mode the MCU, GPS and GSM are fully active all the
+ * time and no explicit sleep modes are used.
+ *
+ * High power consumption.
+ *
+ * Recommended for intervals up to 15 seconds.
  */
-#define TRACKER_SLEEP_SEC           30
+#define TRACKER_SLEEP_MODE_CONTINUOUS 1
+
+/*
+ * In stop mode, the GPS is power gated and the MCU is stopped during
+ * the waiting state.
+ *
+ * Optimized power consumption.
+ *
+ * Recommended for intervals up to a minute.
+ */
+#define TRACKER_SLEEP_MODE_STOP       2
+
+/*
+ * In standby mode everything except alarm clock is power gated so
+ * after every power on, it takes a long time for GSM to connect to
+ * the network and GPS to find the fix again.
+ *
+ * Lowest power consumption.
+ *
+ * Recommended for intervals more that a minute.
+ */
+#define TRACKER_SLEEP_MODE_STANDBY    3
+
+/*
+ * Choose one of the sleep modes above
+ */
+#define TRACKER_SLEEP_MODE            TRACKER_SLEEP_MODE_STOP
+
+
+/*
+ * Seconds to wait for GPS fix and GSM readiness after waking
+ * up. After the timeout, the device will power off for a minute and
+ * wake up again.
+ *
+ */
+#define TRACKER_TIMEOUT_READY_SEC     120
+
+/*
+ * Location update interval.
+ */
+#define TRACKER_INTERVAL_SEC          30
 
 /*
  * Add offset to coordinates to "anonymize" location when developing
  */
-#define DBG_LOCATION_OFFSET_LON     0.0
-#define DBG_LOCATION_OFFSET_LAT     0.0
+#define DBG_LOCATION_OFFSET_LON       0.0
+#define DBG_LOCATION_OFFSET_LAT       0.0
 
 #ifdef RELEASE_BUILD
 #define USE_USB 0
@@ -100,6 +145,7 @@ static struct nmea_data_t nmea;
 static bool has_fix = false;
 static bool gsm_ready = false;
 static bool gsm_cmd_idle = true;
+static bool generic_error = false;
 
 // Main worker thread
 static Thread *worker_thread = NULL;
@@ -109,6 +155,8 @@ static Thread *worker_thread = NULL;
 #define BLOCKSIZE	64
 #define IPAD 0x36
 #define OPAD 0x5C
+
+#define TRACKER_USER_AGENT  "RuuviTracker (SC v2)/SIM968"
 
 static void sha1_hmac(char *response, const char *secret,
                       const char *msg, size_t msg_len)
@@ -316,83 +364,71 @@ static void send_event(void)
 static WORKING_AREA(main_worker_thread, 4096);
 static msg_t mainWorkerThread(void *UNUSED(arg))
 {
-  uint8_t apn[] = TRACKER_SIM_APN;
-  systime_t wait_limit;
+  const uint8_t apn[] = TRACKER_SIM_APN;
+  const uint8_t user_agent[] = TRACKER_USER_AGENT;
+  systime_t timeout;
+  systime_t next_update = 0;
+
+  chRegSetThreadName(__func__);
 
   gsm_cmd_idle = true;
 
-  if (!chThdShouldTerminate()) {
+  gps_power_on();
 
-    gps_power_on();
-
-    // DEBUG: Wait a while so that USB is ready to print debugs
-    //chThdSleepMilliseconds(3000);
-
-    SC_LOG_PRINTF("Started up\r\n");
-
-    gsm_set_apn(apn);
-    gsm_start();
-
-#if 1
-    // Normal operation until timeout
-    wait_limit = chTimeNow() + 60000;
-
-    // Loop sometime before sleeping
-    while(!chThdShouldTerminate() && chTimeNow() < wait_limit) {
-
-      chThdSleepMilliseconds(2000);
-      if (has_fix && gsm_cmd_idle && gsm_ready) {
-        gsm_cmd_idle = false;
-        send_event();
-      } else {
-        SC_LOG_PRINTF("Not sending location: has_fix: %d, "
-                      "gsm_ready: %d, gsm_cmd_idle: %d\r\n",
-                      has_fix, gsm_ready, gsm_cmd_idle);
-      }
-
-      sc_led_toggle();
-    }
-#else
-    // GPS power testing
-    while /*if*/ (1) {
-      SC_LOG_PRINTF("%d, Waiting for fix\r\n", chTimeNow());
-      wait_limit = chTimeNow() + 5000;
-      while (chTimeNow() < wait_limit) {
-        chThdSleepMilliseconds(1000);
-      }
-
-      if (has_fix) {
-        uint8_t standby_on[] = "$PMTK161,1*29\r\n";
-        uint8_t standby_off[] = "$PMTK161,0*28\r\n";
-        SC_LOG_PRINTF("Got fix, running for 10 secs\r\n");
-        wait_limit = chTimeNow() + 10000;
-        while (chTimeNow() < wait_limit) {
-          chThdSleepMilliseconds(1000);
-        }
-        SC_LOG_PRINTF("Setting GPS to Standby\r\n");
-        sc_uart_send_msg(SC_UART_2, standby_on, sizeof(standby_on));
-        palClearPad(GPIOC, GPIOC_ENABLE_LDO2);
-
-        nmea_stop();
-
-        has_fix = false;
-        wait_limit = chTimeNow() + 10000;
-        while (chTimeNow() < wait_limit) {
-          chThdSleepMilliseconds(1000);
-        }
-
-        nmea_start();
-
-        SC_LOG_PRINTF("%d: Waking up GPS\r\n", chTimeNow());
-        palSetPad(GPIOC, GPIOC_ENABLE_LDO2);
-        sc_uart_send_msg(SC_UART_2, standby_off, sizeof(standby_off));
-
-      } else {
-        SC_LOG_PRINTF("No fix\r\n");
-      }
-    }
+#if !USE_USB
+  SC_LOG_PRINTF("Started up\r\n");
+  chThdSleepMilliseconds(3000);
 #endif
+
+  gsm_set_apn(apn);
+  gsm_set_user_agent(user_agent);
+  gsm_start();
+
+  timeout = chTimeNow() + TRACKER_TIMEOUT_READY_SEC * 1000;
+
+  // In stop and standby modes, chThdTerminate() is called after
+  // send_event has succeeded. In continuous mode, gsm_cmd_idle is set to true.
+  while(!chThdShouldTerminate()) {
+    systime_t now;
+
+    now = chTimeNow();
+
+    // Check for initial timeout
+    if (timeout && now > timeout) {
+      SC_LOG_PRINTF("Initial timeout\r\n");
+      generic_error = true;
+      break;
+    }
+
+    // Avoid chTimeNow wrapping over by restarting after a 10 days
+    if (now > (systime_t)864000000) {
+      SC_LOG_PRINTF("Long timeout (%d ms), restarting\r\n", now);
+      generic_error = true;
+      break;
+    }
+
+    if (has_fix && gsm_cmd_idle && gsm_ready && next_update < now) {
+      gsm_cmd_idle = false;
+      timeout = 0;
+
+      // Update next update time
+      next_update += TRACKER_INTERVAL_SEC;
+      // But don't start lagging more and more behind
+      if (next_update < now) {
+        next_update = now;
+      }
+      send_event();
+    } else {
+      chThdSleepMilliseconds(1000);
+      SC_LOG_PRINTF("Not sending location: time left: %d, has_fix: %d, "
+                    "gsm_ready: %d, gsm_cmd_idle: %d\r\n",
+                    next_update - now, has_fix, gsm_ready, gsm_cmd_idle);
+    }
+
+    sc_led_toggle();
   }
+
+  SC_LOG_PRINTF("Main thread exit, should terminate: %d\r\n", chThdShouldTerminate());
 
   gsm_stop(false);
   gps_power_off();
@@ -404,6 +440,9 @@ int main(void)
 {
   uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_UART3 |
     SC_MODULE_GPIO | SC_MODULE_LED;
+  bool standby_mode = false;
+  uint32_t sleep_time_sec;
+  systime_t interval_ms;
 
 #if USE_USB
   subsystems |= SC_MODULE_SDU;
@@ -449,34 +488,66 @@ int main(void)
     sc_led_off();
     palSetPad(USER_LED2_PORT, USER_LED2);
 
+#if !USE_USB
     SC_LOG_PRINTF("Going to sleep\r\n");
-    //chThdSleepMilliseconds(1000);
+    chThdSleepMilliseconds(1000);
+#endif
 
     sc_event_loop_stop();
     sc_deinit(subsystems);
     palClearPad(USER_LED2_PORT, USER_LED2);
 
+    // In stop and standby modes, current time is interval time
+    interval_ms = chTimeNow();
+
     sc_pwr_chibios_stop();
-    sc_pwr_wakeup_set(TRACKER_SLEEP_SEC, 0);
-#if 0
-    sc_pwr_mode_standby(false, true);
-#else
-    sc_pwr_mode_stop(true);
+
+#if TRACKER_SLEEP_MODE == TRACKER_SLEEP_MODE_STANDBY
+    standby_mode = true;
 #endif
 
+    // Sleep at least one second even if interval based time already passed
+    if (interval_ms < TRACKER_INTERVAL_SEC * 1000) {
+      sleep_time_sec = TRACKER_INTERVAL_SEC - (uint32_t)(interval_ms / 1000);
+    } else {
+      sleep_time_sec = 1;
+    }
 
-#ifndef RELEASE_BUILD
-    {
-      int i, j;
-      // WFI does not cause sleep in debug mode so fake a short sleep
-      for (j = 0; j < TRACKER_SLEEP_SEC; ++j) {
-        for (i = 0; i < 2000000; ++i) {
-          // Nop
+    // Sleep always one minute in case of an error
+    if (generic_error) {
+      sleep_time_sec = 60;
+    }
+
+    sc_pwr_wakeup_set(sleep_time_sec, 0);
+
+    if (standby_mode || generic_error) {
+      // Standby will reset GPS and GSM and is therefore called also in case of
+      // an generic error (e.g. timeout getting a fix or an unexpected http
+      // error/timeout)
+      sc_pwr_mode_standby(false, true);
+    } else {
+      sc_pwr_mode_stop(true);
+    }
+
+    // STM32 should now be in full stop mode. Should wake on RTC (no interrupts should be occurring)
+
+    // WFI does not cause sleep in debug wfi mode so fake some sleep
+    if (sc_pwr_get_wfi_dbg() == 0x7) {
+#if 1
+      int s, n;
+
+      for (s = 0; s < TRACKER_INTERVAL_SEC; ++s) {
+        for (n = 0; n < 2000000; ++n) {
+          // Do nothing
         }
       }
-    }
+#else
+      // FIXME: why this doesn't work?
+      while (!(RTC->ISR & RTC_ISR_WUTF)) {
+        // Do nothing
+      }
 #endif
-    // STM32 should now be in full stop mode. Should wake on RTC (no interrupts should be occurring)
+    }
 
     sc_pwr_wakeup_clear();
     sc_pwr_mode_clear();
@@ -492,6 +563,7 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
   if (uart == SC_UART_2) {
     if (nmea_parse_byte(byte)) {
       nmea = nmea_get_data();
+      // FIXME: could send 2d fix if otherwise timing out.
       if (nmea.fix_type == GPS_FIX_TYPE_3D) {
         has_fix = true;
       } else {
@@ -555,8 +627,13 @@ static void cb_gsm_state_changed(void)
 
 static void cb_gsm_cmd_done(void)
 {
-  //gsm_cmd_idle = true;
+#if TRACKER_SLEEP_MODE == TRACKER_SLEEP_MODE_CONTINUOUS
+  gsm_cmd_idle = true;
+#else
   chThdTerminate(worker_thread);
+#endif
+  // FIXME: get return value of the gsm_cmd and if failed, set
+  // generic_error and terminate the thread.
 }
 
 
