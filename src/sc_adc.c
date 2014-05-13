@@ -85,6 +85,8 @@ static msg_t tempThread(void *UNUSED(arg))
   msg_t msg;
   systime_t last_conversion_time;
 
+  chRegSetThreadName(__func__);
+
   msg = sc_event_msg_create_type(SC_EVENT_TYPE_ADC_AVAILABLE);
 
   //FIXME: adcAcquireBus?

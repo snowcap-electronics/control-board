@@ -373,6 +373,8 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 {
   int retval;
 
+  chRegSetThreadName(__func__);
+
   usbDisconnectBus(serusbcfg.usbp);
 
 #ifdef SC_FORCE_USB_REDETECT
@@ -424,6 +426,8 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 static WORKING_AREA(sc_sdu_send_thread, 512);
 static msg_t scSduSendThread(void *UNUSED(arg))
 {
+  chRegSetThreadName(__func__);
+
   while (!chThdShouldTerminate()) {
 
     // Wait for data to be send

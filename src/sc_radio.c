@@ -84,6 +84,8 @@ static msg_t scRadioFlashThread(void *UNUSED(arg))
   uint8_t retries = SC_RADIO_BSL_RETRIES;
   uint8_t msg_retries;
 
+  chRegSetThreadName(__func__);
+
   chMtxInit(&radio_comm_mtx);
   chBSemInit(&radio_comm_sem, TRUE);
 

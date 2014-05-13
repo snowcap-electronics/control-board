@@ -103,6 +103,8 @@ static msg_t eventLoopThread(void *UNUSED(arg))
     msg_t ret;
     SC_EVENT_TYPE type;
 
+    chRegSetThreadName(__func__);
+
     // Wait for action
     ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
 

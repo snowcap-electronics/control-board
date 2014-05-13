@@ -58,6 +58,8 @@ static msg_t sc9dofThread(void *UNUSED(arg))
   msg_t drdy;
   uint8_t warmup = 64;
 
+  chRegSetThreadName(__func__);
+
   // Init sensor(s)
 #ifdef SC_HAS_LIS302DL
   sc_lis302dl_init();

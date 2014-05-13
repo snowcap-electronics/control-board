@@ -70,6 +70,8 @@ static msg_t scAhrsThread(void *UNUSED(arg))
 {
   msg_t drdy;
 
+  chRegSetThreadName(__func__);
+
   // Create data ready notification
   drdy = sc_event_msg_create_type(SC_EVENT_TYPE_AHRS_AVAILABLE);
 
