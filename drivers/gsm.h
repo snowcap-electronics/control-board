@@ -90,6 +90,8 @@ void gsm_start(void);
 void gsm_stop(bool power_off);
 /* Set GPRS access point name. Example "internet". Can be set at any time before using http */
 void gsm_set_apn(const uint8_t *apn);
+/* Set HTTP user Agent name. Example "RuuviTracker/SIM968". Can be set at any time before using http */
+void gsm_set_user_agent(const uint8_t *agent);
 /* Feed one byte from the GSM to the GSM parser */
 void gsm_state_parser(uint8_t c);
 /* Get GSM state */

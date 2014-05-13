@@ -97,6 +97,7 @@ struct gsm_modem {
     enum CFUN cfun;
     int last_sms_index;
     uint8_t ap_name[64];
+    uint8_t agent_name[64];
     uint8_t buf[BUFF_SIZE+1];
     size_t buf_len;
     uint8_t incoming_buf[BUFF_SIZE+1];
@@ -990,6 +991,11 @@ void gsm_set_apn(const uint8_t *buf)
     strncpy((char*)gsm.ap_name, (char*)buf, sizeof(gsm.ap_name));
 }
 
+void gsm_set_user_agent(const uint8_t *buf)
+{
+    strncpy((char*)gsm.agent_name, (char*)buf, sizeof(gsm.agent_name));
+}
+
 /*
  * Setup a thread for handling GSM communication
  */
@@ -1133,7 +1139,8 @@ static int gsm_http_init(const uint8_t *url, uint8_t url_len)
     int ret;
     uint8_t httpinit[]         = "AT+HTTPINIT\r\n";
     uint8_t httpparamcid[]     = "AT+HTTPPARA=\"CID\",\"1\"\r\n";
-    uint8_t httpparamua[]      = "AT+HTTPPARA=\"UA\",\"RuuviTracker/SIM968\"\r\n";
+    uint8_t httpparamurl[]     = "AT+HTTPPARA=\"URL\",\"%s\"\r\n";
+    uint8_t httpparamua[]      = "AT+HTTPPARA=\"UA\",\"%s\"\r\n";
     uint8_t httpparamredir[]   = "AT+HTTPPARA=\"REDIR\",\"1\"\r\n";
     uint8_t httpparamtimeout[] = "AT+HTTPPARA=\"TIMEOUT\",\"30\"\r\n";
 
@@ -1149,10 +1156,10 @@ static int gsm_http_init(const uint8_t *url, uint8_t url_len)
     ret = gsm_cmd_internal(httpparamcid, sizeof(httpparamcid));
     if (ret != AT_OK)
         return -1;
-    ret = gsm_cmd_fmt((uint8_t*)"AT+HTTPPARA=\"URL\",\"%s\"\r\n", url);
+    ret = gsm_cmd_fmt(httpparamurl, url);
     if (ret != AT_OK)
         return -1;
-    ret = gsm_cmd_internal(httpparamua, sizeof(httpparamua));
+    ret = gsm_cmd_fmt(httpparamua, gsm.agent_name);
     if (ret != AT_OK)
         return -1;
     ret = gsm_cmd_internal(httpparamredir, sizeof(httpparamredir));
