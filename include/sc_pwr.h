@@ -38,5 +38,7 @@ void sc_pwr_chibios_start(void);
 void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms);
 void sc_pwr_wakeup_clear(void);
 #endif
+void sc_pwr_set_wfi_dbg(void);
+uint32_t sc_pwr_get_wfi_dbg(void);
 
 #endif

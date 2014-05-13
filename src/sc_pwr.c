@@ -31,6 +31,9 @@
 #include "sc_extint.h"
 
 
+volatile uint32_t *DBGMCU_CR = (uint32_t *)0xe0042004;
+
+
 /*
  * Put the MCU to StandBy mode (all off except RTC)
  */
@@ -135,6 +138,29 @@ void sc_pwr_wakeup_clear(void)
     rtcSetPeriodicWakeup_v2(&RTCD1, NULL);
 }
 #endif
+
+
+
+/*
+ * Enable clocks to use a debugger (GDB) with WFI.
+ */
+void sc_pwr_set_wfi_dbg(void)
+{
+    uint32_t cr;
+    cr = *DBGMCU_CR;
+    cr |= 0x7; /* DBG_STANDBY | DBG_STOP | DBG_SLEEP */
+    *DBGMCU_CR = cr;
+}
+
+
+
+/*
+ * Get WFI debug bits
+ */
+uint32_t sc_pwr_get_wfi_dbg(void)
+{
+    return *DBGMCU_CR;
+}
 
 
 /* Emacs indentatation information
