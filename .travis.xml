@@ -1,5 +1,8 @@
 language: c
 
+notifications:
+  irc: "chat.freenode.net#snowcap"
+
 before_script:
   - sudo add-apt-repository ppa:terry.guo/gcc-arm-embedded
   - sudo apt-get update -q
