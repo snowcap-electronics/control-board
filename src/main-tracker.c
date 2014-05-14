@@ -33,15 +33,15 @@
  */
 
 /*
- *  Uncomment and set these to match the server information
+ *  Set these to match the server information
  */
-//#define TRACKER_API_SECRET            ""
-//#define TRACKER_CODE                  ""
+#define TRACKER_API_SECRET            "change this"
+#define TRACKER_CODE                  "change this"
 
 /*
- * Uncomment and set APN of the SIM card operator
+ * Set APN of the SIM card operator
  */
-//#define TRACKER_SIM_APN               ""
+#define TRACKER_SIM_APN               "change this"
 
 /*
  * In continuous mode the MCU, GPS and GSM are fully active all the
@@ -108,9 +108,6 @@
 /*
  * TRACKER IMPLEMENTATION
  */
-#if !defined(TRACKER_API_SECRET) || !defined(TRACKER_CODE) || !defined(TRACKER_SIM_APN)
-#error "TRACKER_API_SECRET, TRACKER_CODE and TRACKER_SIM_APN must be defined"
-#endif
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
