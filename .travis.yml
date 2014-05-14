@@ -1,8 +1,12 @@
 language: c
 
 notifications:
-  irc: "chat.freenode.net#snowcap"
+  irc:
+    channels:
+      - "chat.freenode.net#snowcap"
     on_success: change
+    use_notice: true
+    skip_join: true
 
 before_script:
   - sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded > /dev/null 2>&1
