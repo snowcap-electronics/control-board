@@ -18,7 +18,7 @@ addons:
       name: "snowcap-electronics/control-board"
       description: "MCU firmware"
     notification_email: tuomas@kulve.fi
-    build_command_prepend:
+    build_command_prepend: cov-configure --comptype gcc --compiler arm-none-eabi-gcc
     build_command: make SC_PROJECT_CONFIG=projects/rtc2_tracker.mk -j4
     branch_pattern: master
 
