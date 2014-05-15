@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/dash
 
 set -e
 
@@ -16,6 +16,10 @@ do
     config_name=`basename $cfg .mk`
     rm -rf out/$config_name
     mkdir -p out/$config_name
-    cp build/*{bin,dmp,elf,hex,map} out/$config_name/
+    cp build/*bin out/$config_name/
+    cp build/*dmp out/$config_name/
+    cp build/*elf out/$config_name/
+    cp build/*hex out/$config_name/
+    cp build/*map out/$config_name/
   fi
 done
