@@ -8,6 +8,20 @@ notifications:
     use_notice: true
     skip_join: true
 
+env:
+  global:
+    - secure: "LV/xnOSrnzRNhYMcEUNC0Z+yaOw64iEpyNJ1Y5Ga7RxH458APFznhs/BKhZCuLpmGJapvTwkjYdWEG5iKIu7woTy5CQuziIu3C3G7bstlUQkA+PEkERVJFbBV3FpDNWow7YumdE1USIw+8MzpA0ofOKtL2ihGQju1rPCYlg5BlA="
+
+addons:
+  coverity_scan:
+    project:
+      name: "snowcap-electronics/control-board"
+      description: "MCU firmware"
+    notification_email: tuomas@kulve.fi
+    build_command_prepend:
+    build_command: make SC_PROJECT_CONFIG=projects/rtc2_tracker.mk -j4
+    branch_pattern: master
+
 before_script:
   - sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded > /dev/null 2>&1
   - sudo apt-get update -q
