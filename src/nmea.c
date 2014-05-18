@@ -159,9 +159,12 @@ static bool calculate_nmea_checksum(const char *data, size_t len)
     	received_checksum = strtol(checksum_index, NULL, 16);*/
 
     /* Loop through data, XORing each character to the next */
-    data = strstr(data, "$");
+    if ((data = strstr(data, "$")) == NULL) {
+        SC_LOG_PRINTF("Failed to find $");
+        return false;
+    }
     data++;
-    while(*data != '*') {
+    while(*data != '*' && *data != '\0') {
         checksum ^= *data;
         data++;
     }
