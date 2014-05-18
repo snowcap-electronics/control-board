@@ -343,7 +343,7 @@ static void send_event(void)
   js_replace("time", buf_p);
 
   if (first_time) {
-    strncpy(code, buf_p, sizeof(code));
+    strlcpy(code, buf_p, sizeof(code));
 	  js_replace("session_code", code);
 	  first_time = 0;
   }
