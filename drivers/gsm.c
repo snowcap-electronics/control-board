@@ -747,7 +747,7 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     }
 
     if (found && line) {
-        strncpy((char *)line, (char *)gsm.buf, buf_size);
+        strlcpy((char *)line, (char *)gsm.buf, buf_size);
     }
 
     urc_messages[0].msg = "";
@@ -988,12 +988,12 @@ static int gsm_gprs_disable(void)
 
 void gsm_set_apn(const uint8_t *buf)
 {
-    strncpy((char*)gsm.ap_name, (char*)buf, sizeof(gsm.ap_name));
+    strlcpy((char*)gsm.ap_name, (char*)buf, sizeof(gsm.ap_name));
 }
 
 void gsm_set_user_agent(const uint8_t *buf)
 {
-    strncpy((char*)gsm.agent_name, (char*)buf, sizeof(gsm.agent_name));
+    strlcpy((char*)gsm.agent_name, (char*)buf, sizeof(gsm.agent_name));
 }
 
 /*
