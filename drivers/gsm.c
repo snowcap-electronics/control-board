@@ -1263,8 +1263,8 @@ static HTTP_Response *gsm_http_handle(method_t method,
     }
     // FIXME: next data will be http response
 
-    response->code = status;
-    response->content_len = len;
+    //response->code = status;
+    //response->content_len = len;
     //response->content[0] = '\0';
     _DEBUG("HTTP: Got %d bytes of data\r\n", len);
 
