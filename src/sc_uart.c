@@ -647,7 +647,10 @@ static uint8_t uart_is_enabled(UARTDriver *drv)
   }
 #endif
 
-  chDbgAssert(uart != SC_UART_LAST, "Invalid UART driver", "#1");
+  if (uart == SC_UART_LAST) {
+	chDbgAssert(0, "Invalid UART driver", "#1");
+	return 0;
+  }
 
   return uarts_enabled & (1 << uart);
 }
