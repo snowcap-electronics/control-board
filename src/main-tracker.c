@@ -307,28 +307,38 @@ static void send_event(void)
   static const uint8_t content_type[] = "application/json";
   char buf[1024];
   size_t buf_i = 0;
+  int ret;
   char *buf_p;
   size_t json_len;
-  uint8_t ret;
   static int first_time = 1;
 
   buf_p = &buf[buf_i];
-  buf_i += chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
-                      "%f", nmea.lat + DBG_LOCATION_OFFSET_LAT);
+  ret = chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
+                   "%f", nmea.lat + DBG_LOCATION_OFFSET_LAT);
+  if (ret > 0) {
+    buf_i += ret;
+  }
   json[buf_i++] = '\0';
   js_replace("latitude", buf_p);
 
   buf_p = &buf[buf_i];
-  buf_i += chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
-                      "%f", nmea.lon + DBG_LOCATION_OFFSET_LON);
+  // Not sure if chsnprintf can return -1, but using ret to make coverity happy.
+  ret = chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
+                   "%f", nmea.lon + DBG_LOCATION_OFFSET_LON);
+  if (ret > 0) {
+    buf_i += ret;
+  }
   json[buf_i++] = '\0';
   js_replace("longitude", buf_p);
 
   buf_p = &buf[buf_i];
-  buf_i += chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
-                      "%04d-%02d-%02dT%02d:%02d:%02d.000Z",
-                      nmea.dt.year, nmea.dt.month, nmea.dt.day,
-                      nmea.dt.hh, nmea.dt.mm, nmea.dt.sec);
+  ret = chsnprintf(buf_p, SC_MAX(sizeof(buf) - buf_i, 0),
+                   "%04d-%02d-%02dT%02d:%02d:%02d.000Z",
+                   nmea.dt.year, nmea.dt.month, nmea.dt.day,
+                   nmea.dt.hh, nmea.dt.mm, nmea.dt.sec);
+  if (ret > 0) {
+    buf_i += ret;
+  }
   json[buf_i++] = '\0';
   js_replace("time", buf_p);
 
