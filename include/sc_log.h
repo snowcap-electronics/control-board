@@ -33,8 +33,9 @@
 #include <stdarg.h>
 
 typedef enum SC_LOG_LVL {
-  SC_LOG_LVL_VERBOSE   = 1,
-  SC_LOG_LVL_DEBUG     = 2
+  SC_LOG_LVL_ASSERT    = 1,
+  SC_LOG_LVL_VERBOSE   = 2,
+  SC_LOG_LVL_DEBUG     = 3
 } SC_LOG_LVL;
 
 typedef enum SC_LOG_MODULE {
@@ -46,6 +47,13 @@ typedef enum SC_LOG_MODULE {
 // Conveniency macros
 #define SC_LOG_PRINTF(...) sc_log_printf(SC_LOG_LVL_VERBOSE, SC_LOG_MODULE_TAG, __VA_ARGS__)
 #define SC_DBG_PRINTF(...) sc_log_printf(SC_LOG_LVL_DEBUG, SC_LOG_MODULE_TAG, __VA_ARGS__)
+#define SC_LOG_ASSERT(cond, msg) do {									\
+	if (!(cond)) {														\
+	  sc_log(SC_LOG_LVL_ASSERT, SC_LOG_MODULE_TAG, (uint8_t *)(msg));	\
+	  chThdSleepMilliseconds(500);										\
+	  chDbgAssert(cond, msg, __func__);									\
+	}																	\
+  } while(0);
 #define SC_LOG(msg) sc_log(SC_LOG_LVL_VERBOSE, SC_LOG_MODULE_TAG, (uint8_t *)(msg))
 #define SC_DBG(msg) sc_log(SC_LOG_LVL_DEBUG, SC_LOG_MODULE_TAG, (uint8_t *)(msg))
 

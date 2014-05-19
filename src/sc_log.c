@@ -52,12 +52,15 @@ void sc_log_printf(SC_LOG_LVL lvl, SC_LOG_MODULE module, const char* fmt, ...)
   vsnprintf((char *)buf, sizeof(buf), fmt, args);
   va_end(args);
 
+  // FIXME: pass on the len
   sc_log(lvl, module, buf);
 }
 
 
+// FIXME: add a variant with len
 void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
 {
+  uint8_t assert_msg[] = "[ASSERT] ";
   uint16_t len = 0;
 
   // FIXME: implement module based filtering
@@ -79,6 +82,9 @@ void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
 
 #if HAL_USE_UART
   if (log_output == SC_LOG_OUTPUT_UART) {
+	if (lvl == SC_LOG_LVL_ASSERT) {
+	  sc_uart_send_msg(output_uart, assert_msg, sizeof(assert_msg));
+	}
 	sc_uart_send_msg(output_uart, msg, len);
   }
 #endif
