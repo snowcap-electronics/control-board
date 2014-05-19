@@ -46,8 +46,8 @@
 /* Assume debug output to be this USB-serial port */
 #define printf(...) SC_DBG_PRINTF(__VA_ARGS__)
 
-#define D_ENTER() printf("%s:%s(): enter\r\n", __FILE__, __FUNCTION__)
-#define D_EXIT() printf("%s:%s(): exit\r\n", __FILE__, __FUNCTION__)
+#define D_ENTER() printf("%s(): enter\r\n", __func__)
+#define D_EXIT() printf("%s(): exit\r\n", __func__)
 #define _DEBUG(...) do{                                       \
 	  printf(__VA_ARGS__);                                    \
   } while(0)
@@ -146,7 +146,7 @@ static msg_t scGsmThread(void *UNUSED(arg));
 typedef struct Message Message;
 struct Message {
     const char *msg;        /* Message string */
-    uint8_t msg_len;        /* Message length */
+    size_t msg_len;        /* Message length */
     enum State next_state;  /* Automatic state transition */
     bool (*func)(uint8_t *line, uint8_t len);/* Function to call on message */
 };
@@ -495,8 +495,14 @@ static bool handle_network(uint8_t *line, uint8_t len)
     (void)len;
     /* Example: +COPS: 0,0,"Saunalahti" */
     if (1 == sscanf((char*)line, "+COPS: 0,0,\"%s", network)) {
-        *strchr(network,'"') = 0;
-        _DEBUG("GSM: Registered to network %s\r\n", network);
+        char *end;
+        end = strchr(network,'"');
+        if (!end) {
+            _DEBUG("GSM: Invalid network line: %s\r\n", line);
+        } else {
+            *end = 0;
+            _DEBUG("GSM: Registered to network %s\r\n", network);
+        }
         gsm.state = STATE_READY;
         return true;
     }
@@ -520,16 +526,22 @@ static bool handle_sapbr(uint8_t *line, uint8_t len)
     if (1 == sscanf((char*)line, "+SAPBR: %*d,%d", &status)) {
         switch(status) {
         case STATUS_CONNECTING:
+            _DEBUG("GPRS connecting\r\n");
+            return false;
         case STATUS_CONNECTED:
+            _DEBUG("GPRS connected\r\n");
             gsm.flags |= GPRS_READY;
             return true;
         default:
             // FIXME: handle all explicitly, assert on default (unknown)
-            _DEBUG("%s","GPRS not active\r\n");
+            _DEBUG("GPRS not active\r\n");
             gsm.flags &= ~GPRS_READY;
             return true;
         }
-    } else if (0 == strncmp((char*)line, sapbr_deact, strlen(sapbr_deact))) {
+    }
+
+    if (0 == strncmp((char*)line, sapbr_deact, sizeof(sapbr_deact))) {
+        _DEBUG("GPRS disconnected\r\n");
         gsm.flags &= ~GPRS_READY;
         return true;
     }
@@ -593,7 +605,7 @@ static bool handle_call_ready(uint8_t *line, uint8_t len)
     (void)len;
     (void)line;
     if (!(gsm.flags & SIM_INSERTED)) {
-        _DEBUG("%s","GSM ready but SIM is not\r\n");
+        _DEBUG("GSM ready but SIM is not\r\n");
     }
     return false;
 }
@@ -603,7 +615,7 @@ static bool handle_ok(uint8_t *line, uint8_t len)
     (void)line;
     (void)len;
     gsm.reply = AT_OK;
-    _DEBUG("%s","GSM: AT OK\r\n");
+    _DEBUG("GSM: AT OK\r\n");
     chBSemSignal(&gsm.waiting_reply);
     return false;
 }
@@ -613,7 +625,7 @@ static bool handle_fail(uint8_t *line, uint8_t len)
     (void)line;
     (void)len;
     gsm.reply = AT_FAIL;
-    _DEBUG("%s","GSM: Fail\r\n");
+    _DEBUG("GSM: Fail\r\n");
     chBSemSignal(&gsm.waiting_reply);
     return false;
 }
@@ -649,12 +661,12 @@ static void gsm_toggle_power_pin(uint8_t wait_status)
         if (status == wait_status) {
             // FIXME: extra sleep, should not be needed
             chThdSleepMilliseconds(1000);
-            _DEBUG("%d: Got status %s\r\n", chTimeNow());
+            _DEBUG("%d: Got status %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
             return;
         }
         chThdSleepMilliseconds(100);
     }
-    _DEBUG("%d: Timeout waiting for status %s\r\n", chTimeNow());
+    _DEBUG("%d: Timeout waiting for status %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
 }
 
 static void sleep_enable(void)
@@ -713,19 +725,25 @@ static uint8_t gsm_cmd_fmt(const uint8_t *fmt, ...)
 {
     uint8_t cmd[256];
     va_list ap;
-    uint8_t len;
+    ssize_t len;
     va_start( ap, fmt );
     len = vsnprintf((char*) cmd, sizeof(cmd), (char*)fmt, ap );
     va_end( ap );
-    return gsm_cmd_internal(cmd, len);
+    if (len > 0) {
+        return gsm_cmd_internal(cmd, (size_t)len);
+    } else {
+        _DEBUG("Failed to vsnprintf\r\n");
+        return AT_ERROR;
+    }
 }
 
 /* Wait for specific pattern */
 static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, size_t buf_size)
 {
-    D_ENTER();
     systime_t wait_limit;
     uint8_t found = 0;
+
+    D_ENTER();
 
     _DEBUG("wait=%s\r\n", pattern);
 
@@ -779,7 +797,11 @@ static uint8_t gsm_cmd_wait_fmt(const uint8_t *response, int timeout, uint8_t *f
     va_start( ap, fmt );
     len = vsnprintf((char*)cmd, sizeof(cmd), (char *)fmt, ap );
     va_end( ap );
-    return gsm_cmd_wait(cmd, len, response, timeout);
+    if (len > 0) {
+        return gsm_cmd_wait(cmd, len, response, timeout);
+    } else {
+        return AT_ERROR;
+    }
 }
 
 
@@ -798,11 +820,11 @@ static void set_mode_to_fixed_baud(void)
     if (gsm_cmd_internal(at, sizeof(at)) == AT_OK) {
         uint8_t setbaud[] = "AT+IPR=115200\r\n";  /* Switch to fixed baud rate */
         if (gsm_cmd_internal(setbaud, sizeof(setbaud)) != AT_OK) {
-            _DEBUG("%s", "Failed to set baud rate to 115200, keeping autobaud\r\n");
+            _DEBUG("Failed to set baud rate to 115200, keeping autobaud\r\n");
         }
     } else {
         // FIXME: assert?
-        _DEBUG("%s", "Failed to synchronize autobauding mode\r\n");
+        _DEBUG("Failed to synchronize autobauding mode\r\n");
     }
     D_EXIT();
 }
@@ -810,9 +832,9 @@ static void set_mode_to_fixed_baud(void)
 static void gsm_enable_hw_flow()
 {
     unsigned int timeout_s = 5;
-    uint8_t ifcset[] = "AT+IFC=2,2\r\n"; /* Enable HW flow ctrl */
-    uint8_t echo[]   = "ATE0\r\n";       /* Disable ECHO */
-    uint8_t sleep[]  = "AT+CSCLK=1\r\n"; /* Allow module to sleep */
+    uint8_t ifcset[]  = "AT+IFC=2,2\r\n"; /* Enable HW flow ctrl */
+    uint8_t echo[]    = "ATE0\r\n";       /* Disable ECHO */
+    uint8_t sleep[]   = "AT+CSCLK=1\r\n"; /* Allow module to sleep */
     uint8_t verbose[] = "AT+CMEE=2\r\n"; /* Verbose errors */
     uint8_t ret = AT_OK;
 
@@ -832,7 +854,7 @@ static void gsm_enable_hw_flow()
     ret = gsm_cmd_internal(ifcset, sizeof(ifcset));
     if (ret == AT_OK) {
         gsm_set_serial_flow_control(1);
-        _DEBUG("%s","HW flow enabled\r\n");
+        _DEBUG("HW flow enabled\r\n");
     }
 
     if (ret == AT_OK) {
@@ -894,7 +916,7 @@ static void gsm_set_power_state(enum Power_mode mode)
         gsm.flags = 0;
         break;
     case CUT_OFF:
-        _DEBUG("%s","CUT_OFF mode not yet handled\r\n");
+        _DEBUG("CUT_OFF mode not yet handled\r\n");
         chDbgAssert(0, "CUT_OFF mode not yet handled", "#1");
         break;
     default:
@@ -1172,7 +1194,8 @@ static int gsm_http_init(const uint8_t *url, uint8_t url_len)
 }
 
 static void gsm_http_clean(void)
-{    uint8_t httpterm[] = "AT+HTTPTERM\r\n";
+{
+    uint8_t httpterm[] = "AT+HTTPTERM\r\n";
     gsm_cmd_internal(httpterm, sizeof(httpterm));
 }
 
@@ -1212,20 +1235,20 @@ static HTTP_Response *gsm_http_handle(method_t method,
     _DEBUG("gsm_http_handle, url: %s\r\n", url);
 
     if (gsm_http_init(url, url_len) != 0) {
-        _DEBUG("%s","GSM: Failed to initialize HTTP\r\n");
+        _DEBUG("GSM: Failed to initialize HTTP\r\n");
         goto HTTP_END;
     }
 
     if (content_type) {
         if (gsm_http_send_content_type(content_type, type_len) != 0) {
-            _DEBUG("%s", "GSM: Failed to set content type\r\n");
+            _DEBUG("GSM: Failed to set content type\r\n");
             goto HTTP_END;
         }
     }
 
     if (data) {
         if (gsm_http_send_data(data, data_len) != 0) {
-            _DEBUG("%s", "GSM: Failed to send http data\r\n");
+            _DEBUG("GSM: Failed to send http data\r\n");
             goto HTTP_END;
         }
     }
