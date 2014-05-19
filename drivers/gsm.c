@@ -41,26 +41,6 @@
 
 #include "sc.h"
 
-//#define NO_DEBUG
-#ifndef NO_DEBUG
-/* Assume debug output to be this USB-serial port */
-#define printf(...) SC_DBG_PRINTF(__VA_ARGS__)
-
-#define D_ENTER() printf("%s(): enter\r\n", __func__)
-#define D_EXIT() printf("%s(): exit\r\n", __func__)
-#define _DEBUG(...) do{                                       \
-	  printf(__VA_ARGS__);                                    \
-  } while(0)
-
-   //printf("%s:%s:%d: ", __FILE__, __FUNCTION__, __LINE__);
-
-#else
-
-#define D_ENTER()
-#define D_EXIT()
-#define _DEBUG(...)
-#endif /* NO_DEBUG */
-
 /* ============ DEFINE GPIO PINS HERE =========*/
 
 #define STATUS_PIN  GPIOC_GSM_STATUS
@@ -245,7 +225,7 @@ void gsm_state_parser(uint8_t c)
     size_t i;
     bool state_changed = false;
 
-    //_DEBUG("recv byte: '%d'\r\n", c);
+    //SC_DBG_PRINTF("recv byte: '%d'\r\n", c);
 
     if (c == '\r' || c == '\0') {
         return;
@@ -265,9 +245,8 @@ void gsm_state_parser(uint8_t c)
     if (gsm.incoming_i == BUFF_SIZE) {
         gsm.incoming_i = 0;
         gsm.incoming_buf[BUFF_SIZE] = '\0';
-        _DEBUG("buffer full: %s\r\n", gsm.incoming_buf);
         gsm.incoming_buf[0] = '\0';
-        chDbgAssert(0, "GSM incoming buffer full", "#1");
+        SC_LOG_ASSERT(0, "GSM incoming buffer full\r\n");
         return;
     }
 
@@ -278,7 +257,7 @@ void gsm_state_parser(uint8_t c)
 
     gsm.incoming_buf[gsm.incoming_i] = '\0';
 
-    _DEBUG("recv: %s\r\n", gsm.incoming_buf);
+    SC_DBG_PRINTF("recv: %s\r\n", gsm.incoming_buf);
 
     // Copy the data for prosessing
     chMtxLock(&gsm.gsm_data_mtx);
@@ -292,7 +271,6 @@ void gsm_state_parser(uint8_t c)
 
     m = lookup_urc_message(gsm.buf, gsm.buf_len);
     if (m) {
-        //_DEBUG("urc message: %s, next state: %d\r\n", m->msg, m->next_state);
         if (m->next_state) {
             gsm.state = m->next_state;
             state_changed = true;
@@ -323,13 +301,13 @@ uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "GSM API call already ongoing", "#1");
+        SC_LOG_ASSERT(0, "GSM API call already ongoing");
         return 0;
     }
 
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "Previous GSM API call not finished", "#1");
+        SC_LOG_ASSERT(0, "Previous GSM API call not finished");
         chMtxUnlock();
         return 0;
     }
@@ -356,13 +334,13 @@ uint8_t gsm_http_get(const uint8_t *url, uint8_t len)
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "GSM API call already ongoing", "#1");
+        SC_LOG_ASSERT(0, "GSM API call already ongoing");
         return 0;
     }
 
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "Previous GSM API call not finished", "#1");
+        SC_LOG_ASSERT(0, "Previous GSM API call not finished");
         chMtxUnlock();
         return 0;
     }
@@ -398,13 +376,13 @@ uint8_t gsm_http_post(const uint8_t *url, uint8_t url_len,
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "GSM API call already ongoing", "#1");
+        SC_LOG_ASSERT(0, "GSM API call already ongoing");
         return 0;
     }
 
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
-        chDbgAssert(0, "Previous GSM API call not finished", "#1");
+        SC_LOG_ASSERT(0, "Previous GSM API call not finished");
         chMtxUnlock();
         return 0;
     }
@@ -498,10 +476,10 @@ static bool handle_network(uint8_t *line, uint8_t len)
         char *end;
         end = strchr(network,'"');
         if (!end) {
-            _DEBUG("GSM: Invalid network line: %s\r\n", line);
+            SC_LOG_PRINTF("GSM: Invalid network line: %s\r\n", line);
         } else {
             *end = 0;
-            _DEBUG("GSM: Registered to network %s\r\n", network);
+            SC_LOG_PRINTF("GSM: Registered to network %s\r\n", network);
         }
         gsm.state = STATE_READY;
         return true;
@@ -526,22 +504,22 @@ static bool handle_sapbr(uint8_t *line, uint8_t len)
     if (1 == sscanf((char*)line, "+SAPBR: %*d,%d", &status)) {
         switch(status) {
         case STATUS_CONNECTING:
-            _DEBUG("GPRS connecting\r\n");
+            SC_LOG_PRINTF("GPRS connecting\r\n");
             return false;
         case STATUS_CONNECTED:
-            _DEBUG("GPRS connected\r\n");
+            SC_LOG_PRINTF("GPRS connected\r\n");
             gsm.flags |= GPRS_READY;
             return true;
         default:
             // FIXME: handle all explicitly, assert on default (unknown)
-            _DEBUG("GPRS not active\r\n");
+            SC_LOG_PRINTF("GPRS not active\r\n");
             gsm.flags &= ~GPRS_READY;
             return true;
         }
     }
 
     if (0 == strncmp((char*)line, sapbr_deact, sizeof(sapbr_deact))) {
-        _DEBUG("GPRS disconnected\r\n");
+        SC_LOG_PRINTF("GPRS disconnected\r\n");
         gsm.flags &= ~GPRS_READY;
         return true;
     }
@@ -555,7 +533,7 @@ static bool handle_sim_not_ready(uint8_t *line, uint8_t len)
 {
     (void)line;
     (void)len;
-    _DEBUG("SIM not ready\r\n");
+    SC_LOG_PRINTF("SIM not ready\r\n");
     return true;
 }
 
@@ -595,7 +573,7 @@ static bool handle_cfun(uint8_t *line, uint8_t len)
         gsm.cfun = CFUN_1;
         return true;
     } else {
-        _DEBUG("GSM: Unknown CFUN state: %s\r\n", line);
+        SC_LOG_PRINTF("GSM: Unknown CFUN state: %s\r\n", line);
     }
     return false;
 }
@@ -605,7 +583,7 @@ static bool handle_call_ready(uint8_t *line, uint8_t len)
     (void)len;
     (void)line;
     if (!(gsm.flags & SIM_INSERTED)) {
-        _DEBUG("GSM ready but SIM is not\r\n");
+        SC_LOG_PRINTF("GSM ready but SIM is not\r\n");
     }
     return false;
 }
@@ -615,7 +593,7 @@ static bool handle_ok(uint8_t *line, uint8_t len)
     (void)line;
     (void)len;
     gsm.reply = AT_OK;
-    _DEBUG("GSM: AT OK\r\n");
+    SC_LOG_PRINTF("GSM: AT OK\r\n");
     chBSemSignal(&gsm.waiting_reply);
     return false;
 }
@@ -625,7 +603,7 @@ static bool handle_fail(uint8_t *line, uint8_t len)
     (void)line;
     (void)len;
     gsm.reply = AT_FAIL;
-    _DEBUG("GSM: Fail\r\n");
+    SC_LOG_PRINTF("GSM: Fail\r\n");
     chBSemSignal(&gsm.waiting_reply);
     return false;
 }
@@ -635,7 +613,7 @@ static bool handle_error(uint8_t *line, uint8_t len)
     (void)line;
     (void)len;
     gsm.reply = AT_ERROR;
-    _DEBUG("GSM ERROR: %s\r\n", line);
+    SC_LOG_PRINTF("GSM ERROR: %s\r\n", line);
     chBSemSignal(&gsm.waiting_reply);
     return false;
 }
@@ -644,40 +622,37 @@ static void gsm_toggle_power_pin(uint8_t wait_status)
 {
     systime_t wait_limit;
 
-    _DEBUG("%d: Toggling power pin for status %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
+    SC_DBG_PRINTF("%d: Toggling power pin for status %s\r\n",
+                  chTimeNow(), wait_status ? "HIGH" : "LOW");
 
     palClearPad(POWER_PORT, POWER_PIN);
     chThdSleepMilliseconds(2000);
     palSetPad(POWER_PORT, POWER_PIN);
 
-    _DEBUG("%d: Toggling done\r\n", chTimeNow());
-
     // Wait for status pin update
     wait_limit = chTimeNow() + 4000;
-    _DEBUG("Starting waiting for status pin\r\n");
     while (chTimeNow() < wait_limit) {
         int status = palReadPad(STATUS_PORT, STATUS_PIN);
-        _DEBUG("%d: Waiting for status pin to go %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
         if (status == wait_status) {
             // FIXME: extra sleep, should not be needed
             chThdSleepMilliseconds(1000);
-            _DEBUG("%d: Got status %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
             return;
         }
         chThdSleepMilliseconds(100);
     }
-    _DEBUG("%d: Timeout waiting for status %s\r\n", chTimeNow(), wait_status ? "HIGH" : "LOW");
+    SC_LOG_PRINTF("%d: Timeout waiting for status %s\r\n",
+                  chTimeNow(), wait_status ? "HIGH" : "LOW");
 }
 
 static void sleep_enable(void)
 {
-    _DEBUG("sleep_enable\r\n");
+    SC_DBG_PRINTF("sleep_enable\r\n");
     palSetPad(DTR_PORT, DTR_PIN);
 }
 
 static void sleep_disable(void)
 {
-    _DEBUG("sleep_disable\r\n");
+    SC_DBG_PRINTF("sleep_disable\r\n");
     palClearPad(DTR_PORT, DTR_PIN);
     chThdSleepMilliseconds(50);
 }
@@ -702,7 +677,7 @@ static uint8_t gsm_cmd_internal(const uint8_t *cmd, uint8_t len)
     chBSemReset(&gsm.waiting_reply, TRUE);
 
     for(retry=0; retry<3; retry++) {
-        _DEBUG("send (retry %d): %s", retry, cmd);
+        SC_LOG_PRINTF("send (retry %d): %s", retry, cmd);
         gsm_uart_write(cmd, len);
         if(RDY_OK != chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS))
             gsm.reply = AT_TIMEOUT;
@@ -711,11 +686,11 @@ static uint8_t gsm_cmd_internal(const uint8_t *cmd, uint8_t len)
     }
 
     if (gsm.reply != AT_OK) {
-        _DEBUG("'%s' failed (%d)\r\n", cmd, gsm.reply);
+        SC_LOG_PRINTF("'%s' failed (%d)\r\n", cmd, gsm.reply);
     }
 
     if (retry == 3) {             /* Modem not responding */
-        _DEBUG("Modem not responding!\r\n");
+        SC_LOG_PRINTF("Modem not responding!\r\n");
         return AT_TIMEOUT;
     }
     return gsm.reply;
@@ -732,7 +707,7 @@ static uint8_t gsm_cmd_fmt(const uint8_t *fmt, ...)
     if (len > 0) {
         return gsm_cmd_internal(cmd, (size_t)len);
     } else {
-        _DEBUG("Failed to vsnprintf\r\n");
+        SC_LOG_PRINTF("Failed to vsnprintf\r\n");
         return AT_ERROR;
     }
 }
@@ -743,9 +718,7 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     systime_t wait_limit;
     uint8_t found = 0;
 
-    D_ENTER();
-
-    _DEBUG("wait=%s\r\n", pattern);
+    SC_LOG_PRINTF("wait=%s\r\n", pattern);
 
     urc_messages[0].msg = (const char*)pattern;
     urc_messages[0].msg_len = strlen((char*)pattern);
@@ -771,7 +744,6 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     urc_messages[0].msg = "";
     urc_messages[0].msg_len = 0;
 
-    D_EXIT();
     return found ? AT_OK : AT_TIMEOUT;
 }
 
@@ -783,7 +755,7 @@ static uint8_t gsm_wait(const uint8_t *pattern, int timeout)
 static uint8_t gsm_cmd_wait(const uint8_t *cmd, int len, const uint8_t *response, int timeout)
 {
     int r;
-    _DEBUG("send: %s", cmd);
+    SC_LOG_PRINTF("send: %s", cmd);
     gsm_uart_write(cmd, len);
     r = gsm_wait(response, timeout);
     return r;
@@ -809,24 +781,22 @@ static uint8_t gsm_cmd_wait_fmt(const uint8_t *response, int timeout, uint8_t *f
 static void set_mode_to_fixed_baud(void)
 {
     uint8_t at[] = "AT\r\n";
-    D_ENTER();
 
     gsm_set_serial_flow_control(0);
     // Send 3x AT for autobaud. Works only after boot.
-    _DEBUG("send: %s", at);
+    SC_LOG_PRINTF("send: %s", at);
     gsm_uart_write(at, sizeof(at));
-    _DEBUG("send: %s", at);
+    SC_LOG_PRINTF("send: %s", at);
     gsm_uart_write(at, sizeof(at));
     if (gsm_cmd_internal(at, sizeof(at)) == AT_OK) {
-        uint8_t setbaud[] = "AT+IPR=115200\r\n";  /* Switch to fixed baud rate */
+        uint8_t setbaud[] = "AT+IPR=115200\r\n";  /* Switch to fixed baud rate*/
         if (gsm_cmd_internal(setbaud, sizeof(setbaud)) != AT_OK) {
-            _DEBUG("Failed to set baud rate to 115200, keeping autobaud\r\n");
+            SC_LOG_PRINTF("Failed to set baud rate to 115200, keeping autobaud\r\n");
         }
     } else {
         // FIXME: assert?
-        _DEBUG("Failed to synchronize autobauding mode\r\n");
+        SC_LOG_PRINTF("Failed to synchronize autobauding mode\r\n");
     }
-    D_EXIT();
 }
 
 static void gsm_enable_hw_flow()
@@ -838,12 +808,11 @@ static void gsm_enable_hw_flow()
     uint8_t verbose[] = "AT+CMEE=2\r\n"; /* Verbose errors */
     uint8_t ret = AT_OK;
 
-    D_ENTER();
     while(gsm.state < STATE_BOOTING) {
-        _DEBUG("Waiting for booting state\r\n");
+        SC_LOG_PRINTF("Waiting for booting state\r\n");
         chThdSleepMilliseconds(1000);
         if (!(timeout_s--)) {
-            _DEBUG("No boot messages from uart. assume autobauding\r\n");
+            SC_LOG_PRINTF("No boot messages from uart. assume autobauding\r\n");
             set_mode_to_fixed_baud();
             break;
         }
@@ -854,7 +823,7 @@ static void gsm_enable_hw_flow()
     ret = gsm_cmd_internal(ifcset, sizeof(ifcset));
     if (ret == AT_OK) {
         gsm_set_serial_flow_control(1);
-        _DEBUG("HW flow enabled\r\n");
+        SC_LOG_PRINTF("HW flow enabled\r\n");
     }
 
     if (ret == AT_OK) {
@@ -866,10 +835,9 @@ static void gsm_enable_hw_flow()
     }
 
     if (ret != AT_OK) {
-        _DEBUG("Failed to enable HW flow control\r\n");
+        SC_LOG_PRINTF("Failed to enable HW flow control\r\n");
     }
 
-    D_EXIT();
 }
 
 /* Enable GSM module */
@@ -902,7 +870,7 @@ static void gsm_set_power_state(enum Power_mode mode)
                 gsm_enable_hw_flow();
                 /* We should now know modem's real status */
             } else {
-                chDbgAssert(0, "GSM already powered on", "#1");
+                SC_LOG_ASSERT(0, "GSM already powered on");
             }
         }
         break;
@@ -910,17 +878,17 @@ static void gsm_set_power_state(enum Power_mode mode)
         if (1 == status_pin) {
             gsm_toggle_power_pin(PAL_LOW);
         } else {
-            chDbgAssert(0, "GSM already powered off", "#1");
+            SC_LOG_ASSERT(0, "GSM already powered off");
         }
         gsm.state = STATE_OFF;
         gsm.flags = 0;
         break;
     case CUT_OFF:
-        _DEBUG("CUT_OFF mode not yet handled\r\n");
-        chDbgAssert(0, "CUT_OFF mode not yet handled", "#1");
+        SC_LOG_PRINTF("CUT_OFF mode not yet handled\r\n");
+        SC_LOG_ASSERT(0, "CUT_OFF mode not yet handled");
         break;
     default:
-        chDbgAssert(0, "Unknown GSM mode", "#1");
+        SC_LOG_ASSERT(0, "Unknown GSM mode");
         break;
     }
 }
@@ -941,8 +909,8 @@ static int gsm_gprs_enable()
     }
 
     if (gsm.state < STATE_READY) {
-        _DEBUG("Timeout waiting for RDY state before enabling GPRS\r\n");
-        chDbgAssert(0, "Timeout waiting for RDY state before enabling GPRS", "#1");
+        SC_LOG_PRINTF("Timeout waiting for RDY state before enabling GPRS\r\n");
+        SC_LOG_ASSERT(0, "Timeout waiting for RDY state before enabling GPRS");
         return AT_TIMEOUT;
     }
 
@@ -952,7 +920,7 @@ static int gsm_gprs_enable()
         return rc;
 
     if (gsm.flags & GPRS_READY) {
-        _DEBUG("GPRS already enabled\r\n");
+        SC_LOG_PRINTF("GPRS already enabled\r\n");
         return AT_OK;
     }
 
@@ -1038,7 +1006,7 @@ static msg_t scGsmThread(void *arg)
 # if 0
     if (palReadPad(GPIOC, GPIOC_ENABLE_GSM_VBAT) == PAL_LOW) {
         // Power off GSM
-        _DEBUG("GSM_VBAT already powered, toggling.\r\n");
+        SC_LOG_PRINTF("GSM_VBAT already powered, toggling.\r\n");
         palSetPad(GPIOC, GPIOC_ENABLE_GSM_VBAT);
         chThdSleepMilliseconds(2000);
     }
@@ -1054,7 +1022,7 @@ static msg_t scGsmThread(void *arg)
     while(!chThdShouldTerminate()) {
 
         // Wait for either new command to send to GSM
-        _DEBUG("scGsmThread: waiting for new cmd.\r\n");
+        SC_LOG_PRINTF("scGsmThread: waiting for new cmd.\r\n");
         chBSemWait(&api.new_call_sem);
 
         if (chThdShouldTerminate()) {
@@ -1063,10 +1031,10 @@ static msg_t scGsmThread(void *arg)
 
         sleep_disable();
 
-        _DEBUG("scGsmThread: waiting for api_data_mtx.\r\n");
+        SC_DBG_PRINTF("scGsmThread: waiting for api_data_mtx.\r\n");
         chMtxLock(&api.api_data_mtx);
 
-        _DEBUG("scGsmThread: have new cmd: %d.\r\n", api.api_call);
+        SC_LOG_PRINTF("scGsmThread: have new cmd: %d.\r\n", api.api_call);
 
         switch(api.api_call) {
         case API_CALL_GSM_CMD:
@@ -1080,14 +1048,15 @@ static msg_t scGsmThread(void *arg)
                                 api.http.content_type, api.http.type_len);
                 gsm_gprs_disable();
             } else {
-                _DEBUG("scGsmThread: failed to enable gprs, skipped http call.\r\n");
+                SC_LOG_PRINTF("scGsmThread: failed to enable gprs, "
+                              "skipped http call.\r\n");
             }
             break;
         case API_CALL_UNKNOWN:
-            chDbgAssert(0, "Unexpected API_CALL_UNKNOWN\r\n", "#1");
+            SC_LOG_ASSERT(0, "Unexpected API_CALL_UNKNOWN\r\n");
             break;
         default:
-            chDbgAssert(0, "Unknown API CALL\r\n", "#1");
+            SC_LOG_ASSERT(0, "Unknown API CALL\r\n");
             break;
         }
 
@@ -1129,7 +1098,7 @@ void gsm_start(void)
     gsm.incoming_i = 0;
 
     if (gsm_thread) {
-        chDbgAssert(0, "GSM thread already running", "#1");
+        SC_LOG_ASSERT(0, "GSM thread already running");
     } else {
         gsm_thread = chThdCreateStatic(sc_gsm_thread, sizeof(sc_gsm_thread),
                                        NORMALPRIO, scGsmThread, NULL);
@@ -1150,7 +1119,7 @@ void gsm_stop(bool power_off)
         chThdWait(gsm_thread);
         gsm_thread = NULL;
     } else {
-        chDbgAssert(0, "GSM thread not running", "#1");
+        SC_LOG_ASSERT(0, "GSM thread not running");
     }
 }
 
@@ -1208,11 +1177,12 @@ static int gsm_http_send_content_type(const uint8_t *content_type, uint8_t len)
 static int gsm_http_send_data(const uint8_t *data, int len)
 {
     int r;
-    r = gsm_cmd_wait_fmt((uint8_t*)"DOWNLOAD", TIMEOUT_MS, (uint8_t*)"AT+HTTPDATA=%d,1000\r\n", len);
+    r = gsm_cmd_wait_fmt((uint8_t*)"DOWNLOAD", TIMEOUT_MS,
+                         (uint8_t*)"AT+HTTPDATA=%d,1000\r\n", len);
     if (AT_OK != r) {
         return r;
     }
-    _DEBUG("About to send %d bytes: '%s'", len, data);
+    SC_LOG_PRINTF("About to send %d bytes: '%s'", len, data);
     chBSemReset(&gsm.waiting_reply, TRUE);
     gsm_uart_write(data, len);
 
@@ -1232,23 +1202,23 @@ static HTTP_Response *gsm_http_handle(method_t method,
     uint8_t resp[64];
     HTTP_Response *response = NULL;
 
-    _DEBUG("gsm_http_handle, url: %s\r\n", url);
+    SC_DBG_PRINTF("gsm_http_handle, url: %s\r\n", url);
 
     if (gsm_http_init(url, url_len) != 0) {
-        _DEBUG("GSM: Failed to initialize HTTP\r\n");
+        SC_LOG_PRINTF("GSM: Failed to initialize HTTP\r\n");
         goto HTTP_END;
     }
 
     if (content_type) {
         if (gsm_http_send_content_type(content_type, type_len) != 0) {
-            _DEBUG("GSM: Failed to set content type\r\n");
+            SC_LOG_PRINTF("GSM: Failed to set content type\r\n");
             goto HTTP_END;
         }
     }
 
     if (data) {
         if (gsm_http_send_data(data, data_len) != 0) {
-            _DEBUG("GSM: Failed to send http data\r\n");
+            SC_LOG_PRINTF("GSM: Failed to send http data\r\n");
             goto HTTP_END;
         }
     }
@@ -1261,20 +1231,22 @@ static HTTP_Response *gsm_http_handle(method_t method,
         ret = gsm_cmd_internal(httpaction, sizeof(httpaction));
     }
     if (ret != AT_OK) {
-        _DEBUG("GSM: HTTP Action failed\r\n");
+        SC_LOG_PRINTF("GSM: HTTP Action failed\r\n");
         goto HTTP_END;
     }
 
-    if (gsm_wait_cpy((uint8_t*)"+HTTPACTION", TIMEOUT_HTTP, resp, sizeof(resp)) == AT_TIMEOUT) {
-        _DEBUG("GSM: HTTP Timeout\r\n");
+    if (gsm_wait_cpy((uint8_t*)"+HTTPACTION", TIMEOUT_HTTP,
+                     resp, sizeof(resp)) == AT_TIMEOUT) {
+        SC_LOG_PRINTF("GSM: HTTP Timeout\r\n");
         goto HTTP_END;
     }
 
-    if (2 != sscanf((char*)resp, "+HTTPACTION:%*d,%d,%d", &status, &len)) { /* +HTTPACTION:<method>,<result>,<lenght of data> */
-        _DEBUG("GSM: Failed to parse response\r\n");
+    /* +HTTPACTION:<method>,<result>,<lenght of data> */
+    if (2 != sscanf((char*)resp, "+HTTPACTION:%*d,%d,%d", &status, &len)) {
+        SC_LOG_PRINTF("GSM: Failed to parse response\r\n");
         goto HTTP_END;
     }
-    _DEBUG("HTTP response %d len=%d\r\n", status, len);
+    SC_LOG_PRINTF("HTTP response %d len=%d\r\n", status, len);
 
     /* Continue to read response, if there is any */
     if (len <= 0)
@@ -1289,7 +1261,7 @@ static HTTP_Response *gsm_http_handle(method_t method,
     //response->code = status;
     //response->content_len = len;
     //response->content[0] = '\0';
-    _DEBUG("HTTP: Got %d bytes of data\r\n", len);
+    SC_DBG_PRINTF("HTTP: Got %d bytes of data\r\n", len);
 
 HTTP_END:
     gsm_http_clean();
