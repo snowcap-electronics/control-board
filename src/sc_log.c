@@ -87,6 +87,8 @@ void sc_log(SC_LOG_LVL lvl, SC_LOG_MODULE module, uint8_t *msg)
 	}
 	sc_uart_send_msg(output_uart, msg, len);
   }
+#else
+  (void)assert_msg;
 #endif
 }
 
