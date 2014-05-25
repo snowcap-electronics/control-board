@@ -77,12 +77,12 @@ static void init(void)
   while (1) {
     int i;
 
+    sc_init(subsystems);
+
     for (i = 0; i < 20; ++i) {
       chThdSleepMilliseconds(100);
       sc_led_toggle();
     }
-
-    sc_init(subsystems);
 
 #ifdef POWER_USE_USB_LOGGING
     sc_uart_default_usb(TRUE);
