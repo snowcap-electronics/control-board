@@ -54,13 +54,6 @@ int main(void)
   // for longer periods of time.
   sc_event_register_handle_byte(cb_handle_byte);
 
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
-  // Register user button on F4 discovery
-  sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
-  sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
-#endif
-  sc_extint_set_event(GPIOA, GPIOA_PIN1, SC_EXTINT_EDGE_BOTH);
-
   // Loop forever waiting for callbacks
   while(1) {
     chThdSleepMilliseconds(1000);
