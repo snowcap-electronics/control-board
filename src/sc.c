@@ -35,9 +35,6 @@ void sc_init(uint32_t subsystems)
   sc_pwr_set_wfi_dbg();
 #endif
 
-  /* Initialize ChibiOS core */
-  chSysInit();
-
   chRegSetThreadName("main");
 
   /* Initialize command parsing */
@@ -220,7 +217,7 @@ void sc_deinit(uint32_t subsystems)
   }
 #endif
 
-  /* Initialize command parsing */
+  /* Deinitialize command parsing */
   sc_cmd_deinit();
 
 }
