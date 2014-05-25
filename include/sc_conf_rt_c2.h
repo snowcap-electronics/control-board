@@ -66,6 +66,12 @@
 #define GPIO4_PIN          12
 #endif
 
+// Test pin for debug state output
+#ifndef TP_PB_PORT
+#define TP_PB_PORT         GPIOB
+#define TP_PB_PIN          GPIOB_SCL
+#endif
+
 #ifndef USBDX
 #define USBDX              USBD1
 #endif
