@@ -89,7 +89,10 @@
 #define TRACKER_TIMEOUT_READY_SEC     120
 
 /*
- * Location update interval.
+ * Location update interval. This takes into account the time spent
+ * finding GSM network and GPS fix. In bad conditions that can take
+ * long time and in those cases the actual sleep time may decrease
+ * down to one second.
  */
 #define TRACKER_INTERVAL_SEC          30
 
@@ -115,6 +118,7 @@
 #include "sc.h"
 #include "sha1.h"
 #include "nmea.h"
+#include "testplatform.h"
 #include "drivers/gsm.h"
 
 #include "chprintf.h"
@@ -173,7 +177,7 @@ static void sha1_hmac(char *response, const char *secret,
 	if (len > BLOCKSIZE) {
 		//Too long key, need to cut
     len = BLOCKSIZE;
-    chDbgAssert(0, "Secret too long", "#1");
+    SC_LOG_ASSERT(0, "Secret too long");
   }
 
   memcpy(key, secret, len);
@@ -259,7 +263,7 @@ static void calculate_mac(char *secret)
                         "%s:%s|",
                         js_elems[i].name, js_elems[i].value);
 
-    chDbgAssert(str_i < sizeof(str), "calculate_mac buffer full", "#1");
+    SC_LOG_ASSERT(str_i < sizeof(str), "calculate_mac buffer full");
   }
 
   sha1_hmac(sha, secret, str, str_i);
@@ -288,7 +292,7 @@ static int js_tostr(char *str, size_t len)
                         "%s\"%s\": \"%s\"",
                         i ? ", " : "",
                         js_elems[i].name, js_elems[i].value);
-    chDbgAssert(str_i < tmplen, "js_tostr buffer full", "#1");
+    SC_LOG_ASSERT(str_i < tmplen, "js_tostr buffer full");
   }
   str[str_i++] = '}';
   str[str_i++] = '\r';
@@ -348,12 +352,12 @@ static void send_event(void)
 	  first_time = 0;
   }
 
-  chDbgAssert(buf_i < sizeof(buf), "Attribute buffer full", "#1");
+  SC_LOG_ASSERT(buf_i < sizeof(buf), "Attribute buffer full");
 
   calculate_mac(TRACKER_API_SECRET);
   json_len = js_tostr(json, sizeof(json));
 
-  chDbgAssert(json_len < sizeof(json), "JSON buffer full", "#1");
+  SC_LOG_ASSERT(json_len < sizeof(json), "JSON buffer full");
 
   SC_LOG_PRINTF("Sending JSON event (%d bytes):\r\n", json_len);
   SC_LOG_PRINTF("%s\r\n", json);
@@ -380,16 +384,22 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
 
   gsm_cmd_idle = true;
 
+  nmea_start();
+
+  SC_LOG_PRINTF("NMEA started\r\n");
+  chThdSleepMilliseconds(500);
+
   gps_power_on();
 
-#if !USE_USB
-  SC_LOG_PRINTF("Started up\r\n");
-  chThdSleepMilliseconds(3000);
-#endif
+  SC_LOG_PRINTF("GPS started\r\n");
+  chThdSleepMilliseconds(500);
 
   gsm_set_apn(apn);
   gsm_set_user_agent(user_agent);
   gsm_start();
+
+  SC_LOG_PRINTF("GSM started\r\n");
+  chThdSleepMilliseconds(500);
 
   timeout = chTimeNow() + TRACKER_TIMEOUT_READY_SEC * 1000;
 
@@ -409,7 +419,7 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
 
     // Avoid chTimeNow wrapping over by restarting after a 10 days
     if (now > (systime_t)864000000) {
-      SC_LOG_PRINTF("Long timeout (%d ms), restarting\r\n", now);
+      SC_LOG_PRINTF("Long run time (%d ms), restarting\r\n", now);
       generic_error = true;
       break;
     }
@@ -434,11 +444,11 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
 
     sc_led_toggle();
   }
-
   SC_LOG_PRINTF("Main thread exit, should terminate: %d\r\n", chThdShouldTerminate());
 
   gsm_stop(false);
   gps_power_off();
+  nmea_stop();
 
   return RDY_OK;
 }
@@ -456,19 +466,16 @@ int main(void)
 #endif
 
   halInit();
+
   while (1) {
+
+    /* Initialize ChibiOS core */
+    chSysInit();
+
+    tp_init();
 
     // Set UART config for GSM
     sc_uart_set_config(SC_UART_3, 115200, 0, 0, 0);
-
-    sc_init(subsystems);
-
-#if USE_USB
-    sc_uart_default_usb(TRUE);
-    sc_log_output_uart(SC_UART_USB);
-#endif
-
-    nmea_start();
 
     // Register callbacks.
     // These will be called from Event Loop thread. It's OK to do some
@@ -481,6 +488,28 @@ int main(void)
     // Start event loop. This will start a new thread and return
     sc_event_loop_start();
 
+    sc_init(subsystems);
+
+#if USE_USB
+    sc_uart_default_usb(TRUE);
+    sc_log_output_uart(SC_UART_USB);
+#endif
+
+    {
+      int i;
+      for (i = 0; i < 20; ++i) {
+        chThdSleepMilliseconds(100);
+        sc_led_toggle();
+      }
+    }
+
+#if USE_USB
+    chThdSleepMilliseconds(3000);
+    SC_LOG_PRINTF("Started up, wake up flag: 0x%x, SEVONPEND: 0x%x\r\n",
+                  PWR->CSR & PWR_CSR_WUF, SCB->SCR & SCB_SCR_SEVONPEND_Msk);
+    chThdSleepMilliseconds(500);
+#endif
+
     sc_led_on();
 
     // Start a thread for doing the bulk work
@@ -490,24 +519,12 @@ int main(void)
     chThdWait(worker_thread);
     worker_thread = NULL;
 
-    nmea_stop();
-
     sc_led_off();
-    palSetPad(USER_LED2_PORT, USER_LED2);
 
-#if !USE_USB
-    SC_LOG_PRINTF("Going to sleep\r\n");
-    chThdSleepMilliseconds(1000);
-#endif
-
-    sc_event_loop_stop();
-    sc_deinit(subsystems);
-    palClearPad(USER_LED2_PORT, USER_LED2);
+    // FIXME: assuminen here that stopping everyting doesn't take much time
 
     // In stop and standby modes, current time is interval time
     interval_ms = chTimeNow();
-
-    sc_pwr_chibios_stop();
 
 #if TRACKER_SLEEP_MODE == TRACKER_SLEEP_MODE_STANDBY
     standby_mode = true;
@@ -525,40 +542,22 @@ int main(void)
       sleep_time_sec = 60;
     }
 
-    sc_pwr_wakeup_set(sleep_time_sec, 0);
+    sleep_time_sec = 10;
 
-    if (standby_mode || generic_error) {
-      // Standby will reset GPS and GSM and is therefore called also in case of
-      // an generic error (e.g. timeout getting a fix or an unexpected http
-      // error/timeout)
-      sc_pwr_mode_standby(false, true);
-    } else {
-      sc_pwr_mode_stop(true);
-    }
-
-    // STM32 should now be in full stop mode. Should wake on RTC (no interrupts should be occurring)
-
-    // WFI does not cause sleep in debug wfi mode so fake some sleep
-    if (sc_pwr_get_wfi_dbg() == 0x7) {
-#if 1
-      int s, n;
-
-      for (s = 0; s < TRACKER_INTERVAL_SEC; ++s) {
-        for (n = 0; n < 2000000; ++n) {
-          // Do nothing
-        }
-      }
-#else
-      // FIXME: why this doesn't work?
-      while (!(RTC->ISR & RTC_ISR_WUTF)) {
-        // Do nothing
-      }
+#if USE_USB
+    SC_LOG_PRINTF("%d: Going to sleep %d seconds (debug bits: 0x%x, error: %d)\r\n",
+                  interval_ms, sleep_time_sec, sc_pwr_get_wfi_dbg(), generic_error);
+    chThdSleepMilliseconds(1000);
 #endif
-    }
 
-    sc_pwr_wakeup_clear();
-    sc_pwr_mode_clear();
-    sc_pwr_chibios_start();
+    sc_deinit(subsystems);
+    tp_deinit();
+    sc_event_loop_stop();
+
+    palSetPad(USER_LED2_PORT, USER_LED2);
+    (void)standby_mode;
+    sc_pwr_rtc_sleep(sleep_time_sec);
+    palClearPad(USER_LED2_PORT, USER_LED2);
   }
 
   return 0;
