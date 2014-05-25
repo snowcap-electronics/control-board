@@ -378,8 +378,8 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   usbDisconnectBus(serusbcfg.usbp);
 
 #ifdef SC_FORCE_USB_REDETECT
-  // Don't force on wakeu-p to avoid confusing the PC on frequent wake-ups
-  if (!(PWR->CR & PWR_CR_CWUF)) {
+  // Don't force on wake-up to avoid confusing the PC on frequent wake-ups
+  if (!(PWR->CSR & PWR_CSR_WUF)) {
     /*
      * Force HOST re-detect device after e.g. DFU flashing by
      * pulling D+ low so host assumes that device is disconnected.
