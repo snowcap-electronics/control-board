@@ -163,6 +163,7 @@ CSRC = $(PORTSRC) \
        src/sha1.c \
        src/nmea.c \
        src/slre.c \
+       src/testplatform.c \
        src/main-$(SC_PROJECT).c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
