@@ -109,7 +109,7 @@ bool nmea_parse_byte(uint8_t c)
     buf[i++] = (char)c;
     if (i == NMEA_BUFF_SIZE) {
         i = 0;
-        chDbgAssert(0, "NMEA incoming buffer full", "#1");
+        SC_LOG_ASSERT(0, "NMEA incoming buffer full");
         return false;
     }
 
@@ -240,7 +240,7 @@ static bool parse_gpgsa(const char *line, size_t len)
             nmea_data.fix_type = GPS_FIX_TYPE_3D;
             break;
         default:
-            chDbgAssert(0, "GPS: Error, unknown GPS fix type!", "#1");
+            SC_LOG_ASSERT(0, "GPS: Error, unknown GPS fix type!");
             return false;
             break;
         }
