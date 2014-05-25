@@ -62,6 +62,12 @@
 #define GPIO4_PORT         GPIOE
 #endif
 
+// Test pin for debug state output
+#ifndef TP_PB_PORT
+#define TP_PB_PORT         GPIOA
+#define TP_PB_PIN          GPIOA_PIN2
+#endif
+
 #ifndef PWMDX1
 #define PWMDX1             PWMD3
 #endif
