@@ -81,31 +81,31 @@ static void init(void)
   halInit();
   chSysInit();
 
-  sc_init(subsystems);
+  while (1) {
+    int i;
+
+    for (i = 0; i < 20; ++i) {
+      chThdSleepMilliseconds(100);
+      sc_led_toggle();
+    }
+
+    sc_init(subsystems);
 
 #ifdef POWER_USE_USB_LOGGING
-  sc_uart_default_usb(TRUE);
-  sc_log_output_uart(SC_UART_USB);
+    sc_uart_default_usb(TRUE);
+    sc_log_output_uart(SC_UART_USB);
 #endif
 
-  // Make sure pin mux is set
-  tp_init();
-  // Stop the thread we know we won't use
-  tp_deinit();
+    sc_deinit(subsystems);
 
-  while (1) {
+    // Make sure pin mux is set
+    tp_init();
+    // Stop the thread we know we won't use
+    tp_deinit();
 
-    {
-      int i;
-      for (i = 0; i < 20; ++i) {
-        chThdSleepMilliseconds(100);
-        sc_led_toggle();
-      }
-    }
     sc_led_on();
     sc_pwr_rtc_sleep(10);
     sc_led_off();
-
   }
 }
 
