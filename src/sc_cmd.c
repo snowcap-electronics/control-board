@@ -503,10 +503,10 @@ static void parse_command_power(uint8_t *cmd, uint8_t cmd_len)
 
   switch (cmd[1]) {
   case 'a':
-    sc_pwr_mode_standby(true, true);
+    //sc_pwr_mode_standby(true, true);
     break;
   case 'o':
-    sc_pwr_mode_stop(true);
+    //sc_pwr_mode_stop(true);
     break;
   default:
     // Invalid value, ignoring command

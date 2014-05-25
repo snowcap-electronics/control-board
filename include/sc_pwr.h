@@ -29,16 +29,11 @@
 #ifndef SC_PWR_H
 #define SC_PWR_H
 
-void sc_pwr_mode_standby(bool wake_on_pa0, bool wake_on_rtc);
-void sc_pwr_mode_stop(bool wake_on_rtc);
-void sc_pwr_mode_clear(void);
-void sc_pwr_chibios_stop(void);
-void sc_pwr_chibios_start(void);
-#if HAL_USE_RTC
-void sc_pwr_wakeup_set(uint32_t sec, uint32_t ms);
-void sc_pwr_wakeup_clear(void);
-#endif
 void sc_pwr_set_wfi_dbg(void);
 uint32_t sc_pwr_get_wfi_dbg(void);
+
+#if HAL_USE_RTC
+void sc_pwr_rtc_sleep(int timeout_sec);
+#endif
 
 #endif
