@@ -231,6 +231,30 @@ void sc_event_loop_stop(void)
 
   chThdWait(event_thread);
   event_thread = NULL;
+
+  // Clear all handlers
+#if HAL_USE_UART
+  cb_handle_byte = NULL;
+#endif
+#if HAL_USE_EXT
+  {
+    uint8_t i;
+    for (i = 0; i < EXT_MAX_CHANNELS; ++i) {
+      cb_extint[i] = NULL;
+    }
+  }
+#endif
+
+  cb_gsm_state_changed = NULL;
+  cb_gsm_cmd_done = NULL;
+
+#if HAL_USE_ADC
+  cb_adc_available = NULL;
+#endif
+  cb_temp_available = NULL;
+  cb_9dof_available = NULL;
+  cb_blob_available = NULL;
+  cb_ahrs_available = NULL;
 }
 
 
