@@ -31,6 +31,8 @@
 int main(void)
 {
   halInit();
+  /* Initialize ChibiOS core */
+  chSysInit();
 
   sc_init(SC_MODULE_LED);
 

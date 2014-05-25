@@ -80,6 +80,8 @@ static void init(void)
   }
 
   halInit();
+  /* Initialize ChibiOS core */
+  chSysInit();
 
   sc_init(subsystems);
 

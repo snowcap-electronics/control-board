@@ -35,6 +35,8 @@ static void cb_adc_available(void);
 int main(void)
 {
   halInit();
+  /* Initialize ChibiOS core */
+  chSysInit();
 
   // Init SC framework, with USB if not F1 Discovery
 #if defined(BOARD_ST_STM32VL_DISCOVERY)

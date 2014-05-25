@@ -36,6 +36,10 @@ static void cb_pa0_changed(void);
 
 int main(void)
 {
+  halInit();
+  /* Initialize ChibiOS core */
+  chSysInit();
+
   sc_init(SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SDU | SC_MODULE_RADIO);
   sc_uart_default_usb(TRUE);
 
