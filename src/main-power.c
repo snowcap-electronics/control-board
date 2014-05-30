@@ -35,77 +35,44 @@
 //#define POWER_USE_USB_LOGGING
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
-static void init(void);
-
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
-static void cb_button_changed(void);
-#endif
 
 int main(void)
 {
-  init();
-
-  // Start event loop. This will start a new thread and return
-  sc_event_loop_start();
-
-  // Register callbacks.
-  // These will be called from Event Loop thread. It's OK to do some
-  // calculations etc. time consuming there, but not to sleep or block
-  // for longer periods of time.
-  sc_event_register_handle_byte(cb_handle_byte);
-
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
-  // Register user button on F4 discovery
-  sc_extint_set_event(GPIOA, GPIOA_BUTTON, SC_EXTINT_EDGE_BOTH);
-  sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
-#endif
-  sc_extint_set_event(GPIOA, GPIOA_PIN1, SC_EXTINT_EDGE_BOTH);
-
-  // Loop forever waiting for callbacks
-  while(1) {
-    chThdSleepMilliseconds(1000);
-    SC_LOG_PRINTF("%d: ping\r\n", chTimeNow());
-  }
-
-  return 0;
-}
-
-static void init(void)
-{
   uint32_t subsystems = SC_MODULE_GPIO | SC_MODULE_LED;
-
-#ifdef POWER_USE_USB_LOGGING
-  subsystems |= SC_MODULE_SDU | SC_MODULE_UART1;
-#endif
 
   halInit();
   chSysInit();
 
-  sc_init(subsystems);
-
-#ifdef POWER_USE_USB_LOGGING
-  sc_uart_default_usb(TRUE);
-  sc_log_output_uart(SC_UART_USB);
-#endif
-
-  // Make sure pin mux is set
-  tp_init();
-  // Stop the thread we know we won't use
-  tp_deinit();
-
   while (1) {
+    int i;
 
-    {
-      int i;
-      for (i = 0; i < 20; ++i) {
-        chThdSleepMilliseconds(100);
-        sc_led_toggle();
-      }
+    sc_init(subsystems);
+
+    // Start event loop. This will start a new thread and return
+    sc_event_loop_start();
+
+    // Register callbacks.
+    // These will be called from Event Loop thread. It's OK to do some
+    // calculations etc. time consuming there, but not to sleep or block
+    // for longer periods of time.
+    sc_event_register_handle_byte(cb_handle_byte);
+
+    for (i = 0; i < 20; ++i) {
+      chThdSleepMilliseconds(100);
+      sc_led_toggle();
     }
+
+    sc_deinit(subsystems);
+    sc_event_loop_stop();
+
+    // Make sure pin mux is set
+    tp_init();
+    // Stop the thread we know we won't use
+    tp_deinit();
+
     sc_led_on();
     sc_pwr_rtc_sleep(10);
     sc_led_off();
-
   }
 }
 
@@ -117,23 +84,6 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
   // FIXME: per uart
   sc_cmd_push_byte(byte);
 }
-
-
-
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
-static void cb_button_changed(void)
-{
-  uint8_t msg[] = "d: button state: X\r\n";
-  uint8_t button_state;
-
-  button_state = palReadPad(GPIOA, GPIOA_BUTTON);
-
-  msg[17] = button_state + '0';
-
-  sc_uart_send_msg(SC_UART_LAST, msg, sizeof(msg));
-}
-#endif
-
 
 /* Emacs indentatation information
    Local Variables:
