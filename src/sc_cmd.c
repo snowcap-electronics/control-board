@@ -107,12 +107,12 @@ void sc_cmd_push_byte(uint8_t byte)
       return;
     }
 
-    if (++blob_i >= SC_BLOB_MAX_SIZE) {
+    if (blob_i+1 >= SC_BLOB_MAX_SIZE) {
       chDbgAssert(0, "blob_i out of bounds", "#1");
       chMtxUnlock();
       return;
     }
-    blob_buf[blob_i] = byte;
+    blob_buf[blob_i++] = byte;
 
     if (blob_i % 1024 == 0) {
       SC_DBG("1K received\r\n");
