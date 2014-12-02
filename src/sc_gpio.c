@@ -34,14 +34,27 @@
 struct gpio_list {
   ioportid_t port;
   uint8_t pin;
+  uint8_t valid;
 };
 
 struct gpio_list gpio_list[SC_GPIO_MAX_PINS + 1] = {
-  {0, 0},
-  {GPIO1_PORT, GPIO1_PIN},
-  {GPIO2_PORT, GPIO2_PIN},
-  {GPIO3_PORT, GPIO3_PIN},
-  {GPIO4_PORT, GPIO4_PIN},
+  {0, 0, 0},
+  {GPIO1_PORT, GPIO1_PIN, 1},
+  {GPIO2_PORT, GPIO2_PIN, 1},
+  {GPIO3_PORT, GPIO3_PIN, 1},
+  {GPIO4_PORT, GPIO4_PIN, 1},
+#ifdef GPIO5_PORT
+  {GPIO5_PORT, GPIO5_PIN, 1},
+#endif
+#ifdef GPIO6_PORT
+  {GPIO6_PORT, GPIO6_PIN, 1},
+#endif
+#ifdef GPIO7_PORT
+  {GPIO7_PORT, GPIO7_PIN, 1},
+#endif
+#ifdef GPIO8_PORT
+  {GPIO8_PORT, GPIO8_PIN, 1},
+#endif
 };
 
 
@@ -52,7 +65,11 @@ void sc_gpio_init(void)
 {
   uint8_t i;
   for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
-    palSetPadMode(gpio_list[i + 1].port, gpio_list[i + 1].pin, PAL_MODE_OUTPUT_PUSHPULL);
+    if (gpio_list[i+1].valid) {
+        ioportid_t port = gpio_list[i + 1].port;
+        uint8_t pin = gpio_list[i + 1].pin;
+        palSetPadMode(port, pin, PAL_MODE_OUTPUT_PUSHPULL);
+    }
   }
 }
 
@@ -74,6 +91,7 @@ void sc_gpio_deinit(void)
 void sc_gpio_on(uint8_t gpio)
 {
   chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#1");
+  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#1");
 
   palSetPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -86,6 +104,7 @@ void sc_gpio_on(uint8_t gpio)
 void sc_gpio_off(uint8_t gpio)
 {
   chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#2");
+  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#2");
 
   palClearPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -98,6 +117,7 @@ void sc_gpio_off(uint8_t gpio)
 void sc_gpio_toggle(uint8_t gpio)
 {
   chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#3");
+  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#3");
 
   palTogglePad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -111,12 +131,13 @@ void sc_gpio_set_state_all(uint8_t gpios)
 {
   uint8_t i;
   for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
-    if (gpios & 1) {
-      palSetPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
-    } else {
-      palClearPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
+    if (gpio_list[i + 1].valid) {
+        if (gpios & 1) {
+          palSetPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
+        } else {
+          palClearPad(gpio_list[i + 1].port, gpio_list[i + 1].pin);
+        }
     }
-
     gpios >>= 1;
   }
 }

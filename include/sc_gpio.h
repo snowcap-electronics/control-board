@@ -30,7 +30,7 @@
 #ifndef SC_GPIO_H
 #define SC_GPIO_H
 
-#define SC_GPIO_MAX_PINS 4
+#define SC_GPIO_MAX_PINS 8
 
 void sc_gpio_init(void);
 void sc_gpio_deinit(void);

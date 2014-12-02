@@ -398,16 +398,18 @@ static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len)
  */
 static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
 {
+  (void)cmd_len;
   uint8_t gpio, gpios = 0;
-
-  // Command must have states of all GPIO pins, ignore otherwise
-  if (cmd_len < SC_GPIO_MAX_PINS + 1) {
-    return;
-  }
 
   for (gpio = 0; gpio < SC_GPIO_MAX_PINS; ++gpio) {
     if (cmd[1 + gpio] == '1') {
       gpios |= (1 << gpio);
+    } else if (cmd[1 + gpio] != '0') {
+      /* If it's neither 1 nor 0, the command has
+       * ended and we leave the rest bits as zero.
+       * NOTE: this might have side-effects
+       */
+      break;
     }
   }
 
