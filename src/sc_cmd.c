@@ -66,6 +66,17 @@ static uint16_t blob_len = 0;
 static uint16_t blob_i = 0;
 static Mutex blob_mtx;
 
+/*
+ * Command storage
+ */
+#ifndef SC_CMD_MAX_COMMANDS
+#define SC_CMD_MAX_COMMANDS   16
+#endif
+struct sc_cmd {
+    uint8_t cmd;
+    sc_cmd_cb cmd_cb;
+};
+static struct sc_cmd commands[SC_CMD_MAX_COMMANDS] = { {0, NULL}, };
 
 /*
  * Initialize command module
@@ -73,6 +84,19 @@ static Mutex blob_mtx;
 void sc_cmd_init(void)
 {
   chMtxInit(&blob_mtx);
+
+  sc_cmd_register('b', parse_command_blob);
+  sc_cmd_register('c', parse_command_power);
+#if HAL_USE_PAL
+  sc_cmd_register('g', parse_command_gpio);
+  sc_cmd_register('G', parse_command_gpio_all);
+#endif
+  sc_cmd_register('l', parse_command_led);
+#if HAL_USE_PWM
+  sc_cmd_register('p', parse_command_pwm);
+#endif
+  sc_cmd_register('r', parse_command_radio);
+
 }
 
 
@@ -155,7 +179,24 @@ void sc_cmd_push_byte(uint8_t byte)
   }
 }
 
+/*
+ * Register a command and handler
+ */
+void sc_cmd_register(uint8_t cmd, sc_cmd_cb cb)
+{
+  int i = 0;
 
+  do {
+    chDbgAssert(i < SC_CMD_MAX_COMMANDS, "Too many commands registered!", "#2");
+    chDbgAssert(commands[i].cmd != cmd, "Command registered twice!", "#1");
+    i++;
+  } while (i < SC_CMD_MAX_COMMANDS && commands[i].cmd != 0);
+
+  if (i < SC_CMD_MAX_COMMANDS && commands[i].cmd == 0) {
+    commands[i].cmd = cmd;
+    commands[i].cmd_cb = cb;
+  }
+}
 
 /*
  * Parse a received command.
@@ -195,37 +236,15 @@ static void parse_command(void)
   }
   recv_i -= found;
 
-  switch (command_buf[0]) {
-  case 'b':
-    parse_command_blob(command_buf, found);
-    break;
-  case 'c':
-    parse_command_power(command_buf, found);
-    break;
-#if HAL_USE_PAL
-  case 'g':
-    parse_command_gpio(command_buf, found);
-    break;
-  case 'G':
-    parse_command_gpio_all(command_buf, found);
-    break;
-#endif
-  case 'l':
-    parse_command_led(command_buf, found);
-    break;
-#if HAL_USE_PWM
-  case 'p':
-    parse_command_pwm(command_buf, found);
-    break;
-#endif
-  case 'r':
-    parse_command_radio(command_buf, found);
-    break;
-  default:
-    // Invalid command, ignoring
-    break;
-  }
+  if (command_buf[0] == 0)
+    return;
 
+  for (i = 0; i < SC_CMD_MAX_COMMANDS; i++) {
+    if (commands[i].cmd == command_buf[0] && commands[i].cmd_cb != NULL) {
+      commands[i].cmd_cb(command_buf, found);
+      return;
+    }
+  }
 }
 
 
