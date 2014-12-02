@@ -38,6 +38,8 @@ void sc_gpio_on(uint8_t gpio);
 void sc_gpio_off(uint8_t gpio);
 void sc_gpio_toggle(uint8_t gpio);
 void sc_gpio_set_state_all(uint8_t gpios);
+uint8_t sc_gpio_state(uint8_t gpio);
+uint8_t sc_gpio_get_state_all(void);
 
 #endif
 #endif

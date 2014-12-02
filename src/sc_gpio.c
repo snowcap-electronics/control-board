@@ -142,6 +142,36 @@ void sc_gpio_set_state_all(uint8_t gpios)
   }
 }
 
+/*
+ * Return the state of the gpio
+ */
+uint8_t sc_gpio_state(uint8_t gpio)
+{
+  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#4");
+  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#4");
+
+  return palReadPad(gpio_list[gpio].port, gpio_list[gpio].pin);
+}
+
+/*
+ * Return the state of all the gpios as a bitmask
+ * NOTE: Only valid pins are accurate, rest are zeroed
+ */
+uint8_t sc_gpio_get_state_all(void)
+{
+  uint8_t i;
+  uint8_t gpios = 0;
+
+  for (i = 0; i < SC_GPIO_MAX_PINS; ++i) {
+    if (gpio_list[i + 1].valid
+     && palReadPad(gpio_list[i].port, gpio_list[i].pin)) {
+        gpios |= (1 << i);
+    }
+  }
+  return gpios;
+}
+
+
 #endif // HAL_USE_PAL
 
 /* Emacs indentatation information
