@@ -90,8 +90,14 @@ void sc_gpio_deinit(void)
  */
 void sc_gpio_on(uint8_t gpio)
 {
-  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#1");
-  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#1");
+  if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
+    chDbgAssert(0, "GPIO pin outside range", "#1");
+    return;
+  }
+  if (!gpio_list[gpio].valid) {
+    chDbgAssert(0, "GPIO pin not valid", "#1");
+    return;
+  }
 
   palSetPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -103,8 +109,14 @@ void sc_gpio_on(uint8_t gpio)
  */
 void sc_gpio_off(uint8_t gpio)
 {
-  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#2");
-  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#2");
+  if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
+    chDbgAssert(0, "GPIO pin outside range", "#2");
+    return;
+  }
+  if (!gpio_list[gpio].valid) {
+    chDbgAssert(0, "GPIO pin not valid", "#2");
+    return;
+  }
 
   palClearPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -116,8 +128,14 @@ void sc_gpio_off(uint8_t gpio)
  */
 void sc_gpio_toggle(uint8_t gpio)
 {
-  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#3");
-  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#3");
+  if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
+    chDbgAssert(0, "GPIO pin outside range", "#3");
+    return;
+  }
+  if (!gpio_list[gpio].valid) {
+    chDbgAssert(0, "GPIO pin not valid", "#3");
+    return;
+  }
 
   palTogglePad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
@@ -147,8 +165,14 @@ void sc_gpio_set_state_all(uint8_t gpios)
  */
 uint8_t sc_gpio_state(uint8_t gpio)
 {
-  chDbgAssert(gpio > 0 || gpio <= SC_GPIO_MAX_PINS, "GPIO pin outside range", "#4");
-  chDbgAssert(gpio_list[gpio].valid, "GPIO pin not valid", "#4");
+  if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
+    chDbgAssert(0, "GPIO pin outside range", "#4");
+    return 0;
+  }
+  if (!gpio_list[gpio].valid) {
+    chDbgAssert(0, "GPIO pin not valid", "#4");
+    return 0;
+  }
 
   return palReadPad(gpio_list[gpio].port, gpio_list[gpio].pin);
 }
