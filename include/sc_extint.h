@@ -44,6 +44,10 @@ typedef enum {
 void sc_extint_set_event(ioportid_t port,
                          uint8_t pin,
                          SC_EXTINT_EDGE mode);
+void sc_extint_set_debounced_event(ioportid_t port,
+                                 uint8_t pin,
+                                 SC_EXTINT_EDGE mode,
+                                 systime_t delay);
 void sc_extint_set_isr_cb(ioportid_t port,
                           uint8_t pin,
                           SC_EXTINT_EDGE mode,

@@ -36,6 +36,16 @@
 MUTEX_DECL(cfg_mtx);
 
 static EXTConfig extcfg;
+static struct VirtualTimer vt;
+
+typedef struct _timer_t {
+  uint8_t active;
+  systime_t delay;
+  ioportid_t port;
+  expchannel_t channel;
+  SC_EXTINT_EDGE mode;
+} timer_t;
+static timer_t debouncetimers[EXT_MAX_CHANNELS] = { {0, }, };
 
 static void _extint_cb(EXTDriver *extp, expchannel_t channel)
 {
@@ -46,6 +56,48 @@ static void _extint_cb(EXTDriver *extp, expchannel_t channel)
 
   msg = sc_event_msg_create_extint(channel);
   sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
+}
+
+void delay_handler(void *arg)
+{
+  msg_t msg;
+  timer_t *t = (timer_t *)arg;
+
+  chDbgAssert(t != NULL, "Delay triggered with NULL timer", "#1");
+
+  /* If the interrupt is requested in rising/falling edge, only send event
+   * if the channel settled in state that matches requested mode.
+   */
+  if (t->mode == SC_EXTINT_EDGE_RISING) {
+    if (palReadPad(t->port, t->channel) != PAL_HIGH) {
+      t->active = 0;
+      return;
+    }
+  } else if (t->mode == SC_EXTINT_EDGE_FALLING) {
+    if (palReadPad(t->port, t->channel) != PAL_LOW) {
+      t->active = 0;
+      return;
+    }
+  }
+
+  msg = sc_event_msg_create_extint(t->channel);
+  sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
+  t->active = 0;
+}
+
+static void _extint_debounce_cb(EXTDriver *extp, expchannel_t channel)
+{
+  (void)extp;
+
+  chDbgAssert(channel < EXT_MAX_CHANNELS, "Channel number too large", "#1");
+
+  chSysLockFromIsr();
+  if (debouncetimers[channel].active == 0) {
+    debouncetimers[channel].active = 1;
+    debouncetimers[channel].channel = channel;
+    chVTSetI(&vt, MS2ST(debouncetimers[channel].delay), delay_handler, &debouncetimers[channel]);
+  }
+  chSysUnlockFromIsr();
 }
 
 
@@ -80,6 +132,13 @@ void sc_extint_set_event(ioportid_t port, uint8_t pin, SC_EXTINT_EDGE mode)
   sc_extint_set_isr_cb(port, pin, mode, _extint_cb);
 }
 
+void sc_extint_set_debounced_event(ioportid_t port, uint8_t pin, SC_EXTINT_EDGE mode, systime_t delay)
+{
+  debouncetimers[pin].delay = delay;
+  debouncetimers[pin].mode = mode;
+  debouncetimers[pin].port = port;
+  sc_extint_set_isr_cb(port, pin, mode, _extint_debounce_cb);
+}
 
 
 void sc_extint_set_isr_cb(ioportid_t port,
