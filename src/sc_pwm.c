@@ -39,11 +39,26 @@ static PWMConfig pwmcfg1 = {
   SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
   NULL,              // No periodic callback.
   {
-    // Enable channels 1 through 4 (all)
+#ifdef SC_PWM1_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM1_2_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM1_3_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM1_4_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL}
+#else
+    {PWM_OUTPUT_DISABLED, NULL}
+#endif
   },
   // HW dependent part
   0, // TIM CR2 register initialization data
@@ -55,11 +70,26 @@ static PWMConfig pwmcfg2 = {
   SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
   NULL,              // No periodic callback.
   {
-    // Enable channels 1 through 2
+#ifdef SC_PWM2_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
     {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM2_2_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM2_3_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM2_4_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL}
+#else
     {PWM_OUTPUT_DISABLED, NULL}
+#endif
   },
   // HW dependent part
   0, // TIM CR2 register initialization data
@@ -72,8 +102,42 @@ static PWMConfig pwmcfg2 = {
  */
 void sc_pwm_init(void)
 {
-  // Configure PWM driver(s)
+
+#ifdef SC_PWM1_1_PIN
+  palSetPadMode(SC_PWM1_1_PORT, SC_PWM1_1_PIN, PAL_MODE_ALTERNATE(SC_PWM1_1_AF));
+#endif
+
+#ifdef SC_PWM1_2_PIN
+  palSetPadMode(SC_PWM1_2_PORT, SC_PWM1_2_PIN, PAL_MODE_ALTERNATE(SC_PWM1_2_AF));
+#endif
+
+#ifdef SC_PWM1_3_PIN
+  palSetPadMode(SC_PWM1_3_PORT, SC_PWM1_3_PIN, PAL_MODE_ALTERNATE(SC_PWM1_3_AF));
+#endif
+
+#ifdef SC_PWM1_4_PIN
+  palSetPadMode(SC_PWM1_4_PORT, SC_PWM1_4_PIN, PAL_MODE_ALTERNATE(SC_PWM1_4_AF));
+#endif
+
+#ifdef SC_PWM2_1_PIN
+  palSetPadMode(SC_PWM2_1_PORT, SC_PWM2_1_PIN, PAL_MODE_ALTERNATE(SC_PWM2_1_AF));
+#endif
+
+#ifdef SC_PWM2_2_PIN
+  palSetPadMode(SC_PWM2_2_PORT, SC_PWM2_2_PIN, PAL_MODE_ALTERNATE(SC_PWM2_2_AF));
+#endif
+
+#ifdef SC_PWM2_3_PIN
+  palSetPadMode(SC_PWM2_3_PORT, SC_PWM2_3_PIN, PAL_MODE_ALTERNATE(SC_PWM2_3_AF));
+#endif
+
+#ifdef SC_PWM2_4_PIN
+  palSetPadMode(SC_PWM2_4_PORT, SC_PWM2_4_PIN, PAL_MODE_ALTERNATE(SC_PWM2_4_AF));
+#endif
+
+#ifdef PWMDX1
   pwmStart(&PWMDX1, &pwmcfg1);
+#endif
 
 #ifdef PWMDX2
   pwmStart(&PWMDX2, &pwmcfg2);

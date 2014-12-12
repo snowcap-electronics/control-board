@@ -80,14 +80,38 @@
 #define GPIO7_PORT         GPIOC
 #endif
 
-// Timer 4, ch 1-4
+// Timer 4, ch 1-4, PB6-9, AF2
 #ifndef PWMDX1
 #define PWMDX1             PWMD4
+#define SC_PWM1_1_PORT     GPIOB
+#define SC_PWM1_1_PIN      6
+#define SC_PWM1_1_AF       2
+#define SC_PWM1_2_PORT     GPIOB
+#define SC_PWM1_2_PIN      7
+#define SC_PWM1_2_AF       2
+#define SC_PWM1_3_PORT     GPIOB
+#define SC_PWM1_3_PIN      8
+#define SC_PWM1_3_AF       2
+#define SC_PWM1_4_PORT     GPIOB
+#define SC_PWM1_4_PIN      9
+#define SC_PWM1_4_AF       2
 #endif
 
-// Timer 8, ch 1-4
+// Timer 8, ch 1-4, PC6-9, AF3
 #ifndef PWMDX2
 #define PWMDX2             PWMD8
+#define SC_PWM2_1_PORT     GPIOC
+#define SC_PWM2_1_PIN      6
+#define SC_PWM2_1_AF       3
+#define SC_PWM2_2_PORT     GPIOC
+#define SC_PWM2_2_PIN      7
+#define SC_PWM2_2_AF       3
+#define SC_PWM2_3_PORT     GPIOC
+#define SC_PWM2_3_PIN      8
+#define SC_PWM2_3_AF       3
+#define SC_PWM2_4_PORT     GPIOC
+#define SC_PWM2_4_PIN      9
+#define SC_PWM2_4_AF       3
 #endif
 
 #ifndef ADCDX
