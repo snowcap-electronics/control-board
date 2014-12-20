@@ -207,17 +207,16 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
 	duty = 10000;
   }
   if (pwm >= 1 && pwm <= 4) {
+#ifdef PWMDX1
 	pwmEnableChannel(&PWMDX1, pwm - 1, PWM_PERCENTAGE_TO_WIDTH(&PWMDX1, duty));
+#else
+	chDbgAssert(0, "PWMDX1 not defined", "#2");
+#endif
   }
 
-  if (pwm >= 5 && pwm <= 6) {
-	// Not enabled, do nothing
-	return;
-  }
-
-  if (pwm >= 7 && pwm <= 8) {
+  if (pwm >= 5 && pwm <= 8) {
 #ifdef PWMDX2
-	pwmEnableChannel(&PWMDX2, pwm - 7, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
+	pwmEnableChannel(&PWMDX2, pwm - 5, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
 #else
 	chDbgAssert(0, "PWMDX2 not defined", "#2");
 #endif
