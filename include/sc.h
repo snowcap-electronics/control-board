@@ -50,19 +50,21 @@
 #include "sc_log.h"
 #include "sc_radio.h"
 #include "sc_pwr.h"
+#include "sc_hid.h"
 
-#define SC_MODULE_UART1       0x0001
-#define SC_MODULE_UART2       0x0002
-#define SC_MODULE_UART3       0x0004
-#define SC_MODULE_UART4       0x0008
-#define SC_MODULE_PWM         0x0010
-#define SC_MODULE_ICU         0x0020
-#define SC_MODULE_I2C         0x0040
-#define SC_MODULE_SDU         0x0080
-#define SC_MODULE_ADC         0x0100
-#define SC_MODULE_GPIO        0x0200
-#define SC_MODULE_LED         0x0400
-#define SC_MODULE_RADIO       0x0800
+#define SC_MODULE_UART1       (0x1 <<  1)
+#define SC_MODULE_UART2       (0x1 <<  2)
+#define SC_MODULE_UART3       (0x1 <<  3)
+#define SC_MODULE_UART4       (0x1 <<  4)
+#define SC_MODULE_PWM         (0x1 <<  5)
+#define SC_MODULE_ICU         (0x1 <<  6)
+#define SC_MODULE_I2C         (0x1 <<  7)
+#define SC_MODULE_SDU         (0x1 <<  8)
+#define SC_MODULE_ADC         (0x1 <<  9)
+#define SC_MODULE_GPIO        (0x1 << 10)
+#define SC_MODULE_LED         (0x1 << 11)
+#define SC_MODULE_RADIO       (0x1 << 12)
+#define SC_MODULE_HID         (0x1 << 13)
 
 void sc_init(uint32_t subsystems);
 void sc_deinit(uint32_t subsystems);

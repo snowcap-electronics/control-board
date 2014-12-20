@@ -160,6 +160,7 @@ CSRC = $(PORTSRC) \
        src/sc_pwr.c \
        src/sc_event.c \
        src/sc_sdu.c \
+       src/sc_hid.c \
        src/sc_adc.c \
        src/sc_gpio.c \
        src/sc_spi.c \

@@ -125,11 +125,27 @@ void sc_init(uint32_t subsystems)
     chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
 #endif
   }
+
+  if (subsystems & SC_MODULE_HID) {
+#if HAL_USE_USB
+    sc_hid_init();
+#else
+    chDbgAssert(0, "HAL_USE_USB undefined", "#1");
+#endif
+  }
 }
 
 
 void sc_deinit(uint32_t subsystems)
 {
+
+  if (subsystems & SC_MODULE_HID) {
+#ifdef HAL_USE_USB
+    sc_hid_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_USB undefined", "#1");
+#endif
+  }
 
   if (subsystems & SC_MODULE_RADIO) {
 #ifdef SC_HAS_RBV2
