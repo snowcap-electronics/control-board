@@ -150,26 +150,26 @@
 /**
  * @brief   Helper macro for word values into descriptor strings.
  */
-#define USB_DESC_WORD(w)						\
-  (uint8_t)((w) & 255),							\
-	(uint8_t)(((w) >> 8) & 255)
+#define USB_DESC_WORD(w)                        \
+  (uint8_t)((w) & 255),                         \
+    (uint8_t)(((w) >> 8) & 255)
 
 /**
  * @brief   Helper macro for BCD values into descriptor strings.
  */
-#define USB_DESC_BCD(bcd)						\
-  (uint8_t)((bcd) & 255),						\
-	(uint8_t)(((bcd) >> 8) & 255)
+#define USB_DESC_BCD(bcd)                       \
+  (uint8_t)((bcd) & 255),                       \
+    (uint8_t)(((bcd) >> 8) & 255)
 
 
 #define USB_DESC_HID(bcdHID, bCountryCode, bNumDescriptors, bDescriptorType, wDescriptorLength) \
-  USB_DESC_BYTE(9),														\
-	USB_DESC_BYTE(USB_DESCRIPTOR_HID),									\
-	USB_DESC_BCD(bcdHID),												\
-	USB_DESC_BYTE(bCountryCode),										\
-	USB_DESC_BYTE(bNumDescriptors),										\
-	USB_DESC_BYTE(bDescriptorType),										\
-	USB_DESC_WORD(wDescriptorLength)
+  USB_DESC_BYTE(9),                                                     \
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                                  \
+    USB_DESC_BCD(bcdHID),                                               \
+    USB_DESC_BYTE(bCountryCode),                                        \
+    USB_DESC_BYTE(bNumDescriptors),                                     \
+    USB_DESC_BYTE(bDescriptorType),                                     \
+    USB_DESC_WORD(wDescriptorLength)
 
 static uint8_t usbInitState;
 
@@ -265,10 +265,10 @@ static const uint8_t hid_configuration_descriptor_data[] = {
                          0x00),            /* iInterface.                                 */
 
   USB_DESC_HID		    (0x0111,	/* bcdHID 		*/
-			             0x00,		/* bCountryCode 	*/
-			             0x01,		/* bNumDescriptor 	*/
-			             0x22,		/* bDescriptorType	*/
-			             sizeof(hid_generic_joystick_reporter_data)),		/* Report Descriptor Lenght. Compute it! */
+                       0x00,		/* bCountryCode 	*/
+                       0x01,		/* bNumDescriptor 	*/
+                       0x22,		/* bDescriptorType	*/
+                       sizeof(hid_generic_joystick_reporter_data)),		/* Report Descriptor Lenght. Compute it! */
   /* Endpoint 1 Descriptor INTERRUPT IN  */
   USB_DESC_ENDPOINT     (0x81,   	/* bEndpointAddress.   (0x80 = Direction IN) + (0x01 = Address 1)     */
                          0x03,          /* bmAttributes (Interrupt).             		 	      */
@@ -363,23 +363,23 @@ static bool_t hidRequestsHook(USBDriver *usbp)
 {
   const USBDescriptor *dp;
   if ((usbp->setup[0] & (USB_RTYPE_TYPE_MASK | USB_RTYPE_RECIPIENT_MASK)) ==
-	  (USB_RTYPE_TYPE_STD | USB_RTYPE_RECIPIENT_INTERFACE)) {
-	switch (usbp->setup[1]) {
-	case USB_REQ_GET_DESCRIPTOR:
-	  dp = usbp->config->get_descriptor_cb(
-										   usbp, usbp->setup[3], usbp->setup[2],
-										   usbFetchWord(&usbp->setup[4]));
-	  if (dp == NULL)
-		return FALSE;
-	  usbSetupTransfer(usbp, (uint8_t *)dp->ud_string, dp->ud_size, NULL);
-	  return TRUE;
-	default:
-	  return FALSE;
-	}
+      (USB_RTYPE_TYPE_STD | USB_RTYPE_RECIPIENT_INTERFACE)) {
+    switch (usbp->setup[1]) {
+    case USB_REQ_GET_DESCRIPTOR:
+      dp = usbp->config->get_descriptor_cb(
+                                           usbp, usbp->setup[3], usbp->setup[2],
+                                           usbFetchWord(&usbp->setup[4]));
+      if (dp == NULL)
+        return FALSE;
+      usbSetupTransfer(usbp, (uint8_t *)dp->ud_string, dp->ud_size, NULL);
+      return TRUE;
+    default:
+      return FALSE;
+    }
   }
 
   if ((usbp->setup[0] & (USB_RTYPE_TYPE_MASK | USB_RTYPE_RECIPIENT_MASK)) ==
-	  (USB_RTYPE_TYPE_CLASS | USB_RTYPE_RECIPIENT_INTERFACE)) {
+      (USB_RTYPE_TYPE_CLASS | USB_RTYPE_RECIPIENT_INTERFACE)) {
     switch (usbp->setup[1]) {
     case HID_GET_REPORT_REQUEST:
       //usbSetupTransfer(usbp, (uint8_t *)&linecoding, sizeof(linecoding), NULL);
@@ -468,21 +468,21 @@ static const USBEndpointConfig ep2config = {
 static void usb_event(USBDriver *usbp, usbevent_t event) {
   switch(event) {
   case USB_EVENT_RESET:
-	return;
+    return;
   case USB_EVENT_ADDRESS:
-	return;
+    return;
   case USB_EVENT_CONFIGURED:
-	chSysLockFromIsr();
-	usbInitEndpointI(usbp, HID_IN_EP_ADDRESS, &ep1config);
-	usbInitEndpointI(usbp, HID_OUT_EP_ADDRESS, &ep2config);
-	chSysUnlockFromIsr();
-	return;
+    chSysLockFromIsr();
+    usbInitEndpointI(usbp, HID_IN_EP_ADDRESS, &ep1config);
+    usbInitEndpointI(usbp, HID_OUT_EP_ADDRESS, &ep2config);
+    chSysUnlockFromIsr();
+    return;
   case USB_EVENT_SUSPEND:
-	return;
+    return;
   case USB_EVENT_WAKEUP:
-	return;
+    return;
   case USB_EVENT_STALLED:
-	return;
+    return;
   }
   return;
 }
@@ -501,7 +501,7 @@ const USBConfig usbcfg = {
 void hid_transmit(hid_data *data)
 {
   if (!usbInitState) {
-	return;
+    return;
   }
   usbPrepareTransmit(&USBD1, HID_IN_EP_ADDRESS, (uint8_t *)data, sizeof(hid_data));
   chSysLock();
@@ -545,3 +545,12 @@ void sc_hid_deinit(void)
   usbInitState = 0;
 }
 #endif
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

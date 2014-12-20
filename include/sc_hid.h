@@ -52,3 +52,13 @@ void sc_hid_deinit(void);
 #endif /* HAL_USE_USB */
 
 #endif
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
