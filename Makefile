@@ -59,6 +59,13 @@ endif
 ##############################################################################
 # Project, sources and paths
 #
+ifeq ($(MAKECMDGOALS),clean)
+  ifeq ($(SC_PROJECT_CONFIG),)
+#   If cleaning up, it doesn't matter which project is used
+	SC_PROJECT_CONFIG = projects/f4v1_test.mk
+  endif
+endif
+
 ifneq ($(SC_PROJECT_CONFIG),)
   include $(SC_PROJECT_CONFIG)
 else
