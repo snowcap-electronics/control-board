@@ -168,6 +168,10 @@ void sc_lsm9ds0_init(void)
 
   // Setup and start acc+magn
 
+  // We need to give a bit of time to the chip until we can ask it to shut down
+  // i2c not ready initially?
+  chThdSleepMilliseconds(20);
+
   // Shutdown the chip so that we get new data ready
   // interrupts even if the chip was already running
   sc_lsm9ds0_shutdown();
