@@ -84,6 +84,15 @@
 #define USBDX              USBD1
 #endif
 
+#ifndef SC_UART1_TX_PORT
+#define SC_UART1_TX_PORT   GPIOB
+#define SC_UART1_TX_PIN    6
+#define SC_UART1_TX_AF     7
+#define SC_UART1_RX_PORT   GPIOB
+#define SC_UART1_RX_PIN    7
+#define SC_UART1_RX_AF     7
+#endif
+
 #ifdef SC_HAS_LIS302DL
 #define SC_LIS302DL_SPIN           SPID1
 #define SC_LIS302DL_CS_PORT        GPIOE
