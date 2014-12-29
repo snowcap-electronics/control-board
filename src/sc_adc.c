@@ -167,11 +167,6 @@ void sc_temp_thread_init(void)
 void sc_adc_init(void)
 {
   chMtxInit(&adc_mtx);
-
-#if defined(BOARD_SNOWCAP_V1)
-#elif defined(BOARD_SNOWCAP_STM32F4_V1)
-  palSetGroupMode(GPIOA, PAL_PORT_BIT(0), 0, PAL_MODE_INPUT_ANALOG);
-#endif
 }
 
 
@@ -185,6 +180,17 @@ void sc_adc_deinit(void)
 
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)
 {
+  uint8_t c;
+  ioportmask_t mask = 0;
+
+#if defined(BOARD_SNOWCAP_V1)
+#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
+  for (c = 0; c < channels; ++c) {
+    mask |= PAL_PORT_BIT(c);
+  }
+  palSetGroupMode(GPIOA, mask, 0, PAL_MODE_INPUT_ANALOG);
+#endif
+
   // Set global interval time in milliseconds
   interval_ms = interval_in_ms;
 
@@ -220,7 +226,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
   }
-#elif defined(BOARD_SNOWCAP_STM32F4_V1)
+#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
   //
   // FIXME: the following hardcoded pins should be somehow in sc_conf.h
   // SC STM32F4 MCU Board v1 maps PA0, PA1, PA2, and PA3 to AN1-4
