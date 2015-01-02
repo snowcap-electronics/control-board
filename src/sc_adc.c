@@ -180,11 +180,11 @@ void sc_adc_deinit(void)
 
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)
 {
-  uint8_t c;
-  ioportmask_t mask = 0;
-
 #if defined(BOARD_SNOWCAP_V1)
 #elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
+  ioportmask_t mask = 0;
+  uint8_t c;
+
   for (c = 0; c < channels; ++c) {
     mask |= PAL_PORT_BIT(c);
   }
