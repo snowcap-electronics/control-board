@@ -507,9 +507,9 @@ void hid_transmit(hid_data *data)
   if (!usbInitState) {
     return;
   }
-  usbPrepareTransmit(&USBD1, HID_IN_EP_ADDRESS, (uint8_t *)data, sizeof(hid_data));
+  usbPrepareTransmit(&USBDX, HID_IN_EP_ADDRESS, (uint8_t *)data, sizeof(hid_data));
   chSysLock();
-  usbStartTransmitI(&USBD1, HID_IN_EP_ADDRESS);
+  usbStartTransmitI(&USBDX, HID_IN_EP_ADDRESS);
   //palSetPadMode(GPIOD, 14, PAL_MODE_OUTPUT_PUSHPULL);
   //palClearPad(GPIOD, 14);
   chSysUnlock();
@@ -537,11 +537,11 @@ void sc_hid_init(void)
 {
   usbInitState = 0;
   // FIXME: use USBDX
-  usbDisconnectBus(&USBD1);
+  usbDisconnectBus(&USBDX);
   // FIXME: can't block here for this long
   chThdSleepMilliseconds(1000);
-  usbStart(&USBD1, &usbcfg);
-  usbConnectBus(&USBD1);
+  usbStart(&USBDX, &usbcfg);
+  usbConnectBus(&USBDX);
 }
 
 void sc_hid_deinit(void)
