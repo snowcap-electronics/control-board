@@ -31,7 +31,7 @@
 
 #include <stdint.h>
 
-void sc_ahrs_init(void);
+void sc_ahrs_init(sc_float beta);
 void sc_ahrs_shutdown(void);
 void sc_ahrs_push_9dof(uint32_t ts,
                        sc_float *acc,
