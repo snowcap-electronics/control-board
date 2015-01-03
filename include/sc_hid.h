@@ -39,10 +39,14 @@
 
 #if HAL_USE_USB
 
+#define SC_HID_USE_BUTTON 0
+
 typedef struct {
   int8_t x;
   int8_t y;
+#if SC_HID_USE_BUTTON
   uint8_t button;
+#endif
 } hid_data;
 
 void hid_transmit(hid_data *data);

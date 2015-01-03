@@ -231,6 +231,7 @@ static const uint8_t hid_generic_joystick_reporter_data[] ={
   HID_REPORT_SIZE		(8),
   HID_REPORT_COUNT	(2),
   HID_INPUT	(HID_INPUT_DATA_VAR_ABS),
+#if SC_HID_USE_BUTTON
   HID_USAGE_PAGE(HID_USAGE_PAGE_BUTTON),
   HID_USAGE_MINIMUM(HID_USAGE_BUTTON1),
   HID_USAGE_MAXIMUM(HID_USAGE_BUTTON8),
@@ -239,6 +240,7 @@ static const uint8_t hid_generic_joystick_reporter_data[] ={
   HID_REPORT_SIZE		(1),
   HID_REPORT_COUNT	(8),
   HID_INPUT	(HID_INPUT_DATA_VAR_ABS),
+#endif
   HID_END_COLLECTION ,
   HID_END_COLLECTION,
 };
@@ -387,7 +389,9 @@ static bool_t hidRequestsHook(USBDriver *usbp)
       //palSetPad(GPIOD, 12);
       hid_in_data.x=0;
       hid_in_data.y=0;
+#if SC_HID_USE_BUTTON
       hid_in_data.button=0;
+#endif
       usbSetupTransfer(usbp,(uint8_t *)&hid_in_data,sizeof(hid_in_data), NULL);
       usbInitState = 1;
       return TRUE;
