@@ -35,6 +35,7 @@
 #ifdef SC_HAS_LSM9DS0
 
 /* LSM9DS0 registers used in this file */
+#define LSM9DS0_INT_CTRL_REG_M     0x12
 #define LSM9DS0_CTRL_REG1_G        0x20
 #define LSM9DS0_CTRL_REG3_G        0x22
 #define LSM9DS0_CTRL_REG4_G        0x23
@@ -69,11 +70,11 @@
 #define LSM9DS0_SUBADDR_AUTO_INC_BIT  0x80
 
 // +-2 g: 0.061 mg/bit
-#define LSM9DS0_ACC_SENSITIVITY    (0.061 / 1000)
-// +-4 gauss: 0.08 mgauss/bit
-#define LSM9DS0_MAGN_SENSITIVITY   (0.16 / 1000)
+#define LSM9DS0_ACC_SENSITIVITY    (0.061 / 1000.0)
+// +-2 gauss: 0.08 mgauss/bit
+#define LSM9DS0_MAGN_SENSITIVITY   (0.08 / 1000.0)
 // +-500 mdps: 17.50 mdps/bit
-#define LSM9DS0_GYRO_SENSITIVITY   (17.50 / 1000)
+#define LSM9DS0_GYRO_SENSITIVITY   (17.50 / 1000.0)
 
 static uint8_t i2cn_xm;
 static uint8_t i2cn_g;
@@ -194,11 +195,22 @@ void sc_lsm9ds0_init(void)
   // Configure 100Hz magn (and temperature)
   txbuf[0] = LSM9DS0_CTRL_REG5_XM;
   txbuf[1] = 0xF4; // High res, 100Hz, temp
+  //txbuf[1] = 0x94; // Low res, 100Hz, temp
+  sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
+
+  // Configure full scale selection to 2 gauss
+  txbuf[0] = LSM9DS0_CTRL_REG6_XM;
+  txbuf[1] = 0x00; // +- 2 gaus
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
   // Enable magn in continuous conversion mode
   txbuf[0] = LSM9DS0_CTRL_REG7_XM;
   txbuf[1] = 0x00; // Continuous conversion mode
+  sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
+
+  // Enable interrupts
+  txbuf[0] = LSM9DS0_INT_CTRL_REG_M;
+  txbuf[1] = 0xE9; // XEN + YEN + ZEN + int + active high
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
   // Setup and start gyro
@@ -229,18 +241,30 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
   uint8_t i;
   const uint8_t all_done = SENSOR_RDY_ACC | SENSOR_RDY_MAGN | SENSOR_RDY_GYRO;
 
+  static uint32_t acc_read_last = 0;
+  static uint32_t magn_read_last = 0;
+  static uint32_t gyro_read_last = 0;
+
   // Read all sensors at least once
   while (sensors_done != all_done){
-
+    uint32_t now;
     // Wait for data ready signal
-    chBSemWait(&lsm9ds0_drdy_sem);
+    chBSemWaitTimeout(&lsm9ds0_drdy_sem, 50);
 
 #ifdef SC_WAR_ISSUE_1
-    // WAR for broken DRDY_G pin
-    if (sensors_ready & SENSOR_RDY_ACC) {
-      chMtxLock(&data_mtx);
-      sensors_ready |= SENSOR_RDY_GYRO;
-      chMtxUnlock();
+    // WAR: read data if there hasn't been a data ready interrupt in a while
+    {
+      // FIXME: assuming here >>30Hz
+      now = chTimeNow();
+      if (now - acc_read_last > 10) {
+        sensors_ready |= SENSOR_RDY_ACC;
+      }
+      if (now - magn_read_last > 10) {
+        sensors_ready |= SENSOR_RDY_MAGN;
+      }
+      if (now - gyro_read_last > 10) {
+        sensors_ready |= SENSOR_RDY_GYRO;
+      }
     }
 #endif
 
@@ -259,6 +283,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sensors_ready &= ~SENSOR_RDY_ACC;
         chMtxUnlock();
         sensors_done |= SENSOR_RDY_ACC;
+        acc_read_last = now;
       }
 
       if (sensors_ready & SENSOR_RDY_MAGN) {
@@ -274,6 +299,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sensors_ready &= ~SENSOR_RDY_MAGN;
         chMtxUnlock();
         sensors_done |= SENSOR_RDY_MAGN;
+        magn_read_last = now;
       }
 
       if (sensors_ready & SENSOR_RDY_GYRO) {
@@ -289,6 +315,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
         sensors_ready &= ~SENSOR_RDY_GYRO;
         chMtxUnlock();
         sensors_done |= SENSOR_RDY_GYRO;
+        gyro_read_last = now;
       }
     }
   }
