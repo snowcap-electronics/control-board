@@ -35,7 +35,7 @@
 #ifdef SC_USE_9DOF
 
 /* Initialise and start reading sensors */
-void sc_9dof_init(uint16_t calibration_samples);
+void sc_9dof_init(void);
 
 /* Shutdown initialised sensors */
 void sc_9dof_shutdown(void);

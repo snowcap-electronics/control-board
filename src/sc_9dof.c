@@ -42,8 +42,6 @@ static sc_float acc[3];
 static sc_float magn[3];
 static sc_float gyro[3];
 static uint32_t ts;
-static uint16_t calibration_total;
-static uint16_t calibration_i;
 
 static Mutex data_mtx;
 static Thread * sc_9dof_thread_ptr;
@@ -54,9 +52,7 @@ static msg_t sc9dofThread(void *UNUSED(arg))
   sc_float tmp_acc[3]  = {0, 0, 0};
   sc_float tmp_magn[3] = {0, 0, 0};
   sc_float tmp_gyro[3] = {0, 0, 0};
-  sc_float gyro_calib[3] = {0, 0, 0};
   msg_t drdy;
-  uint8_t warmup = 64;
 
   chRegSetThreadName(__func__);
 
@@ -81,33 +77,6 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 #else
     chDbgAssert(0, "No 9dof drivers included in the build", "#3");
 #endif
-
-    // FIXME: for some reason the initial values might contain
-    // garbage. Ignore them. Why aren't they valid..?
-    if (warmup) {
-      --warmup;
-      continue;
-    }
-
-    // Calculate average gyro offset
-    if (calibration_i < calibration_total) {
-      gyro_calib[0] += tmp_gyro[0];
-      gyro_calib[1] += tmp_gyro[1];
-      gyro_calib[2] += tmp_gyro[2];
-
-      if (++calibration_i < calibration_total) {
-        continue;
-      } else {
-        gyro_calib[0] /= calibration_total;
-        gyro_calib[1] /= calibration_total;
-        gyro_calib[2] /= calibration_total;
-      }
-    }
-
-    // Adjust gyro reading based on the average offset
-    tmp_gyro[0] -= gyro_calib[0];
-    tmp_gyro[1] -= gyro_calib[1];
-    tmp_gyro[2] -= gyro_calib[2];
 
     chMtxLock(&data_mtx);
     memcpy(acc,  tmp_acc,  sizeof(tmp_acc));
@@ -134,7 +103,7 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 }
 
 
-void sc_9dof_init(uint16_t calibration_samples)
+void sc_9dof_init(void)
 {
   if (running == 1) {
     chDbgAssert(0, "9DoF already running", "#1");
@@ -142,8 +111,6 @@ void sc_9dof_init(uint16_t calibration_samples)
   }
 
   chMtxInit(&data_mtx);
-  calibration_total = calibration_samples;
-  calibration_i = 0;
   running = 1;
 
   sc_9dof_thread_ptr = chThdCreateStatic(sc_9dof_thread,
