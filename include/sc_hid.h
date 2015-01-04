@@ -39,7 +39,7 @@
 
 #if HAL_USE_USB
 
-#define SC_HID_USE_BUTTON 0
+#define SC_HID_USE_BUTTON 1
 
 typedef struct {
   int8_t x;
