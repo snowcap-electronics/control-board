@@ -140,7 +140,7 @@ void sc_deinit(uint32_t subsystems)
 {
 
   if (subsystems & SC_MODULE_HID) {
-#ifdef HAL_USE_USB
+#if HAL_USE_USB
     sc_hid_deinit();
 #else
     chDbgAssert(0, "HAL_USE_USB undefined", "#1");
