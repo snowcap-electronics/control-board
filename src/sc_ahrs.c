@@ -135,9 +135,9 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     // http://stackoverflow.com/questions/11492299/quaternion-to-euler-angles-algorithm-how-to-convert-to-y-up-and-between-ha
     // http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
     // Creative Commons Attribution-ShareAlike License
-    yaw = (sc_float)atan2(2.0f * q1 * q0 + 2.0f * q2 * q3, 1 - 2.0f * (q3*q3  + q0*q0));
+    roll = (sc_float)atan2(2.0f * q1 * q0 + 2.0f * q2 * q3, 1 - 2.0f * (q3*q3  + q0*q0));
     pitch = (sc_float)asin(2.0f * ( q1 * q3 - q0 * q2 ) );
-    roll = (sc_float)atan2(2.0f * q1 * q2 + 2.0f * q3 * q0, 1 - 2.0f * (q2*q2 + q3*q3));
+    yaw = (sc_float)atan2(2.0f * q1 * q2 + 2.0f * q3 * q0, 1 - 2.0f * (q2*q2 + q3*q3));
 
     // Radians to degrees
     yaw   *= 180 / M_PI;
