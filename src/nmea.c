@@ -28,8 +28,6 @@
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
-#include "ch.h"
-#include "hal.h"
 #include "slre.h"
 #include "nmea.h"
 #include "sc_log.h"
@@ -72,7 +70,7 @@ static double nmeadeg2degree(double val);
 static struct nmea_data_t nmea_data;
 static struct nmea_data_t nmea_data_latest;
 
-static Mutex nmea_data_mtx;
+static mutex_t nmea_data_mtx;
 
 /* ===================Internal functions begin=============================== */
 
@@ -97,12 +95,12 @@ bool nmea_parse_byte(uint8_t c)
         // FIXME: How to check that these are from the same block?
         if (nmea_data.msgs_received & (GPRMC | GPGGA | GPGSA)) {
             nmea_data_latest = nmea_data;
-            nmea_data_latest.last_update = chTimeNow();
+            nmea_data_latest.last_update = ST2MS(chVTGetSystemTime());
             nmea_data.msgs_received = 0;
             new_data = true;
         }
         i = 0;
-        chMtxUnlock();
+        chMtxUnlock(&nmea_data_mtx);
         return new_data;
     }
 
@@ -350,7 +348,7 @@ static double nmeadeg2degree(double val)
 
 void nmea_start()
 {
-    chMtxInit(&nmea_data_mtx);
+    chMtxObjectInit(&nmea_data_mtx);
     memset(&nmea_data_latest, 0, sizeof(nmea_data_latest));
     nmea_data_latest.fix_type = GPS_FIX_TYPE_NONE;
     memset(&nmea_data, 0, sizeof(nmea_data));
@@ -367,7 +365,7 @@ struct nmea_data_t nmea_get_data(void)
     struct nmea_data_t d;
     chMtxLock(&nmea_data_mtx);
     d = nmea_data_latest;
-    chMtxUnlock();
+    chMtxUnlock(&nmea_data_mtx);
     return d;
 }
 

@@ -50,7 +50,7 @@ void sc_init(uint32_t subsystems)
 #if STM32_UART_USE_USART1 && HAL_USE_UART
     sc_uart_start(SC_UART_1);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 
@@ -58,7 +58,7 @@ void sc_init(uint32_t subsystems)
 #if STM32_UART_USE_USART2 && HAL_USE_UART
     sc_uart_start(SC_UART_2);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 
@@ -66,7 +66,7 @@ void sc_init(uint32_t subsystems)
 #if STM32_UART_USE_USART3 && HAL_USE_UART
     sc_uart_start(SC_UART_3);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 
@@ -74,7 +74,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_PWM
     sc_pwm_init();
 #else
-    chDbgAssert(0, "HAL_USE_PWM undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PWM undefined");
 #endif
   }
 
@@ -82,7 +82,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_ICU
     sc_icu_init(1);
 #else
-    chDbgAssert(0, "HAL_USE_ICU undefined", "#1");
+    chDbgAssert(0, "HAL_USE_ICU undefined");
 #endif
   }
 
@@ -90,7 +90,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_SERIAL_USB
     sc_sdu_init();
 #else
-    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined", "#1");
+    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined");
 #endif
   }
 
@@ -98,7 +98,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_ADC
     sc_adc_init();
 #else
-    chDbgAssert(0, "HAL_USE_ADC undefined", "#1");
+    chDbgAssert(0, "HAL_USE_ADC undefined");
 #endif
   }
 
@@ -106,7 +106,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_PAL
     sc_gpio_init();
 #else
-    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PAL undefined");
 #endif
   }
 
@@ -114,7 +114,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_PAL
     sc_led_init();
 #else
-    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PAL undefined");
 #endif
   }
 
@@ -122,7 +122,7 @@ void sc_init(uint32_t subsystems)
 #ifdef SC_HAS_RBV2
     sc_radio_init();
 #else
-    chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
+    chDbgAssert(0, "SC_HAS_RBV2 undefined");
 #endif
   }
 
@@ -130,7 +130,7 @@ void sc_init(uint32_t subsystems)
 #if HAL_USE_USB
     sc_hid_init();
 #else
-    chDbgAssert(0, "HAL_USE_USB undefined", "#1");
+    chDbgAssert(0, "HAL_USE_USB undefined");
 #endif
   }
 }
@@ -143,7 +143,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_USB
     sc_hid_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_USB undefined", "#1");
+    chDbgAssert(0, "HAL_USE_USB undefined");
 #endif
   }
 
@@ -151,7 +151,7 @@ void sc_deinit(uint32_t subsystems)
 #ifdef SC_HAS_RBV2
     sc_radio_deinit();
 #else
-    chDbgAssert(0, "SC_HAS_RBV2 undefined", "#1");
+    chDbgAssert(0, "SC_HAS_RBV2 undefined");
 #endif
   }
 
@@ -159,7 +159,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_PAL
     sc_led_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PAL undefined");
 #endif
   }
 
@@ -167,7 +167,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_PAL
     sc_gpio_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_PAL undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PAL undefined");
 #endif
   }
 
@@ -175,7 +175,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_ADC
     sc_adc_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_ADC undefined", "#1");
+    chDbgAssert(0, "HAL_USE_ADC undefined");
 #endif
   }
 
@@ -183,7 +183,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_SERIAL_USB
     sc_sdu_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined", "#1");
+    chDbgAssert(0, "HAL_USE_SERIAL_USB undefined");
 #endif
   }
 
@@ -191,7 +191,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_ICU
     sc_icu_deinit(1);
 #else
-    chDbgAssert(0, "HAL_USE_ICU undefined", "#1");
+    chDbgAssert(0, "HAL_USE_ICU undefined");
 #endif
   }
 
@@ -199,7 +199,7 @@ void sc_deinit(uint32_t subsystems)
 #if HAL_USE_PWM
     sc_pwm_deinit();
 #else
-    chDbgAssert(0, "HAL_USE_PWM undefined", "#1");
+    chDbgAssert(0, "HAL_USE_PWM undefined");
 #endif
   }
 
@@ -207,7 +207,7 @@ void sc_deinit(uint32_t subsystems)
 #if STM32_UART_USE_USART3 && HAL_USE_UART
     sc_uart_stop(SC_UART_3);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 
@@ -215,7 +215,7 @@ void sc_deinit(uint32_t subsystems)
 #if STM32_UART_USE_USART2 && HAL_USE_UART
     sc_uart_stop(SC_UART_2);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 
@@ -223,7 +223,7 @@ void sc_deinit(uint32_t subsystems)
 #if STM32_UART_USE_USART1 && HAL_USE_UART
     sc_uart_stop(SC_UART_1);
 #else
-    chDbgAssert(0, "HAL_USE_UART undefined", "#1");
+    chDbgAssert(0, "HAL_USE_UART undefined");
 #endif
   }
 

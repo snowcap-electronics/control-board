@@ -29,7 +29,6 @@
 #define SC_H
 
 /* ChibiOS includes */
-#include "ch.h"
 #include "hal.h"
 
 /* Project includes */

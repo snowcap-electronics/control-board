@@ -149,7 +149,7 @@ static bool gsm_cmd_idle = true;
 static bool generic_error = false;
 
 // Main worker thread
-static Thread *worker_thread = NULL;
+static thread_t *worker_thread = NULL;
 
 #define SHA1_STR_LEN	40
 #define SHA1_LEN	20
@@ -372,13 +372,15 @@ static void send_event(void)
 /*
  * Setup a working area with for the worker thread
  */
-static WORKING_AREA(main_worker_thread, 4096);
-static msg_t mainWorkerThread(void *UNUSED(arg))
+static THD_WORKING_AREA(main_worker_thread, 4096);
+THD_FUNCTION(mainWorkerThread, arg)
 {
   const uint8_t apn[] = TRACKER_SIM_APN;
   const uint8_t user_agent[] = TRACKER_USER_AGENT;
   systime_t timeout;
   systime_t next_update = 0;
+
+  (void)arg;
 
   chRegSetThreadName(__func__);
 
@@ -401,14 +403,14 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
   SC_LOG_PRINTF("GSM started\r\n");
   chThdSleepMilliseconds(500);
 
-  timeout = chTimeNow() + TRACKER_TIMEOUT_READY_SEC * 1000;
+  timeout = ST2MS(chVTGetSystemTime()) + TRACKER_TIMEOUT_READY_SEC * 1000;
 
   // In stop and standby modes, chThdTerminate() is called after
   // send_event has succeeded. In continuous mode, gsm_cmd_idle is set to true.
-  while(!chThdShouldTerminate()) {
+  while(!chThdShouldTerminateX()) {
     systime_t now;
 
-    now = chTimeNow();
+    now = ST2MS(chVTGetSystemTime());
 
     // Check for initial timeout
     if (timeout && now > timeout) {
@@ -417,7 +419,8 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
       break;
     }
 
-    // Avoid chTimeNow wrapping over by restarting after a 10 days
+    // Avoid chVTGetSystemTime wrapping over by restarting after a 10 days
+    // FIXME: still true with Chibios v3.0?
     if (now > (systime_t)864000000) {
       SC_LOG_PRINTF("Long run time (%d ms), restarting\r\n", now);
       generic_error = true;
@@ -444,13 +447,13 @@ static msg_t mainWorkerThread(void *UNUSED(arg))
 
     sc_led_toggle();
   }
-  SC_LOG_PRINTF("Main thread exit, should terminate: %d\r\n", chThdShouldTerminate());
+  SC_LOG_PRINTF("Main thread exit, should terminate: %d\r\n", chThdShouldTerminateX());
 
   gsm_stop(false);
   gps_power_off();
   nmea_stop();
 
-  return RDY_OK;
+  return MSG_OK;
 }
 
 int main(void)
@@ -524,7 +527,7 @@ int main(void)
     // FIXME: assuminen here that stopping everyting doesn't take much time
 
     // In stop and standby modes, current time is interval time
-    interval_ms = chTimeNow();
+    interval_ms = ST2MS(chVTGetSystemTime());
 
 #if TRACKER_SLEEP_MODE == TRACKER_SLEEP_MODE_STANDBY
     standby_mode = true;

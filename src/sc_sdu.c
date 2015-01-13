@@ -55,13 +55,13 @@
  * Buffer for blocking send. First byte is the message length.
  */
 static uint8_t send_buf[SDU_MAX_SEND_BUFFERS][SDU_MAX_SEND_BUF_LEN];
-static Mutex buf_mtx;
-static Semaphore send_sem;
+static mutex_t buf_mtx;
+static semaphore_t send_sem;
 static uint8_t first_free = 0;
 static uint8_t previous_full = SDU_MAX_SEND_BUFFERS - 1;
 
-static Thread *sdu_send_thread = NULL;
-static Thread *sdu_read_thread = NULL;
+static thread_t *sdu_send_thread = NULL;
+static thread_t *sdu_read_thread = NULL;
 static msg_t scSduReadThread(void *UNUSED(arg));
 static msg_t scSduSendThread(void *UNUSED(arg));
 
@@ -322,7 +322,7 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
   case USB_EVENT_ADDRESS:
     return;
   case USB_EVENT_CONFIGURED:
-    chSysLockFromIsr();
+    chSysLockFromISR();
 
     /* Enables the endpoints specified into the configuration.
        Note, this callback is invoked from an ISR so I-Class functions
@@ -333,7 +333,7 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
     /* Resetting the state of the CDC subsystem.*/
     sduConfigureHookI(&SDUX);
 
-    chSysUnlockFromIsr();
+    chSysUnlockFromISR();
     return;
   case USB_EVENT_SUSPEND:
     return;
@@ -368,10 +368,11 @@ static const SerialUSBConfig serusbcfg = {
 /*
  * Setup a working area with a stack for reading SDU messages
  */
-static WORKING_AREA(sc_sdu_read_thread, 256);
-static msg_t scSduReadThread(void *UNUSED(arg))
+static THD_WORKING_AREA(sc_sdu_read_thread, 256);
+THD_FUNCTION(scSduReadThread, arg)
 {
   int retval;
+  (void) arg;
 
   chRegSetThreadName(__func__);
 
@@ -409,7 +410,7 @@ static msg_t scSduReadThread(void *UNUSED(arg))
   }
 
   // Loop forever reading characters
-  while (!chThdShouldTerminate()) {
+  while (!chThdShouldTerminateX()) {
 
     retval = chnGetTimeout((BaseChannel *)&SDUX, 100/*TIME_IMMEDIATE*/);
     if (retval >= 0) {
@@ -423,17 +424,19 @@ static msg_t scSduReadThread(void *UNUSED(arg))
 /*
  * Setup a working area with a stack for sending message
  */
-static WORKING_AREA(sc_sdu_send_thread, 512);
-static msg_t scSduSendThread(void *UNUSED(arg))
+static THD_WORKING_AREA(sc_sdu_send_thread, 512);
+THD_FUNCTION(scSduSendThread, arg)
 {
   chRegSetThreadName(__func__);
 
-  while (!chThdShouldTerminate()) {
+  (void)arg;
+
+  while (!chThdShouldTerminateX()) {
 
     // Wait for data to be send
     chSemWait(&send_sem);
 
-    if (chThdShouldTerminate()) {
+    if (chThdShouldTerminateX()) {
       break;
     }
 
@@ -446,7 +449,7 @@ static msg_t scSduSendThread(void *UNUSED(arg))
     }
 
     // Unlock send buffer
-    chMtxUnlock();
+    chMtxUnlock(&buf_mtx);
 
     // First byte of the buffer indicates the buffer length
     chSequentialStreamWrite((BaseSequentialStream *)&SDUX,
@@ -481,12 +484,12 @@ int sc_sdu_send_msg(const uint8_t *msg, int len)
     // Check if there's space in the buffer
     if (first_free == previous_full) {
       // No space, lose data
-      chMtxUnlock();
+      chMtxUnlock(&buf_mtx);
 
       // XXX: There's a multisecond delay in starting the USB. Also the
       // buffers seem to get full if nobody is reading the data.
       // So not asserting here.
-      // chDbgAssert(0, "SDU send buffer full", "#1");
+      // chDbgAssert(0, "SDU send buffer full");
       return 1;
     }
 
@@ -508,7 +511,7 @@ int sc_sdu_send_msg(const uint8_t *msg, int len)
   }
 
   // Unlock send buffer
-  chMtxUnlock();
+  chMtxUnlock(&buf_mtx);
 
   for (i = 0; i < msgs_sent; ++i) {
     // Inform the sending thread that there is data to send
@@ -522,20 +525,20 @@ int sc_sdu_send_msg(const uint8_t *msg, int len)
 void sc_sdu_init(void)
 {
   // Initialize sending related semaphores and variables
-  chMtxInit(&buf_mtx);
-  chSemInit(&send_sem, 0);
+  chMtxObjectInit(&buf_mtx);
+  chSemObjectInit(&send_sem, 0);
 
   // Initialize USB
   sduObjectInit(&SDUX);
   sduStart(&SDUX, &serusbcfg);
 
-  chDbgAssert(sdu_read_thread == NULL, "SDU read thread already running", "#1");
+  chDbgAssert(sdu_read_thread == NULL, "SDU read thread already running");
   // Start a thread dedicated USB activating and reading messages
   sdu_read_thread = chThdCreateStatic(sc_sdu_read_thread,
                                       sizeof(sc_sdu_read_thread),
                                       NORMALPRIO, scSduReadThread, NULL);
 
-  chDbgAssert(sdu_send_thread == NULL, "SDU send thread already running", "#1");
+  chDbgAssert(sdu_send_thread == NULL, "SDU send thread already running");
   // Start a thread dedicated to sending messages
   sdu_send_thread = chThdCreateStatic(sc_sdu_send_thread,
                                       sizeof(sc_sdu_send_thread),
@@ -546,13 +549,13 @@ void sc_sdu_init(void)
 void sc_sdu_deinit(void)
 {
 
-  chDbgAssert(sdu_send_thread != NULL, "SDU send thread not running", "#1");
+  chDbgAssert(sdu_send_thread != NULL, "SDU send thread not running");
   chThdTerminate(sdu_send_thread);
   chSemSignal(&send_sem);
   chThdWait(sdu_send_thread);
   sdu_send_thread = NULL;
 
-  chDbgAssert(sdu_read_thread != NULL, "SDU read thread not running", "#1");
+  chDbgAssert(sdu_read_thread != NULL, "SDU read thread not running");
   chThdTerminate(sdu_read_thread);
   chThdWait(sdu_read_thread);
   sdu_read_thread = NULL;

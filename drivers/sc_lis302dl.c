@@ -50,16 +50,16 @@
 #define LIS302DL_SENSIVITY  0.018
 
 static uint8_t spin;
-static BinarySemaphore lis302dl_drdy_sem;
+static binary_semaphore_t lis302dl_drdy_sem;
 
 static void lis302dl_drdy_cb(EXTDriver *extp, expchannel_t channel)
 {
   (void)extp;
   (void)channel;
 
-  chSysLockFromIsr();
+  chSysLockFromISR();
   chBSemSignalI(&lis302dl_drdy_sem);
-  chSysUnlockFromIsr();
+  chSysUnlockFromISR();
 }
 
 // FIXME: add a flag parameter for interrupts, double click recognition, etc?
@@ -68,7 +68,7 @@ void sc_lis302dl_init(void)
   uint8_t txbuf[2];
   int8_t spi_n;
 
-  chBSemInit(&lis302dl_drdy_sem, TRUE);
+  chBSemObjectInit(&lis302dl_drdy_sem, TRUE);
 
   // Register data ready interrupt
   sc_extint_set_isr_cb(SC_LIS302DL_INT_DRDY_PORT,

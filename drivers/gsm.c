@@ -69,8 +69,8 @@ typedef enum method_t {
 struct gsm_modem {
     enum Power_mode power_mode;
     enum State state;
-    BinarySemaphore waiting_reply;
-    Mutex gsm_data_mtx;
+    binary_semaphore_t waiting_reply;
+    mutex_t gsm_data_mtx;
     volatile int raw_mode;
     enum Reply reply;
     enum GSM_FLAGS flags;
@@ -98,8 +98,8 @@ enum API_CALL {
 /* Struct for passing Public API functions to internal thread */
 struct api {
     enum API_CALL api_call;
-    BinarySemaphore new_call_sem;
-    Mutex api_data_mtx;
+    binary_semaphore_t new_call_sem;
+    mutex_t api_data_mtx;
     union {
         struct {
             const uint8_t *cmd;
@@ -119,7 +119,7 @@ struct api {
 
 static struct api api;
 
-static Thread *gsm_thread = NULL;
+static thread_t *gsm_thread = NULL;
 static msg_t scGsmThread(void *UNUSED(arg));
 
 /* URC message */
@@ -279,7 +279,7 @@ void gsm_state_parser(uint8_t c)
             state_changed |= m->func(gsm.buf, gsm.buf_len);
         }
     }
-    chMtxUnlock();
+    chMtxUnlock(&gsm.gsm_data_mtx);
     if (state_changed) {
         gsm_send_event_state_changed();
     }
@@ -290,14 +290,14 @@ void gsm_state_get(enum State *state, enum GSM_FLAGS *flags)
     chMtxLock(&gsm.gsm_data_mtx);
     *state = gsm.state;
     *flags = gsm.flags;
-    chMtxUnlock();
+    chMtxUnlock(&gsm.gsm_data_mtx);
 }
 
 
 /* Public function to pass the actual work to a separate thread */
 uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
 {
-    bool_t ret;
+    bool ret;
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
@@ -308,7 +308,7 @@ uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
         SC_LOG_ASSERT(0, "Previous GSM API call not finished");
-        chMtxUnlock();
+        chMtxUnlock(&api.api_data_mtx);
         return 0;
     }
 
@@ -317,7 +317,7 @@ uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
     api.gsm_cmd.len = len;
 
     chBSemSignal(&api.new_call_sem);
-    chMtxUnlock();
+    chMtxUnlock(&api.api_data_mtx);
 
     return 1;
 }
@@ -330,7 +330,7 @@ uint8_t gsm_cmd(const uint8_t *cmd, uint8_t len)
  */
 uint8_t gsm_http_get(const uint8_t *url, uint8_t len)
 {
-     bool_t ret;
+     bool ret;
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
@@ -341,7 +341,7 @@ uint8_t gsm_http_get(const uint8_t *url, uint8_t len)
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
         SC_LOG_ASSERT(0, "Previous GSM API call not finished");
-        chMtxUnlock();
+        chMtxUnlock(&api.api_data_mtx);
         return 0;
     }
 
@@ -355,7 +355,7 @@ uint8_t gsm_http_get(const uint8_t *url, uint8_t len)
     api.http.type_len = 0;
 
     chBSemSignal(&api.new_call_sem);
-    chMtxUnlock();
+    chMtxUnlock(&api.api_data_mtx);
 
     return 1;
 }
@@ -372,7 +372,7 @@ uint8_t gsm_http_post(const uint8_t *url, uint8_t url_len,
                       const uint8_t *data, int data_len,
                       const uint8_t *content_type, uint8_t type_len)
 {
-    bool_t ret;
+    bool ret;
     ret = chMtxTryLock(&api.api_data_mtx);
     if (!ret) {
         // FIXME: having call already ongoing might not be an error
@@ -383,7 +383,7 @@ uint8_t gsm_http_post(const uint8_t *url, uint8_t url_len,
     if (api.api_call != API_CALL_UNKNOWN) {
         // FIXME: having call already ongoing might not be an error
         SC_LOG_ASSERT(0, "Previous GSM API call not finished");
-        chMtxUnlock();
+        chMtxUnlock(&api.api_data_mtx);
         return 0;
     }
 
@@ -397,7 +397,7 @@ uint8_t gsm_http_post(const uint8_t *url, uint8_t url_len,
     api.http.type_len = type_len;
 
     chBSemSignal(&api.new_call_sem);
-    chMtxUnlock();
+    chMtxUnlock(&api.api_data_mtx);
 
     return 1;
 }
@@ -623,15 +623,15 @@ static void gsm_toggle_power_pin(uint8_t wait_status)
     systime_t wait_limit;
 
     SC_DBG_PRINTF("%d: Toggling power pin for status %s\r\n",
-                  chTimeNow(), wait_status ? "HIGH" : "LOW");
+                  ST2MS(chVTGetSystemTime()), wait_status ? "HIGH" : "LOW");
 
     palClearPad(POWER_PORT, POWER_PIN);
     chThdSleepMilliseconds(2000);
     palSetPad(POWER_PORT, POWER_PIN);
 
     // Wait for status pin update
-    wait_limit = chTimeNow() + 4000;
-    while (chTimeNow() < wait_limit) {
+    wait_limit = ST2MS(chVTGetSystemTime()) + 4000;
+    while (ST2MS(chVTGetSystemTime()) < wait_limit) {
         int status = palReadPad(STATUS_PORT, STATUS_PIN);
         if (status == wait_status) {
             // FIXME: extra sleep, should not be needed
@@ -641,7 +641,7 @@ static void gsm_toggle_power_pin(uint8_t wait_status)
         chThdSleepMilliseconds(100);
     }
     SC_LOG_PRINTF("%d: Timeout waiting for status %s\r\n",
-                  chTimeNow(), wait_status ? "HIGH" : "LOW");
+                  ST2MS(chVTGetSystemTime()), wait_status ? "HIGH" : "LOW");
 }
 
 static void sleep_enable(void)
@@ -679,7 +679,7 @@ static uint8_t gsm_cmd_internal(const uint8_t *cmd, uint8_t len)
     for(retry=0; retry<3; retry++) {
         SC_LOG_PRINTF("send (retry %d): %s", retry, cmd);
         gsm_uart_write(cmd, len);
-        if(RDY_OK != chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS))
+        if(MSG_OK != chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS))
             gsm.reply = AT_TIMEOUT;
         if (gsm.reply != AT_TIMEOUT)
             break;
@@ -723,13 +723,13 @@ static uint8_t gsm_wait_cpy(const uint8_t *pattern, int timeout, uint8_t *line, 
     urc_messages[0].msg = (const char*)pattern;
     urc_messages[0].msg_len = strlen((char*)pattern);
 
-    wait_limit = chTimeNow() + timeout;
+    wait_limit = ST2MS(chVTGetSystemTime()) + timeout;
 
-    while (chTimeNow() < wait_limit) {
+    while (ST2MS(chVTGetSystemTime()) < wait_limit) {
         msg_t ret;
 
         ret = chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS);
-        if (ret == RDY_OK) {
+        if (ret == MSG_OK) {
             if (strncmp(urc_messages[0].msg, (const char *)gsm.buf, urc_messages[0].msg_len) == 0) {
                 found = 1;
                 break;
@@ -903,8 +903,8 @@ static int gsm_gprs_enable()
     uint8_t enablegprs[]  = "AT+SAPBR=1,1\r\n";
 
     /* Wait for network */
-    wait_limit = chTimeNow() + TIMEOUT_GPRS_MS;
-    while(gsm.state < STATE_READY && chTimeNow() < wait_limit) {
+    wait_limit = ST2MS(chVTGetSystemTime()) + TIMEOUT_GPRS_MS;
+    while(gsm.state < STATE_READY && ST2MS(chVTGetSystemTime()) < wait_limit) {
         chThdSleepMilliseconds(1000);
     }
 
@@ -941,13 +941,13 @@ static int gsm_gprs_enable()
             break;
         }
         chThdSleepMilliseconds(1000);
-    }  while(!(gsm.flags & GPRS_READY) && chTimeNow() < wait_limit);
+    }  while(!(gsm.flags & GPRS_READY) && ST2MS(chVTGetSystemTime()) < wait_limit);
 
     // Wait for network OK status
     do {
         gsm_cmd_internal(querystatus, sizeof(querystatus));
         chThdSleepMilliseconds(1000);
-    }  while(!(gsm.flags & GPRS_READY) && chTimeNow() < wait_limit);
+    }  while(!(gsm.flags & GPRS_READY) && ST2MS(chVTGetSystemTime()) < wait_limit);
 
     if (gsm.flags & GPRS_READY) {
         rc = AT_OK;
@@ -989,12 +989,15 @@ void gsm_set_user_agent(const uint8_t *buf)
 /*
  * Setup a thread for handling GSM communication
  */
-static WORKING_AREA(sc_gsm_thread, 4096);
-static msg_t scGsmThread(void *arg)
+static THD_WORKING_AREA(sc_gsm_thread, 4096);
+THD_FUNCTION(scGsmThread, arg)
 {
     (void)arg;
     uint8_t i;
     msg_t msg;
+
+    (void)arg;
+
     msg = sc_event_msg_create_type(SC_EVENT_TYPE_GSM_CMD_DONE);
 
     // Initialise the length of the URC messages
@@ -1019,13 +1022,13 @@ static msg_t scGsmThread(void *arg)
         gsm_set_power_state(POWER_ON);
     }
 
-    while(!chThdShouldTerminate()) {
+    while(!chThdShouldTerminateX()) {
 
         // Wait for either new command to send to GSM
         SC_LOG_PRINTF("scGsmThread: waiting for new cmd.\r\n");
         chBSemWait(&api.new_call_sem);
 
-        if (chThdShouldTerminate()) {
+        if (chThdShouldTerminateX()) {
             break;
         }
 
@@ -1061,7 +1064,7 @@ static msg_t scGsmThread(void *arg)
         }
 
         api.api_call = API_CALL_UNKNOWN;
-        chMtxUnlock();
+        chMtxUnlock(&api.api_data_mtx);
 
         sleep_enable();
 
@@ -1089,10 +1092,10 @@ static void gsm_set_serial_flow_control(int enabled)
 
 void gsm_start(void)
 {
-    chBSemInit(&gsm.waiting_reply, TRUE);
-    chMtxInit(&gsm.gsm_data_mtx);
-    chBSemInit(&api.new_call_sem, TRUE);
-	chMtxInit(&api.api_data_mtx);
+    chBSemObjectInit(&gsm.waiting_reply, TRUE);
+    chMtxObjectInit(&gsm.gsm_data_mtx);
+    chBSemObjectInit(&api.new_call_sem, TRUE);
+	chMtxObjectInit(&api.api_data_mtx);
 
     gsm.incoming_buf[0] = '\0';
     gsm.incoming_i = 0;
@@ -1186,7 +1189,7 @@ static int gsm_http_send_data(const uint8_t *data, int len)
     chBSemReset(&gsm.waiting_reply, TRUE);
     gsm_uart_write(data, len);
 
-    if (RDY_OK != chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS)) {
+    if (MSG_OK != chBSemWaitTimeout(&gsm.waiting_reply, TIMEOUT_MS)) {
         r = AT_TIMEOUT;
     }
 

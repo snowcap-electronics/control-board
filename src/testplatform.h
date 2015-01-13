@@ -27,8 +27,6 @@
 
 #ifndef TESTPLATFORM_H
 #define TESTPLATFORM_H
-#include "ch.h"
-#include "hal.h"
 
 void tp_init(void);
 void tp_deinit(void);

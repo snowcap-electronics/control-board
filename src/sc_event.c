@@ -86,7 +86,7 @@ static sc_event_cb_9dof_available cb_9dof_available = NULL;
 static sc_event_cb_blob_available cb_blob_available = NULL;
 static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 
-static Thread *event_thread = NULL;
+static thread_t *event_thread = NULL;
 
 /*
  * Setup a working area with for the event loop thread
@@ -94,11 +94,12 @@ static Thread *event_thread = NULL;
 #ifndef SC_EVENT_LOOP_THREAD_WA
 #define SC_EVENT_LOOP_THREAD_WA 2048
 #endif
-static WORKING_AREA(event_loop_thread, SC_EVENT_LOOP_THREAD_WA);
-static msg_t eventLoopThread(void *UNUSED(arg))
+static THD_WORKING_AREA(event_loop_thread, SC_EVENT_LOOP_THREAD_WA);
+static THD_FUNCTION(eventLoopThread, arg)
 {
+  (void) arg;
 
-  while (!chThdShouldTerminate()) {
+  while (!chThdShouldTerminateX()) {
     msg_t msg;
     msg_t ret;
     SC_EVENT_TYPE type;
@@ -108,12 +109,12 @@ static msg_t eventLoopThread(void *UNUSED(arg))
     // Wait for action
     ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
 
-    if (chThdShouldTerminate()) {
+    if (chThdShouldTerminateX()) {
       break;
     }
 
-    chDbgAssert(ret == RDY_OK, "chMBFetch failed", "#1");
-    if (ret != RDY_OK) {
+    chDbgAssert(ret == MSG_OK, "chMBFetch failed");
+    if (ret != MSG_OK) {
       continue;
     }
 
@@ -190,12 +191,12 @@ static msg_t eventLoopThread(void *UNUSED(arg))
       // Do nothing
       break;
     default:
-      chDbgAssert(0, "Unhandled event", "sc_event_loop");
+      chDbgAssert(0, "Unhandled event");
       break;
     }
   }
 
-  return RDY_OK;
+  return MSG_OK;
 }
 
 
@@ -206,7 +207,7 @@ static msg_t eventLoopThread(void *UNUSED(arg))
 void sc_event_loop_start(void)
 {
 
-  chDbgAssert(event_thread == NULL, "Event thread already running", "#1");
+  chDbgAssert(event_thread == NULL, "Event thread already running");
 
   // Start a thread dedicated to event loop
   event_thread = chThdCreateStatic(event_loop_thread, sizeof(event_loop_thread),
@@ -221,7 +222,7 @@ void sc_event_loop_stop(void)
 {
   msg_t nop;
 
-  chDbgAssert(event_thread != NULL, "Event thread not running", "#1");
+  chDbgAssert(event_thread != NULL, "Event thread not running");
 
   chThdTerminate(event_thread);
 
@@ -270,16 +271,16 @@ void sc_event_msg_post(msg_t msg, SC_EVENT_MSG_POST_FROM from)
   msg_t ret;
 
   if (from == SC_EVENT_MSG_POST_FROM_ISR) {
-    chSysLockFromIsr();
+    chSysLockFromISR();
 
     ret = chMBPostI(&event_mb, msg);
-    chDbgAssert(ret == RDY_OK, "chMBPostI failed", "#1");
+    chDbgAssert(ret == MSG_OK, "chMBPostI failed");
 
-    chSysUnlockFromIsr();
+    chSysUnlockFromISR();
   } else {
 
     ret = chMBPost(&event_mb, msg, TIME_IMMEDIATE);
-    chDbgAssert(ret == RDY_OK, "chMBPost failed", "#1");
+    chDbgAssert(ret == MSG_OK, "chMBPost failed");
   }
 }
 
@@ -316,7 +317,7 @@ msg_t sc_event_msg_create_extint(uint8_t pin)
   msg_t msg = 0;
   SC_EVENT_TYPE type = SC_EVENT_TYPE_EXTINT;
 
-  chDbgAssert(pin < EXT_MAX_CHANNELS, "EXT int pin number too large", "#1");
+  chDbgAssert(pin < EXT_MAX_CHANNELS, "EXT int pin number too large");
 
   msg =
     (type << EVENT_MSG_TYPE_SHIFT) |
@@ -362,7 +363,7 @@ void sc_event_register_handle_byte(sc_event_cb_handle_byte func)
 void sc_event_register_extint(uint8_t pin, sc_event_cb_extint func)
 {
   chDbgAssert(pin < EXT_MAX_CHANNELS,
-              "External interrupt pin number too large", "#1");
+              "External interrupt pin number too large");
   cb_extint[pin] = func;
 }
 #endif

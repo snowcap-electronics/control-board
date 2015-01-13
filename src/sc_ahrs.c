@@ -41,8 +41,8 @@
 
 #ifdef SC_USE_AHRS
 
-static Mutex ahrs_mtx;
-static BinarySemaphore ahrs_new_data_sem;
+static mutex_t ahrs_mtx;
+static binary_semaphore_t ahrs_new_data_sem;
 
 static uint8_t running = 0;
 
@@ -68,13 +68,15 @@ static void MadgwickAHRSupdate(sc_float dt,
                                sc_float mx, sc_float my, sc_float mz);
 #endif
 
-static Thread * sc_ahrs_thread_ptr;
+static thread_t * sc_ahrs_thread_ptr;
 
-static WORKING_AREA(sc_ahrs_thread, 2048);
-static msg_t scAhrsThread(void *UNUSED(arg))
+static THD_WORKING_AREA(sc_ahrs_thread, 2048);
+THD_FUNCTION(scAhrsThread, arg)
 {
   msg_t drdy;
   uint8_t initialised = 0;
+
+  (void)arg;
 
   chRegSetThreadName(__func__);
 
@@ -107,7 +109,7 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     memcpy(magn, new_magn, sizeof(new_magn));
     memcpy(gyro, new_gyro, sizeof(new_gyro));
     dt = (new_ts - latest_ts) / 1000.0;
-    chMtxUnlock();
+    chMtxUnlock(&ahrs_mtx);
 
 #ifdef SC_ALLOW_GPL
     // Should be rare cases, so just ignore values that would lead to NaN
@@ -145,7 +147,7 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     roll  *= 180 / M_PI;
 #else
     (void)dt;
-    chDbgAssert(0, "Only GPL licensed AHRS supported currently", "#1");
+    chDbgAssert(0, "Only GPL licensed AHRS supported currently");
 #endif
 
     // Store latest values for later use
@@ -154,7 +156,7 @@ static msg_t scAhrsThread(void *UNUSED(arg))
     latest_roll = roll;
     latest_pitch = pitch;
     latest_yaw = yaw;
-    chMtxUnlock();
+    chMtxUnlock(&ahrs_mtx);
 
     // Send data ready notification
     sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
@@ -166,12 +168,12 @@ static msg_t scAhrsThread(void *UNUSED(arg))
 void sc_ahrs_init(sc_float user_beta)
 {
   if (running == 1) {
-    chDbgAssert(0, "AHRS already running", "#1");
+    chDbgAssert(0, "AHRS already running");
     return;
   }
 
-  chMtxInit(&ahrs_mtx);
-  chBSemInit(&ahrs_new_data_sem, TRUE);
+  chMtxObjectInit(&ahrs_mtx);
+  chBSemObjectInit(&ahrs_new_data_sem, TRUE);
 
   running = 1;
   beta = user_beta;
@@ -190,7 +192,7 @@ void sc_ahrs_shutdown(void)
 {
 
   if (running == 0) {
-    chDbgAssert(0, "AHRS not running", "#1");
+    chDbgAssert(0, "AHRS not running");
     return;
   }
 
@@ -209,7 +211,7 @@ void sc_ahrs_push_9dof(uint32_t ts,
                        sc_float *gyro)
 {
   if (running == 0) {
-    chDbgAssert(0, "AHRS not running", "#2");
+    chDbgAssert(0, "AHRS not running");
     return;
   }
 
@@ -218,7 +220,7 @@ void sc_ahrs_push_9dof(uint32_t ts,
   memcpy(new_acc, acc, sizeof(new_acc));
   memcpy(new_magn, magn, sizeof(new_magn));
   memcpy(new_gyro, gyro, sizeof(new_gyro));
-  chMtxUnlock();
+  chMtxUnlock(&ahrs_mtx);
 
   chBSemSignal(&ahrs_new_data_sem);
 }
@@ -232,7 +234,7 @@ void sc_ahrs_get_orientation(uint32_t *ts,
                              sc_float *yaw)
 {
   if (running == 0) {
-    chDbgAssert(0, "AHRS not running", "#3");
+    chDbgAssert(0, "AHRS not running");
     return;
   }
 
@@ -241,7 +243,7 @@ void sc_ahrs_get_orientation(uint32_t *ts,
   *roll = latest_roll;
   *pitch = latest_pitch;
   *yaw = latest_yaw;
-  chMtxUnlock();
+  chMtxUnlock(&ahrs_mtx);
 }
 
 

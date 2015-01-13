@@ -51,7 +51,7 @@ typedef enum SC_LOG_MODULE {
 	if (!(cond)) {														\
 	  sc_log(SC_LOG_LVL_ASSERT, SC_LOG_MODULE_TAG, (uint8_t *)(msg));	\
 	  chThdSleepMilliseconds(500);										\
-	  chDbgAssert(cond, msg, __func__);									\
+	  chDbgAssert(cond, msg);                                           \
 	}																	\
   } while(0);
 #define SC_LOG(msg) sc_log(SC_LOG_LVL_VERBOSE, SC_LOG_MODULE_TAG, (uint8_t *)(msg))

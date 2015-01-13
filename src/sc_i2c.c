@@ -53,7 +53,7 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
     FAST_DUTY_CYCLE_2
   };
 
-  chDbgAssert(i2cp != NULL, "I2C driver null", "#1");
+  chDbgAssert(i2cp != NULL, "I2C driver null");
 
   chMtxLock(&i2ccfg_mtx);
 
@@ -78,9 +78,9 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
   }
 
   if (i == SC_I2C_MAX_CLIENTS) {
-    chDbgAssert(0, "Too many I2C clients", "#1");
+    chDbgAssert(0, "Too many I2C clients");
   }
-  chMtxUnlock();
+  chMtxUnlock(&i2ccfg_mtx);
 
   return i;
 }
@@ -94,8 +94,8 @@ void sc_i2c_stop(uint8_t i2cn)
 
   chMtxLock(&i2ccfg_mtx);
 
-  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#3");
-  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#2");
+  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range");
+  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized");
 
   i2cp = i2c_conf[i2cn].i2cp;
 
@@ -113,7 +113,7 @@ void sc_i2c_stop(uint8_t i2cn)
     i2cStop(i2cp);
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&i2ccfg_mtx);
 }
 
 
@@ -121,13 +121,13 @@ void sc_i2c_read(uint8_t i2cn, uint8_t *data, size_t bytes)
 {
   msg_t ret;
 
-  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#4");
-  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#3");
+  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range");
+  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized");
 
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
   ret = i2cMasterReceive(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, data, bytes);
-  chDbgAssert(ret == RDY_OK, "i2cMasterReceive error", "#1");
+  chDbgAssert(ret == MSG_OK, "i2cMasterReceive error");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
 }
@@ -138,13 +138,13 @@ void sc_i2c_transmit(uint8_t i2cn,
 {
   msg_t ret;
 
-  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range", "#5");
-  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized", "#4");
+  chDbgAssert(i2cn < SC_I2C_MAX_CLIENTS, "I2C n outside range");
+  chDbgAssert(i2c_conf[i2cn].i2cp != NULL, "I2C n not initialized");
 
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
   ret = i2cMasterTransmit(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, tx, tx_bytes, rx, rx_bytes);
-  chDbgAssert(ret == RDY_OK, "i2cMasterTransmit error", "#1");
+  chDbgAssert(ret == MSG_OK, "i2cMasterTransmit error");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
 }

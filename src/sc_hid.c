@@ -361,7 +361,7 @@ static const USBDescriptor hid_strings[] = {
 
 
 
-static bool_t hidRequestsHook(USBDriver *usbp)
+static bool hidRequestsHook(USBDriver *usbp)
 {
   const USBDescriptor *dp;
   if ((usbp->setup[0] & (USB_RTYPE_TYPE_MASK | USB_RTYPE_RECIPIENT_MASK)) ==
@@ -476,10 +476,10 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
   case USB_EVENT_ADDRESS:
     return;
   case USB_EVENT_CONFIGURED:
-    chSysLockFromIsr();
+    chSysLockFromISR();
     usbInitEndpointI(usbp, HID_IN_EP_ADDRESS, &ep1config);
     usbInitEndpointI(usbp, HID_OUT_EP_ADDRESS, &ep2config);
-    chSysUnlockFromIsr();
+    chSysUnlockFromISR();
     return;
   case USB_EVENT_SUSPEND:
     return;

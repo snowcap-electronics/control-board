@@ -191,7 +191,7 @@ void sc_pwm_stop(int pwm)
 #ifdef PWMDX2
 	pwmDisableChannel(&PWMDX2, pwm - 7);
 #else
-	chDbgAssert(0, "PWMDX2 not defined", "#1");
+	chDbgAssert(0, "PWMDX2 not defined");
 #endif
   }
 }
@@ -210,7 +210,7 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
 #ifdef PWMDX1
 	pwmEnableChannel(&PWMDX1, pwm - 1, PWM_PERCENTAGE_TO_WIDTH(&PWMDX1, duty));
 #else
-	chDbgAssert(0, "PWMDX1 not defined", "#2");
+	chDbgAssert(0, "PWMDX1 not defined");
 #endif
   }
 
@@ -218,7 +218,7 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
 #ifdef PWMDX2
 	pwmEnableChannel(&PWMDX2, pwm - 5, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
 #else
-	chDbgAssert(0, "PWMDX2 not defined", "#2");
+	chDbgAssert(0, "PWMDX2 not defined");
 #endif
   }
 }

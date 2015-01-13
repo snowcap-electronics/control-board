@@ -32,7 +32,7 @@
 void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16_t samples)
 {
   if (!state) {
-	chDbgAssert(0, "Null state", "#1");
+	chDbgAssert(0, "Null state");
 	return;
   }
 
@@ -48,7 +48,7 @@ void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16
 sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_float x)
 {
   if (!state) {
-	chDbgAssert(0, "Null state", "#1");
+	chDbgAssert(0, "Null state");
 	return 0;
   }
 
@@ -70,7 +70,7 @@ sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_floa
 void sc_filter_brown_linear_expo_init(sc_filter_brown_linear_expo_state *state, sc_float factor)
 {
   if (!state) {
-	chDbgAssert(0, "Null state", "#1");
+	chDbgAssert(0, "Null state");
 	return;
   }
 
@@ -88,7 +88,7 @@ sc_float sc_filter_brown_linear_expo(sc_filter_brown_linear_expo_state *state, s
   sc_float at, bt;
 
   if (!state) {
-	chDbgAssert(0, "Null state", "#1");
+	chDbgAssert(0, "Null state");
 	return 0;
   }
 

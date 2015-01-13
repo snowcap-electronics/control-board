@@ -49,7 +49,7 @@ static sc_spi_conf spi_conf[SC_SPI_MAX_CLIENTS];
 int8_t sc_spi_init(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin)
 {
   int8_t i;
-  chDbgAssert(spip != NULL, "SPI driver null", "#1");
+  chDbgAssert(spip != NULL, "SPI driver null");
 
   /* Find empty slot for new SPI client */
   for (i = 0; i < SC_SPI_MAX_CLIENTS; ++i) {
@@ -62,15 +62,15 @@ int8_t sc_spi_init(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin)
     }
   }
 
-  chDbgAssert(0, "Too many SPI clients", "#1");
+  chDbgAssert(0, "Too many SPI clients");
 
   return -1;
 }
 
 void sc_spi_stop(uint8_t spin)
 {
-  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range", "#2");
-  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized", "#1");
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
   spiStop(spi_conf[spin].spip);
   spi_conf[spin].spip = NULL;
@@ -80,8 +80,8 @@ void sc_spi_exchange(uint8_t spin, uint8_t *tx, uint8_t *rx, size_t bytes)
 {
   SPIConfig spi_cfg;
 
-  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range", "#3");
-  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized", "#2");
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
   /* spiStart always to set CS for every call according to SPI client. */
   spi_cfg.end_cb = NULL;
@@ -104,8 +104,8 @@ void sc_spi_send(uint8_t spin, uint8_t *data, size_t bytes)
 {
   SPIConfig spi_cfg;
 
-  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range", "#4");
-  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized", "#3");
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
   /* spiStart always to set CS per SPI client. */
   spi_cfg.end_cb = NULL;

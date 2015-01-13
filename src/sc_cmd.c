@@ -64,7 +64,7 @@ static uint8_t recv_i = 0;
 static uint8_t blob_buf[SC_BLOB_MAX_SIZE];
 static uint16_t blob_len = 0;
 static uint16_t blob_i = 0;
-static Mutex blob_mtx;
+static mutex_t blob_mtx;
 
 /*
  * Command storage
@@ -83,15 +83,15 @@ static struct sc_cmd commands[SC_CMD_MAX_COMMANDS] = { {0, NULL}, };
  */
 void sc_cmd_init(void)
 {
-  chMtxInit(&blob_mtx);
+  chMtxObjectInit(&blob_mtx);
 
   sc_cmd_register('b', parse_command_blob);
   sc_cmd_register('c', parse_command_power);
 #if HAL_USE_PAL
   sc_cmd_register('g', parse_command_gpio);
   sc_cmd_register('G', parse_command_gpio_all);
-#endif
   sc_cmd_register('l', parse_command_led);
+#endif
 #if HAL_USE_PWM
   sc_cmd_register('p', parse_command_pwm);
 #endif
@@ -127,13 +127,13 @@ void sc_cmd_push_byte(uint8_t byte)
     // FIXME: HACK: Assume \n is from the previous command and not
     // part of the blob
     if (blob_i == 0 && byte == '\n') {
-      chMtxUnlock();
+      chMtxUnlock(&blob_mtx);
       return;
     }
 
     if (blob_i+1 >= SC_BLOB_MAX_SIZE) {
-      chDbgAssert(0, "blob_i out of bounds", "#1");
-      chMtxUnlock();
+      chDbgAssert(0, "blob_i out of bounds");
+      chMtxUnlock(&blob_mtx);
       return;
     }
     blob_buf[blob_i++] = byte;
@@ -149,7 +149,7 @@ void sc_cmd_push_byte(uint8_t byte)
       sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
     }
   }
-  chMtxUnlock();
+  chMtxUnlock(&blob_mtx);
 
   // Convert all different types of newlines to single \n
   if (byte == '\r') {
@@ -187,8 +187,8 @@ void sc_cmd_register(uint8_t cmd, sc_cmd_cb cb)
   int i = 0;
 
   do {
-    chDbgAssert(i < SC_CMD_MAX_COMMANDS, "Too many commands registered!", "#2");
-    chDbgAssert(commands[i].cmd != cmd, "Command registered twice!", "#1");
+    chDbgAssert(i < SC_CMD_MAX_COMMANDS, "Too many commands registered!");
+    chDbgAssert(commands[i].cmd != cmd, "Command registered twice!");
     i++;
   } while (i < SC_CMD_MAX_COMMANDS && commands[i].cmd != 0);
 
@@ -335,6 +335,7 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 
 
 
+#if HAL_USE_PAL
 /*
  * Parse led command
  */
@@ -362,7 +363,6 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
 
 
 
-#if HAL_USE_PAL
 /*
  * Parse gpio command
  */
@@ -430,18 +430,18 @@ static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
 
   if (bytes == 0) {
     // Something went wrong, ignore
-    chDbgAssert(0, "Failed to parse blob size", "#1");
+    chDbgAssert(0, "Failed to parse blob size");
   }
 
   if (bytes >= SC_BLOB_MAX_SIZE) {
-    chDbgAssert(0, "Requested blob size too large", "#1");
+    chDbgAssert(0, "Requested blob size too large");
     return;
   }
 
   chMtxLock(&blob_mtx);
   blob_i = 0;
   blob_len = bytes;
-  chMtxUnlock();
+  chMtxUnlock(&blob_mtx);
 }
 
 
@@ -499,13 +499,13 @@ uint16_t sc_cmd_blob_get(uint8_t **blob)
   if (blob_len > 0 && blob_i == blob_len) {
     len = blob_len;
   }
-  chMtxUnlock();
+  chMtxUnlock(&blob_mtx);
 
   // There might still be a small change that the blob gets restarted between the check above and returning below.
   if (len) {
     *blob = blob_buf;
   } else {
-    chDbgAssert(0, "No binary blob available", "#1");
+    chDbgAssert(0, "No binary blob available");
     *blob = NULL;
   }
   return len;

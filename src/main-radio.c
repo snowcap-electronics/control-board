@@ -80,7 +80,7 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
     sc_cmd_push_byte(byte);
     break;
   default:
-    chDbgAssert(0, "Unsupported UART", "#1");
+    chDbgAssert(0, "Unsupported UART");
   }
 }
 

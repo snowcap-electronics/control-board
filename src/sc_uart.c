@@ -82,7 +82,7 @@ static uint8_t circular_len[UART_MAX_CIRCULAR_BUFS];
 static UARTDriver *circular_uart[UART_MAX_CIRCULAR_BUFS];
 static int8_t circular_sending;
 static int8_t circular_free;
-static Mutex circular_mtx;
+static mutex_t circular_mtx;
 
 /* Boolean to tell if the last character was received from USB */
 /* FIXME: Quite a hack */
@@ -168,7 +168,7 @@ void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2
 #endif
   default:
 	// Invalid uart
-    chDbgAssert(0, "Invalid UART specified", "#2");
+    chDbgAssert(0, "Invalid UART specified");
 	return;
   }
 
@@ -185,7 +185,7 @@ void sc_uart_init(void)
 {
   int i;
 
-  chDbgAssert(!circular_init_done, "uart already initialized", "#1");
+  chDbgAssert(!circular_init_done, "uart already initialized");
 
   // Initialize sending side circular buffer state
   circular_init_done = 1;
@@ -194,7 +194,7 @@ void sc_uart_init(void)
   for (i = 0; i < UART_MAX_CIRCULAR_BUFS; ++i) {
 	circular_len[i] = 0;
   }
-  chMtxInit(&circular_mtx);
+  chMtxObjectInit(&circular_mtx);
 }
 
 
@@ -202,13 +202,13 @@ void sc_uart_init(void)
 void sc_uart_deinit(void)
 {
 #if STM32_UART_USE_USART1
-  chDbgAssert(uart_is_enabled(&UARTD1) == 0, "Uart 1 still enabled in deinit", "#1");
+  chDbgAssert(uart_is_enabled(&UARTD1) == 0, "Uart 1 still enabled in deinit");
 #endif
 #if STM32_UART_USE_USART2
-  chDbgAssert(uart_is_enabled(&UARTD2) == 0, "Uart 2 still enabled in deinit", "#1");
+  chDbgAssert(uart_is_enabled(&UARTD2) == 0, "Uart 2 still enabled in deinit");
 #endif
 #if STM32_UART_USE_USART3
-  chDbgAssert(uart_is_enabled(&UARTD3) == 0, "Uart 3 still enabled in deinit", "#1");
+  chDbgAssert(uart_is_enabled(&UARTD3) == 0, "Uart 3 still enabled in deinit");
 #endif
 
   circular_init_done = 0;
@@ -261,7 +261,7 @@ void sc_uart_start(SC_UART uart)
 #endif
   default:
 	// Invalid uart, do nothing
-    chDbgAssert(0, "Invalid UART specified", "#1");
+    chDbgAssert(0, "Invalid UART specified");
 	return;
   }
 }
@@ -289,7 +289,7 @@ void sc_uart_stop(SC_UART uart)
 #endif
   default:
 	// Invalid uart
-    chDbgAssert(0, "Invalid UART specified", "#3");
+    chDbgAssert(0, "Invalid UART specified");
 	return;
   }
 
@@ -345,7 +345,7 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 	break;
   default:
 	// Invalid uart, do nothing
-    chDbgAssert(0, "Invalid UART specified", "#1");
+    chDbgAssert(0, "Invalid UART specified");
 	return;
   }
 
@@ -357,7 +357,7 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 
 	// Check for free buffers
 	if (circular_free == -1) {
-	  chDbgAssert(0, "Circular buffer full", "#1");
+	  chDbgAssert(0, "Circular buffer full");
 	  return;
 	}
 
@@ -377,7 +377,7 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 #if !HAL_USE_SERIAL_USB
 void sc_uart_revc_usb_byte(UNUSED(uint8_t c))
 {
-  chDbgAssert(0, "HAL_USE_SERIAL_USB not defined, cannot call sc_uart_revc_usb_byte()", "#1");
+  chDbgAssert(0, "HAL_USE_SERIAL_USB not defined, cannot call sc_uart_revc_usb_byte()");
 }
 #else
 void sc_uart_revc_usb_byte(uint8_t c)
@@ -455,7 +455,7 @@ void sc_uart_send_finished(void)
 	}
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&circular_mtx);
 }
 
 
@@ -569,7 +569,7 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
 
   // Lose message, if no space
   if (circular_free == -1) {
-	chMtxUnlock();
+	chMtxUnlock(&circular_mtx);
 	return;
   }
 
@@ -601,7 +601,7 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
 				  circular_buf[circular_current]);
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&circular_mtx);
 }
 
 
@@ -620,7 +620,7 @@ static void uart_set_enable(SC_UART uart, uint8_t enable)
 	uarts_enabled &= ~(1 << uart);
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&circular_mtx);
 }
 
 
@@ -648,7 +648,7 @@ static uint8_t uart_is_enabled(UARTDriver *drv)
 #endif
 
   if (uart == SC_UART_LAST) {
-	chDbgAssert(0, "Invalid UART driver", "#1");
+	chDbgAssert(0, "Invalid UART driver");
 	return 0;
   }
 

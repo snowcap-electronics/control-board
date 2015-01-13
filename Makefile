@@ -23,6 +23,16 @@ ifeq ($(USE_LINK_GC),)
   USE_LINK_GC = yes
 endif
 
+# Linker extra options here.
+ifeq ($(USE_LDOPT),)
+  USE_LDOPT =
+endif
+
+# Enable this if you want link time optimizations (LTO)
+ifeq ($(USE_LTO),)
+  USE_LTO = yes
+endif
+
 # If enabled, this option allows to compile the application in THUMB mode.
 ifeq ($(USE_THUMB),)
   USE_THUMB = yes
@@ -41,15 +51,16 @@ endif
 # Architecture or project specific options
 #
 
-# Enables the use of FPU on Cortex-M4.
-# Enable this if you really want to use the STM FWLib.
-ifeq ($(USE_FPU),)
-  USE_FPU = no
+# Stack size to be allocated to the Cortex-M process stack. This stack is
+# the stack used by the main() thread.
+ifeq ($(USE_PROCESS_STACKSIZE),)
+  USE_PROCESS_STACKSIZE = 0x400
 endif
 
-# Enable this if you really want to use the STM FWLib.
-ifeq ($(USE_FWLIB),)
-  USE_FWLIB = no
+# Stack size to the allocated to the Cortex-M main/exceptions stack. This
+# stack is used for processing interrupts and exceptions.
+ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
+  USE_EXCEPTIONS_STACKSIZE = 0x400
 endif
 
 #
@@ -91,45 +102,55 @@ PROJECT = $(SC_PROJECT)
 CHIBIOS = ChibiOS
 
 ifeq ($(SC_BOARD),SC_SNOWCAP_V1)
-LDSCRIPT= $(PORTLD)/STM32F205xB.ld
-MCU = cortex-m3
-include boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+# STM32F2 not supported by Chibios v3 (currently, 2015-01-13)
+LDSCRIPT= $(PORTLD)/STM32F405xG.ld
+MCU = cortex-m4
+USE_FPU = hard
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F2xx/port.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
+include boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
 else ifeq ($(SC_BOARD),SC_SNOWCAP_STM32F4_V1)
 LDSCRIPT= $(PORTLD)/STM32F405xG.ld
 MCU = cortex-m4
-include boards/SNOWCAP_STM32F4_V1/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+USE_FPU = hard
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
+include boards/SNOWCAP_STM32F4_V1/board.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
 else ifeq ($(SC_BOARD),SC_F4_DISCOVERY)
 LDSCRIPT= $(PORTLD)/STM32F407xG.ld
 MCU = cortex-m4
-include $(CHIBIOS)/boards/ST_STM32F4_DISCOVERY/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+USE_FPU = hard
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
+include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
 else ifeq ($(SC_BOARD),SC_F1_DISCOVERY)
 LDSCRIPT= $(PORTLD)/STM32F100xB.ld
 MCU = cortex-m3
-include $(CHIBIOS)/boards/ST_STM32VL_DISCOVERY/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F1xx/platform.mk
-include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F1xx/port.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
+USE_FPU = no
+include $(CHIBIOS)/os/hal/boards/ST_STM32VL_DISCOVERY/board.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F1xx/platform.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f1xx.mk
 else ifeq ($(SC_BOARD),RT_C2)
 LDSCRIPT= $(PORTLD)/STM32F405xG.ld
 MCU = cortex-m4
-include boards/RT_C2/board.mk
-include $(CHIBIOS)/os/hal/platforms/STM32F4xx/platform.mk
+USE_FPU = hard
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F4xx/port.mk
-include $(CHIBIOS)/os/kernel/kernel.mk
+include boards/RT_C2/board.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
 else
 $(error SC_BOARD not defined or unknown)
 endif
@@ -139,12 +160,12 @@ endif
 CSRC = $(PORTSRC) \
        $(KERNSRC) \
        $(HALSRC) \
+       $(OSALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
        $(CHIBIOS)/os/various/memstreams.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/chprintf.c \
-       $(CHIBIOS)/os/various/chrtclib.c \
        drivers/sc_lis302dl.c \
        drivers/sc_lsm9ds0.c \
        drivers/gsm.c \
@@ -203,9 +224,9 @@ TCPPSRC =
 ASMSRC = $(PORTASM)
 
 INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
-         $(HALINC) $(PLATFORMINC) $(BOARDINC) \
-         $(CHIBIOS)/os/various/devices_lib/accel \
+         $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
          $(CHIBIOS)/os/various \
+         $(CHIBIOS)/os/hal/include \
          config include
 
 #
@@ -227,6 +248,7 @@ LD   = $(TRGT)gcc
 #LD   = $(TRGT)g++
 CP   = $(TRGT)objcopy
 AS   = $(TRGT)gcc -x assembler-with-cpp
+AR   = $(TRGT)ar
 OD   = $(TRGT)objdump
 SZ   = $(TRGT)size
 HEX  = $(CP) -O ihex
@@ -308,18 +330,5 @@ ifneq ($(SC_DEFINES),)
   DDEFS += $(SC_DEFINES)
 endif
 
-ifeq ($(USE_FPU),yes)
-  USE_OPT += -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -fsingle-precision-constant
-  DDEFS += -DCORTEX_USE_FPU=TRUE
-else
-  DDEFS += -DCORTEX_USE_FPU=FALSE
-endif
-
-ifeq ($(USE_FWLIB),yes)
-  include $(CHIBIOS)/ext/stm32lib/stm32lib.mk
-  CSRC += $(STM32SRC)
-  INCDIR += $(STM32INC)
-  USE_OPT += -DUSE_STDPERIPH_DRIVER
-endif
-
-include $(CHIBIOS)/os/ports/GCC/ARMCMx/rules.mk
+RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
+include $(RULESPATH)/rules.mk

@@ -61,8 +61,8 @@ static uint8_t radio_comm_buf_i = 0;
 static uint16_t radio_comm_buf_expected = 0;
 static uint8_t radio_comm_bsl_version[4];
 static uint8_t radio_comm_data_crc[2];
-static BinarySemaphore radio_comm_sem;
-static Mutex radio_comm_mtx;
+static binary_semaphore_t radio_comm_sem;
+static mutex_t radio_comm_mtx;
 
 static uint16_t crc;
 static void crc_ccitt_init(void);
@@ -78,16 +78,18 @@ static uint8_t radio_comm_get_version(void);
 static uint8_t radio_comm_send_program(uint8_t dry_run);
 static uint8_t ascii2bin(uint8_t h, uint8_t l);
 
-static WORKING_AREA(sc_radio_flash_thread, 512);
-static msg_t scRadioFlashThread(void *UNUSED(arg))
+static THD_WORKING_AREA(sc_radio_flash_thread, 512);
+THD_FUNCTION(scRadioFlashThread, arg)
 {
   uint8_t retries = SC_RADIO_BSL_RETRIES;
   uint8_t msg_retries;
 
+  (void)arg;
+
   chRegSetThreadName(__func__);
 
-  chMtxInit(&radio_comm_mtx);
-  chBSemInit(&radio_comm_sem, TRUE);
+  chMtxObjectInit(&radio_comm_mtx);
+  chBSemObjectInit(&radio_comm_sem, TRUE);
 
   // Do a dry run to validate SREC blob
   if (radio_comm_send_program(1) == 0) {
@@ -186,18 +188,18 @@ static uint8_t radio_comm_validate_reply_successful(void)
   chMtxLock(&radio_comm_mtx);
 
   if (radio_comm_validate_reply() == 0) {
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     return 0;
   }
 
   if (radio_comm_buf[SC_RADIO_COMM_CORE_RES_I + 0] == SC_RADIO_COMM_CORE_RES_MSG &&
       radio_comm_buf[SC_RADIO_COMM_CORE_RES_I + 1] == SC_RADIO_COMM_CORE_RES_MSG_OK) {
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
 
     return 1;
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   SC_DBG("RADIO DEBUG: reply message not operation successful\r\n");
   return 0;
@@ -213,7 +215,7 @@ static uint8_t radio_comm_validate_reply_version(void)
   chMtxLock(&radio_comm_mtx);
 
   if (radio_comm_validate_reply() == 0) {
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     return 0;
   }
 
@@ -221,16 +223,16 @@ static uint8_t radio_comm_validate_reply_version(void)
     uint8_t i;
 
     chDbgAssert(radio_comm_buf_i > SC_RADIO_COMM_CORE_RES_I + 4,
-                "Invalid message for BSL version", "#1");
+                "Invalid message for BSL version");
 
     for (i = 0; i < 4; ++i) {
       radio_comm_bsl_version[i] = radio_comm_buf[SC_RADIO_COMM_CORE_RES_I + 1 + i];
     }
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     return 1;
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   SC_DBG("RADIO DEBUG: invalid version message\r\n");
   return 0;
@@ -246,7 +248,7 @@ static uint8_t radio_comm_validate_reply_crc(void)
   chMtxLock(&radio_comm_mtx);
 
   if (radio_comm_validate_reply() == 0) {
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     return 0;
   }
 
@@ -254,16 +256,16 @@ static uint8_t radio_comm_validate_reply_crc(void)
     uint8_t i;
 
     chDbgAssert(radio_comm_buf_i > SC_RADIO_COMM_CORE_RES_I + 4,
-                "Invalid message for CRC reply", "#1");
+                "Invalid message for CRC reply");
 
     for (i = 0; i < 2; ++i) {
       radio_comm_data_crc[i] = radio_comm_buf[SC_RADIO_COMM_CORE_RES_I + 1 + i];
     }
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     return 1;
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   SC_DBG("RADIO DEBUG: invalid crc message\r\n");
   return 0;
@@ -283,14 +285,14 @@ static uint8_t radio_comm_mass_erase(void)
   chMtxLock(&radio_comm_mtx);
   radio_comm_buf_i = 0;
   radio_comm_buf_expected = 0;
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   // Send password
   sc_uart_send_msg(SC_UART_2, mass_erase, sizeof(mass_erase));
   SC_DBG("RADIO DEBUG: sent mass erase\r\n");
 
   // Wait for reply
-  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != RDY_OK) {
+  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != MSG_OK) {
     SC_DBG("RADIO DEBUG: time out\r\n");
     return 0;
   }
@@ -321,14 +323,14 @@ static uint8_t radio_comm_send_password(void)
   chMtxLock(&radio_comm_mtx);
   radio_comm_buf_i = 0;
   radio_comm_buf_expected = 0;
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   // Send password
   sc_uart_send_msg(SC_UART_2, bsl_password, sizeof(bsl_password));
   SC_DBG("RADIO DEBUG: sent password\r\n");
 
   // Wait for reply
-  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != RDY_OK) {
+  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != MSG_OK) {
     SC_DBG("RADIO DEBUG: time out\r\n");
     return 0;
   }
@@ -356,13 +358,13 @@ static uint8_t radio_comm_get_version(void)
   chMtxLock(&radio_comm_mtx);
   radio_comm_buf_i = 0;
   radio_comm_buf_expected = 0;
-  chMtxUnlock();
+  chMtxUnlock(&radio_comm_mtx);
 
   // Get radio BSL version
   sc_uart_send_msg(SC_UART_2, get_bsl_version, sizeof(get_bsl_version));
 
   // Wait for reply
-  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != RDY_OK) {
+  if (chBSemWaitTimeout(&radio_comm_sem, 1000) != MSG_OK) {
     SC_DBG("RADIO DEBUG: time out\r\n");
     return 0;
   }
@@ -385,7 +387,7 @@ static uint8_t radio_comm_get_version(void)
     msg[len++] = '\r';
     msg[len++] = '\n';
     msg[len++] = '\0';
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     SC_LOG(msg);
   }
 
@@ -529,13 +531,13 @@ static uint8_t radio_comm_send_program(uint8_t dry_run)
         chMtxLock(&radio_comm_mtx);
         radio_comm_buf_i = 0;
         radio_comm_buf_expected = 0;
-        chMtxUnlock();
+        chMtxUnlock(&radio_comm_mtx);
 
         // Send data block
         sc_uart_send_msg(SC_UART_2, buf, buf_len);
 
         // Wait for reply
-        if (chBSemWaitTimeout(&radio_comm_sem, 1000) != RDY_OK) {
+        if (chBSemWaitTimeout(&radio_comm_sem, 1000) != MSG_OK) {
           SC_DBG("RADIO DEBUG: time out\r\n");
           continue;
         }
@@ -548,13 +550,13 @@ static uint8_t radio_comm_send_program(uint8_t dry_run)
         chMtxLock(&radio_comm_mtx);
         radio_comm_buf_i = 0;
         radio_comm_buf_expected = 0;
-        chMtxUnlock();
+        chMtxUnlock(&radio_comm_mtx);
 
         // Verify CRC
         sc_uart_send_msg(SC_UART_2, check_crc, sizeof(check_crc));
 
         // Wait for reply
-        if (chBSemWaitTimeout(&radio_comm_sem, 1000) != RDY_OK) {
+        if (chBSemWaitTimeout(&radio_comm_sem, 1000) != MSG_OK) {
           SC_DBG("RADIO DEBUG: time out\r\n");
           continue;
         }
@@ -819,7 +821,7 @@ void sc_radio_process_byte(uint8_t byte)
   case SC_RADIO_STATE_FLASH_SYNC_UART_READY:
     // Flashing radio
 
-    chDbgAssert(radio_comm_buf_i < SC_RADIO_COMM_BUF_LEN, "Radio comm buffer full", "#1");
+    chDbgAssert(radio_comm_buf_i < SC_RADIO_COMM_BUF_LEN, "Radio comm buffer full");
 
     if (DEBUG_FLOOD) {
       uint8_t len;
@@ -836,7 +838,7 @@ void sc_radio_process_byte(uint8_t byte)
     if (radio_comm_buf_i == 0 && byte != 0x0) {
       // One byte error message from radio
       chBSemSignal(&radio_comm_sem);
-      chMtxUnlock();
+      chMtxUnlock(&radio_comm_mtx);
       break;
     }
 
@@ -875,11 +877,11 @@ void sc_radio_process_byte(uint8_t byte)
       // Buffer full
       chBSemSignal(&radio_comm_sem);
     }
-    chMtxUnlock();
+    chMtxUnlock(&radio_comm_mtx);
     break;
   default:
     // Unknown state
-    chDbgAssert(0, "Unknown Radio state", "#1");
+    chDbgAssert(0, "Unknown Radio state");
     break;
   }
 }

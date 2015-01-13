@@ -36,23 +36,23 @@
 MUTEX_DECL(cfg_mtx);
 
 static EXTConfig extcfg;
-static struct VirtualTimer vt;
+static virtual_timer_t vt;
 
-typedef struct _timer_t {
+typedef struct __sc_timer_t {
   uint8_t active;
   systime_t delay;
   ioportid_t port;
   expchannel_t channel;
   SC_EXTINT_EDGE mode;
-} timer_t;
-static timer_t debouncetimers[EXT_MAX_CHANNELS] = { {0, }, };
+} _sc_timer_t;
+static _sc_timer_t debouncetimers[EXT_MAX_CHANNELS] = { {0, }, };
 
 static void _extint_cb(EXTDriver *extp, expchannel_t channel)
 {
   (void)extp;
   msg_t msg;
 
-  chDbgAssert(channel < EXT_MAX_CHANNELS, "Channel number too large", "#1");
+  chDbgAssert(channel < EXT_MAX_CHANNELS, "Channel number too large");
 
   msg = sc_event_msg_create_extint(channel);
   sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
@@ -61,9 +61,9 @@ static void _extint_cb(EXTDriver *extp, expchannel_t channel)
 void delay_handler(void *arg)
 {
   msg_t msg;
-  timer_t *t = (timer_t *)arg;
+  _sc_timer_t *t = (_sc_timer_t *)arg;
 
-  chDbgAssert(t != NULL, "Delay triggered with NULL timer", "#1");
+  chDbgAssert(t != NULL, "Delay triggered with NULL timer");
 
   /* If the interrupt is requested in rising/falling edge, only send event
    * if the channel settled in state that matches requested mode.
@@ -89,15 +89,15 @@ static void _extint_debounce_cb(EXTDriver *extp, expchannel_t channel)
 {
   (void)extp;
 
-  chDbgAssert(channel < EXT_MAX_CHANNELS, "Channel number too large", "#1");
+  chDbgAssert(channel < EXT_MAX_CHANNELS, "Channel number too large");
 
-  chSysLockFromIsr();
+  chSysLockFromISR();
   if (debouncetimers[channel].active == 0) {
     debouncetimers[channel].active = 1;
     debouncetimers[channel].channel = channel;
     chVTSetI(&vt, MS2ST(debouncetimers[channel].delay), delay_handler, &debouncetimers[channel]);
   }
-  chSysUnlockFromIsr();
+  chSysUnlockFromISR();
 }
 
 
@@ -121,7 +121,7 @@ uint32_t _get_ext_from_port(ioportid_t port)
 #endif
 #undef GPIO2EXT
 
-  chDbgAssert(0, "Invalid port", "#1");
+  chDbgAssert(0, "Invalid port");
 
   return 0;
 }
@@ -154,12 +154,12 @@ void sc_extint_set_isr_cb(ioportid_t port,
 
   chMtxLock(&cfg_mtx);
 
-  chDbgAssert(pin < EXT_MAX_CHANNELS , "EXT pin number outside range", "#2");
+  chDbgAssert(pin < EXT_MAX_CHANNELS , "EXT pin number outside range");
   chDbgAssert(extcfg.channels[pin].cb == NULL,
-              "EXT pin already registered", "#2");
+              "EXT pin already registered");
   chDbgAssert(mode == EXT_CH_MODE_RISING_EDGE ||
               mode == EXT_CH_MODE_FALLING_EDGE ||
-              mode == EXT_CH_MODE_BOTH_EDGES, "Invalid edge mode", "#1");
+              mode == EXT_CH_MODE_BOTH_EDGES, "Invalid edge mode");
 
   for (i = 0; i < EXT_MAX_CHANNELS; ++i) {
     if (extcfg.channels[pin].cb != NULL) {
@@ -179,7 +179,7 @@ void sc_extint_set_isr_cb(ioportid_t port,
 
   extSetChannelMode(&EXTD1, pin, &cfg);
 
-  chMtxUnlock();
+  chMtxUnlock(&cfg_mtx);
 }
 
 
@@ -194,9 +194,9 @@ void sc_extint_clear(ioportid_t port, uint8_t pin)
 
   chMtxLock(&cfg_mtx);
 
-  chDbgAssert(pin < EXT_MAX_CHANNELS , "EXT pin number outside range", "#3");
+  chDbgAssert(pin < EXT_MAX_CHANNELS , "EXT pin number outside range");
   chDbgAssert(extcfg.channels[pin].cb != NULL,
-              "EXT pin cb not registered", "#3");
+              "EXT pin cb not registered");
 
   // FIXME: should check that port matches as well?
 
@@ -216,7 +216,7 @@ void sc_extint_clear(ioportid_t port, uint8_t pin)
     extStop(&EXTD1);
   }
 
-  chMtxUnlock();
+  chMtxUnlock(&cfg_mtx);
 }
 
 

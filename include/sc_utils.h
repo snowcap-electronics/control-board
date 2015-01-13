@@ -30,7 +30,6 @@
 #define SC_UTILS_H
 
 // ChibiOS includes
-#include "ch.h"
 #include "hal.h"
 #include "sc_conf.h"
 

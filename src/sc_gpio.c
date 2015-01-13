@@ -91,11 +91,11 @@ void sc_gpio_deinit(void)
 void sc_gpio_on(uint8_t gpio)
 {
   if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
-    chDbgAssert(0, "GPIO pin outside range", "#1");
+    chDbgAssert(0, "GPIO pin outside range");
     return;
   }
   if (!gpio_list[gpio].valid) {
-    chDbgAssert(0, "GPIO pin not valid", "#1");
+    chDbgAssert(0, "GPIO pin not valid");
     return;
   }
 
@@ -110,11 +110,11 @@ void sc_gpio_on(uint8_t gpio)
 void sc_gpio_off(uint8_t gpio)
 {
   if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
-    chDbgAssert(0, "GPIO pin outside range", "#2");
+    chDbgAssert(0, "GPIO pin outside range");
     return;
   }
   if (!gpio_list[gpio].valid) {
-    chDbgAssert(0, "GPIO pin not valid", "#2");
+    chDbgAssert(0, "GPIO pin not valid");
     return;
   }
 
@@ -129,11 +129,11 @@ void sc_gpio_off(uint8_t gpio)
 void sc_gpio_toggle(uint8_t gpio)
 {
   if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
-    chDbgAssert(0, "GPIO pin outside range", "#3");
+    chDbgAssert(0, "GPIO pin outside range");
     return;
   }
   if (!gpio_list[gpio].valid) {
-    chDbgAssert(0, "GPIO pin not valid", "#3");
+    chDbgAssert(0, "GPIO pin not valid");
     return;
   }
 
@@ -166,11 +166,11 @@ void sc_gpio_set_state_all(uint8_t gpios)
 uint8_t sc_gpio_state(uint8_t gpio)
 {
   if (gpio == 0 || gpio > SC_GPIO_MAX_PINS) {
-    chDbgAssert(0, "GPIO pin outside range", "#4");
+    chDbgAssert(0, "GPIO pin outside range");
     return 0;
   }
   if (!gpio_list[gpio].valid) {
-    chDbgAssert(0, "GPIO pin not valid", "#4");
+    chDbgAssert(0, "GPIO pin not valid");
     return 0;
   }
 

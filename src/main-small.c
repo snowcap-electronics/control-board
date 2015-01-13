@@ -48,7 +48,7 @@ int main(void)
     sc_led_toggle();
 
 #if CH_NO_IDLE_THREAD
-    chDbgAssert(0, "Can't call chThdSleepMilliseconds() without idle thread", "#1");
+    chDbgAssert(0, "Can't call chThdSleepMilliseconds() without idle thread");
 #endif
     chThdSleepMilliseconds(1000);
   }

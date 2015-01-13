@@ -43,16 +43,18 @@ static sc_float magn[3];
 static sc_float gyro[3];
 static uint32_t ts;
 
-static Mutex data_mtx;
-static Thread * sc_9dof_thread_ptr;
+static mutex_t data_mtx;
+static thread_t * sc_9dof_thread_ptr;
 
-static WORKING_AREA(sc_9dof_thread, 512);
-static msg_t sc9dofThread(void *UNUSED(arg))
+static THD_WORKING_AREA(sc_9dof_thread, 512);
+THD_FUNCTION(sc9dofThread, arg)
 {
   sc_float tmp_acc[3]  = {0, 0, 0};
   sc_float tmp_magn[3] = {0, 0, 0};
   sc_float tmp_gyro[3] = {0, 0, 0};
   msg_t drdy;
+
+  (void)arg;
 
   chRegSetThreadName(__func__);
 
@@ -62,7 +64,7 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 #elif defined(SC_HAS_LSM9DS0)
   sc_lsm9ds0_init();
 #else
-  chDbgAssert(0, "No 9dof drivers included in the build", "#1");
+  chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
 
   while (running) {
@@ -75,16 +77,15 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 #elif defined(SC_HAS_LSM9DS0)
     sc_lsm9ds0_read(tmp_acc, tmp_magn, tmp_gyro);
 #else
-    chDbgAssert(0, "No 9dof drivers included in the build", "#3");
+    chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
 
     chMtxLock(&data_mtx);
     memcpy(acc,  tmp_acc,  sizeof(tmp_acc));
     memcpy(magn, tmp_magn, sizeof(tmp_magn));
     memcpy(gyro, tmp_gyro, sizeof(tmp_gyro));
-    chDbgAssert(CH_FREQUENCY == 1000, "Assuming ChTimeNow() returns milliseconds", "#1");
-    ts   = chTimeNow();
-    chMtxUnlock();
+    ts = ST2MS(chVTGetSystemTime());
+    chMtxUnlock(&data_mtx);
 
     // Create and send data ready notification
     drdy = sc_event_msg_create_type(SC_EVENT_TYPE_9DOF_AVAILABLE);
@@ -96,7 +97,7 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 #elif defined(SC_HAS_LSM9DS0)
   sc_lsm9ds0_shutdown();
 #else
-  chDbgAssert(0, "No 9dof drivers included in the build", "#2");
+  chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
 
   return 0;
@@ -106,11 +107,11 @@ static msg_t sc9dofThread(void *UNUSED(arg))
 void sc_9dof_init(void)
 {
   if (running == 1) {
-    chDbgAssert(0, "9DoF already running", "#1");
+    chDbgAssert(0, "9DoF already running");
     return;
   }
 
-  chMtxInit(&data_mtx);
+  chMtxObjectInit(&data_mtx);
   running = 1;
 
   sc_9dof_thread_ptr = chThdCreateStatic(sc_9dof_thread,
@@ -125,7 +126,7 @@ void sc_9dof_init(void)
 void sc_9dof_shutdown(void)
 {
   if (running == 0) {
-    chDbgAssert(0, "9DoF not running", "#1");
+    chDbgAssert(0, "9DoF not running");
     return;
   }
 
@@ -143,7 +144,7 @@ void sc_9dof_get_data(uint32_t *ret_ts,
                       sc_float *ret_gyro)
 {
   if (running == 0) {
-    chDbgAssert(0, "9DoF not running", "#2");
+    chDbgAssert(0, "9DoF not running");
     return;
   }
 
@@ -152,7 +153,7 @@ void sc_9dof_get_data(uint32_t *ret_ts,
   memcpy(ret_acc,  acc, sizeof(acc));
   memcpy(ret_magn, magn, sizeof(magn));
   memcpy(ret_gyro, gyro, sizeof(gyro));
-  chMtxUnlock();
+  chMtxUnlock(&data_mtx);
 }
 
 #endif // SC_USE_9DOF

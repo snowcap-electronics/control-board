@@ -47,7 +47,7 @@ static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
 static systime_t adc_latest_ts = 0;
 static uint16_t interval_ms;
-static Mutex adc_mtx;
+static mutex_t adc_mtx;
 
 static ADCConversionGroup convCfg = {
   /* Circular buffer mode */
@@ -79,11 +79,13 @@ static ADCConversionGroup convCfg = {
 /*
  * Setup a adc conversion thread
  */
-static WORKING_AREA(temp_thread, 256);
-static msg_t tempThread(void *UNUSED(arg))
+static THD_WORKING_AREA(temp_thread, 256);
+THD_FUNCTION(tempThread, arg)
 {
   msg_t msg;
   systime_t last_conversion_time;
+
+  (void)arg;
 
   chRegSetThreadName(__func__);
 
@@ -100,7 +102,7 @@ static msg_t tempThread(void *UNUSED(arg))
   adcSTM32EnableTSVREFE();
 #endif
 
-  last_conversion_time = chTimeNow();
+  last_conversion_time = ST2MS(chVTGetSystemTime());
 
   while (thread_run) {
     msg_t retval;
@@ -111,13 +113,13 @@ static msg_t tempThread(void *UNUSED(arg))
 
     // Do a temperature conversion once per interval
     last_conversion_time += MS2ST(interval_ms);
-    time_now = chTimeNow();
-    chDbgAssert(last_conversion_time > time_now, "Too slow ADC for specified interval", "#1");
+    time_now = ST2MS(chVTGetSystemTime());
+    chDbgAssert(last_conversion_time > time_now, "Too slow ADC for specified interval");
 
     chThdSleepUntil(last_conversion_time);
 
     retval = adcConvert(&ADCDX, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
-    if (retval != RDY_OK) {
+    if (retval != MSG_OK) {
       continue;
     }
 
@@ -134,8 +136,8 @@ static msg_t tempThread(void *UNUSED(arg))
       adc_latest[ch] = (uint16_t)(total_adc[ch] >> SC_ADC_BUFFER_DEPTH_BITS);
     }
 
-    adc_latest_ts = last_conversion_time;
-    chMtxUnlock();
+    adc_latest_ts = ST2MS(last_conversion_time);
+    chMtxUnlock(&adc_mtx);
 
     // Announce that new ADC data is available
     sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
@@ -166,7 +168,7 @@ void sc_temp_thread_init(void)
 
 void sc_adc_init(void)
 {
-  chMtxInit(&adc_mtx);
+  chMtxObjectInit(&adc_mtx);
 }
 
 
@@ -198,7 +200,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   convCfg.sqr1 = ADC_SQR1_NUM_CH(channels);
 
   if (channels < 1 || channels > 4) {
-    chDbgAssert(0, "Invalid amount of channels", "#1");
+    chDbgAssert(0, "Invalid amount of channels");
     return;
   }
 
@@ -254,7 +256,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   }
 #else
   (void)sample_time;
-  chDbgAssert(0, BOARD_NAME " is not supported in ADC yet. Please fix this logic. ", "#1");
+  chDbgAssert(0, BOARD_NAME " is not supported in ADC yet. Please fix this logic. ");
 #endif
   /* Start a thread dedicated to ADC conversion */
   thread_run = TRUE;
@@ -276,7 +278,7 @@ void sc_adc_channel_get(uint16_t *channels, systime_t *ts)
     channels[ch] = adc_latest[ch];
   }
   *ts = adc_latest_ts;
-  chMtxUnlock();
+  chMtxUnlock(&adc_mtx);
 }
 
 #endif // HAL_USE_ADC

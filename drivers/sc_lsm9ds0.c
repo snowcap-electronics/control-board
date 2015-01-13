@@ -78,8 +78,8 @@
 
 static uint8_t i2cn_xm;
 static uint8_t i2cn_g;
-static BinarySemaphore lsm9ds0_drdy_sem;
-static Mutex data_mtx;
+static binary_semaphore_t lsm9ds0_drdy_sem;
+static mutex_t data_mtx;
 static uint8_t sensors_ready;
 
 #define SENSOR_RDY_ACC   0x1
@@ -103,17 +103,17 @@ static void lsm9ds0_drdy_cb(EXTDriver *extp, expchannel_t channel)
 	  rdy = SENSOR_RDY_GYRO;
     break;
   default:
-    chDbgAssert(0, "Invalid channel", "#1");
+    chDbgAssert(0, "Invalid channel");
     return;
   }
 
-  chSysLockFromIsr();
-  // No need to lock mutex inside chSysLockFromIsr()
+  chSysLockFromISR();
+  // No need to lock mutex inside chSysLockFromISR()
   sensors_ready |= rdy;
 
   chBSemSignalI(&lsm9ds0_drdy_sem);
 
-  chSysUnlockFromIsr();
+  chSysUnlockFromISR();
 }
 
 
@@ -124,8 +124,8 @@ void sc_lsm9ds0_init(void)
   int8_t i2c_n;
 
   sensors_ready = 0;
-  chMtxInit(&data_mtx);
-  chBSemInit(&lsm9ds0_drdy_sem, TRUE);
+  chMtxObjectInit(&data_mtx);
+  chBSemObjectInit(&lsm9ds0_drdy_sem, TRUE);
 
   // Pinmux
   palSetPadMode(SC_LSM9DS0_INT1_XM_PORT,
@@ -255,7 +255,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
     // WAR: read data if there hasn't been a data ready interrupt in a while
     {
       // FIXME: assuming here >>30Hz
-      now = chTimeNow();
+      now = ST2MS(chVTGetSystemTime());
       if (now - acc_read_last > 10) {
         sensors_ready |= SENSOR_RDY_ACC;
       }
@@ -281,7 +281,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
 
         chMtxLock(&data_mtx);
         sensors_ready &= ~SENSOR_RDY_ACC;
-        chMtxUnlock();
+        chMtxUnlock(&data_mtx);
         sensors_done |= SENSOR_RDY_ACC;
         acc_read_last = now;
       }
@@ -297,7 +297,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
 
         chMtxLock(&data_mtx);
         sensors_ready &= ~SENSOR_RDY_MAGN;
-        chMtxUnlock();
+        chMtxUnlock(&data_mtx);
         sensors_done |= SENSOR_RDY_MAGN;
         magn_read_last = now;
       }
@@ -313,7 +313,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
 
         chMtxLock(&data_mtx);
         sensors_ready &= ~SENSOR_RDY_GYRO;
-        chMtxUnlock();
+        chMtxUnlock(&data_mtx);
         sensors_done |= SENSOR_RDY_GYRO;
         gyro_read_last = now;
       }

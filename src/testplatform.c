@@ -24,13 +24,14 @@
  */
 #include "sc_utils.h"
 #ifdef TP_PB_PORT
+#if HAL_USE_PAL
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "testplatform.h"
 #include "sc_log.h"
 
-static Thread *tp_thread = NULL;
+static thread_t *tp_thread = NULL;
 static msg_t scTpThread(void *arg);
 static void block_tp_sync(uint8_t pulses);
 static void tp_sleep_ms(uint8_t ms);
@@ -43,8 +44,8 @@ MAILBOX_DECL(tp_mb, tp_mb_buffer, TP_MB_SIZE);
 
 
 
-static WORKING_AREA(sc_tp_thread, 256);
-static msg_t scTpThread(void *arg)
+static THD_WORKING_AREA(sc_tp_thread, 256);
+THD_FUNCTION(scTpThread, arg)
 {
   (void)arg;
 
@@ -53,7 +54,7 @@ static msg_t scTpThread(void *arg)
   // Make sure the pad is cleared
   palClearPad(TP_PB_PORT, TP_PB_PIN);
 
-  while(!chThdShouldTerminate()) {
+  while(!chThdShouldTerminateX()) {
     msg_t ret;
     msg_t msg;
 
@@ -61,12 +62,12 @@ static msg_t scTpThread(void *arg)
 
     ret = chMBFetch(&tp_mb, &msg, TIME_INFINITE);
 
-    if (chThdShouldTerminate()) {
+    if (chThdShouldTerminateX()) {
       break;
     }
 
-    SC_LOG_ASSERT(ret == RDY_OK, "chMBFetch failed");
-    if (ret != RDY_OK) {
+    SC_LOG_ASSERT(ret == MSG_OK, "chMBFetch failed");
+    if (ret != MSG_OK) {
       continue;
     }
 
@@ -79,7 +80,7 @@ static msg_t scTpThread(void *arg)
   // Make sure the pad is cleared
   palClearPad(TP_PB_PORT, TP_PB_PIN);
 
-  return RDY_OK;
+  return MSG_OK;
 }
 
 
@@ -130,7 +131,7 @@ void tp_sync(uint8_t pulses, bool block)
     block_tp_sync(pulses);
   } else {
     ret = chMBPost(&tp_mb, pulses, TIME_IMMEDIATE);
-    SC_LOG_ASSERT(ret == RDY_OK, "chMBPost failed");
+    SC_LOG_ASSERT(ret == MSG_OK, "chMBPost failed");
   }
 }
 
@@ -172,6 +173,7 @@ static void tp_sleep_ms(uint8_t ms)
 }
 
 
+#endif // HAL_USE_PAL
 #endif // TP_PB_PORT
 
 

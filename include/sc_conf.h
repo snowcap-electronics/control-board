@@ -29,7 +29,7 @@
 #ifndef SC_CONF_H
 #define SC_CONF_H
 
-#include "hal.h"
+#include "sc_utils.h"
 
 #ifndef sc_float
 #define sc_float float
