@@ -133,11 +133,27 @@ void sc_init(uint32_t subsystems)
     chDbgAssert(0, "HAL_USE_USB undefined");
 #endif
   }
+
+  if (subsystems & SC_MODULE_I2S) {
+#if HAL_USE_I2S
+    sc_i2s_init();
+#else
+    chDbgAssert(0, "HAL_USE_I2S undefined");
+#endif
+  }
 }
 
 
 void sc_deinit(uint32_t subsystems)
 {
+
+  if (subsystems & SC_MODULE_I2S) {
+#if HAL_USE_I2S
+    sc_i2s_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_I2S undefined");
+#endif
+  }
 
   if (subsystems & SC_MODULE_HID) {
 #if HAL_USE_USB

@@ -50,6 +50,7 @@
 #include "sc_radio.h"
 #include "sc_pwr.h"
 #include "sc_hid.h"
+#include "sc_i2s.h"
 
 #define SC_MODULE_UART1       (0x1 <<  1)
 #define SC_MODULE_UART2       (0x1 <<  2)
@@ -64,6 +65,7 @@
 #define SC_MODULE_LED         (0x1 << 11)
 #define SC_MODULE_RADIO       (0x1 << 12)
 #define SC_MODULE_HID         (0x1 << 13)
+#define SC_MODULE_I2S         (0x1 << 14)
 
 void sc_init(uint32_t subsystems);
 void sc_deinit(uint32_t subsystems);

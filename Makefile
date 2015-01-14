@@ -190,6 +190,7 @@ CSRC = $(PORTSRC) \
        src/sc_radio.c \
        src/sc_ahrs.c \
        src/sc_filter.c \
+       src/sc_i2s.c \
        src/sha1.c \
        src/nmea.c \
        src/slre.c \

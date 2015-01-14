@@ -93,6 +93,16 @@
 #define SC_UART1_RX_AF     7
 #endif
 
+#ifndef SC_I2S_CLK_PORT
+#define SC_I2S_CLK_PORT            GPIOB
+#define SC_I2S_CLK_PIN             GPIOB_CLK_IN
+#define SC_I2S_CLK_AF              5
+#define SC_I2S_DATA_PORT           GPIOC
+#define SC_I2S_DATA_PIN            GPIOC_PDM_OUT
+#define SC_I2S_DATA_AF             5
+#define I2SDX                      I2SD2
+#endif
+
 #ifdef SC_HAS_LIS302DL
 #define SC_LIS302DL_SPIN           SPID1
 #define SC_LIS302DL_CS_PORT        GPIOE
