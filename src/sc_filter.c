@@ -28,7 +28,13 @@
 
 #include "sc_utils.h"
 #include "sc_filter.h"
+#if SC_USE_FILTER_PDM_FIR
+#include "sc_filter_pdm_fir_coeff.h"
+#endif
 
+
+
+#if SC_USE_FILTER_ZERO_CALIBRATE
 void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16_t samples)
 {
   if (!state) {
@@ -64,9 +70,11 @@ sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_floa
 
   return x - state->offset;
 }
+#endif
 
 
 
+#if SC_USE_FILTER_BROWN_LINEAR_EXPO
 void sc_filter_brown_linear_expo_init(sc_filter_brown_linear_expo_state *state, sc_float factor)
 {
   if (!state) {
@@ -111,7 +119,60 @@ sc_float sc_filter_brown_linear_expo(sc_filter_brown_linear_expo_state *state, s
   // FIXME: should we consider time delta here, in case we have missed a measurement?
   return at + bt;
 }
+#endif
 
+
+
+#if SC_USE_FILTER_PDM_FIR
+void sc_filter_pdm_fir_init(sc_filter_pdm_fir_state *state)
+{
+	uint8_t t;
+
+  state->next_tap = 0;
+
+  for (t = 0; t < PDM_FTL_TAPS; ++t) {
+    state->buffer[t] = 0x5555;
+  }
+}
+
+
+
+void sc_filter_pdm_fir_put(sc_filter_pdm_fir_state *state, uint16_t bits)
+{
+	state->buffer[state->next_tap] = bits;
+
+  if (++state->next_tap >= PDM_FTL_TAPS) {
+    state->next_tap = 0;
+  }
+}
+
+
+
+int sc_filter_pdm_fir_get(sc_filter_pdm_fir_state *state, uint8_t out_bits)
+{
+  uint8_t t = state->next_tap;
+  uint16_t i = 0;
+	int tot = 0;
+
+  while (1) {
+
+    uint16_t v = state->buffer[t];
+
+    tot += byte_coeff[i++][(uint8_t)(v >> 8)];
+    tot += byte_coeff[i++][(uint8_t)(v)];
+
+    if (++t >= PDM_FTL_TAPS) {
+      t = 0;
+    }
+    if (t == state->next_tap) {
+      break;
+    }
+  }
+
+  /* Rescale to output range */
+  return tot >> (PDM_FTL_SCALE_BITS - out_bits + 1);
+}
+#endif
 
 
 /* Emacs indentatation information

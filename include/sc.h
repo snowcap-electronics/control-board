@@ -51,6 +51,7 @@
 #include "sc_pwr.h"
 #include "sc_hid.h"
 #include "sc_i2s.h"
+#include "sc_filter.h"
 
 #define SC_MODULE_UART1       (0x1 <<  1)
 #define SC_MODULE_UART2       (0x1 <<  2)
