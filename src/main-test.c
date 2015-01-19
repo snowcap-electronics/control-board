@@ -26,6 +26,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  */
+#define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc.h"
 
@@ -57,9 +58,8 @@ int main(void)
 
   // Loop forever waiting for callbacks
   while(1) {
-    uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    sc_uart_send_msg(SC_UART_LAST, msg, 9);
+    SC_LOG_PRINTF("d: ping\r\n");
   }
 
   return 0;
@@ -79,14 +79,17 @@ static void init(void)
     subsystems |= SC_MODULE_SDU;
   }
 
+  // Init ChibiOS
   halInit();
-  /* Initialize ChibiOS core */
   chSysInit();
 
   sc_init(subsystems);
 
   if (use_usb) {
     sc_uart_default_usb(TRUE);
+    sc_log_output_uart(SC_UART_USB);
+  } else {
+    sc_log_output_uart(SC_UART_1);
   }
 }
 
@@ -104,14 +107,11 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
 static void cb_button_changed(void)
 {
-  uint8_t msg[] = "d: button state: X\r\n";
   uint8_t button_state;
 
   button_state = palReadPad(GPIOA, GPIOA_BUTTON);
 
-  msg[17] = button_state + '0';
-
-  sc_uart_send_msg(SC_UART_LAST, msg, sizeof(msg));
+  SC_LOG_PRINTF("d: button state: %d\r\n", button_state);
 }
 #endif
 
