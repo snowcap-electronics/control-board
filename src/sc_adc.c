@@ -42,7 +42,7 @@
 /* How many samples to read before processing */
 #define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
-static msg_t tempThread(void *UNUSED(arg));
+static msg_t adcThread(void *UNUSED(arg));
 static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
 static systime_t adc_latest_ts = 0;
@@ -79,8 +79,8 @@ static ADCConversionGroup convCfg = {
 /*
  * Setup a adc conversion thread
  */
-static THD_WORKING_AREA(temp_thread, 256);
-THD_FUNCTION(tempThread, arg)
+static THD_WORKING_AREA(adc_thread, 1024);
+THD_FUNCTION(adcThread, arg)
 {
   msg_t msg;
   systime_t last_conversion_time;
@@ -111,10 +111,14 @@ THD_FUNCTION(tempThread, arg)
     adcsample_t samples[SC_ADC_MAX_CHANNELS * SC_ADC_BUFFER_DEPTH];
     systime_t time_now;
 
-    // Do a temperature conversion once per interval
+    // Do ADC conversion(s) once per interval
     last_conversion_time += MS2ST(interval_ms);
     time_now = ST2MS(chVTGetSystemTime());
-    chDbgAssert(last_conversion_time > time_now, "Too slow ADC for specified interval");
+
+    if (last_conversion_time < time_now) {
+      chDbgAssert(0, "Too slow ADC for specified interval");
+      last_conversion_time = time_now + MS2ST(1);
+    }
 
     chThdSleepUntil(last_conversion_time);
 
@@ -157,15 +161,6 @@ THD_FUNCTION(tempThread, arg)
 }
 
 
-/*
- * Start a temperature measuring thread
- */
-void sc_temp_thread_init(void)
-{
-  // Start a thread dedicated to user specific things
-  chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
-}
-
 void sc_adc_init(void)
 {
   chMtxObjectInit(&adc_mtx);
@@ -190,6 +185,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   for (c = 0; c < channels; ++c) {
     mask |= PAL_PORT_BIT(c);
   }
+  // FIXME: the pins should be in sc_conf.h
   palSetGroupMode(GPIOA, mask, 0, PAL_MODE_INPUT_ANALOG);
 #endif
 
@@ -260,7 +256,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
 #endif
   /* Start a thread dedicated to ADC conversion */
   thread_run = TRUE;
-  chThdCreateStatic(temp_thread, sizeof(temp_thread), NORMALPRIO, tempThread, NULL);
+  chThdCreateStatic(adc_thread, sizeof(adc_thread), NORMALPRIO, adcThread, NULL);
 }
 
 
