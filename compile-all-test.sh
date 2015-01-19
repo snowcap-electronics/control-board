@@ -3,6 +3,7 @@
 set -e
 
 CONFIGS="projects/*.mk"
+CORECOUNT=$(nproc)
 
 for cfg in projects/*.mk
 do
@@ -13,7 +14,7 @@ do
 
   echo "BUILDING PROJECT CONFIG $cfg"
   make SC_PROJECT_CONFIG=$cfg clean
-  make SC_PEDANTIC_COMPILER=1 SC_PROJECT_CONFIG=$cfg -j4
+  make SC_PEDANTIC_COMPILER=1 SC_PROJECT_CONFIG=$cfg -j$CORECOUNT
 
   if [ "$1" = "store" ]
   then
