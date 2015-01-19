@@ -79,7 +79,6 @@
 static uint8_t i2cn_xm;
 static uint8_t i2cn_g;
 static binary_semaphore_t lsm9ds0_drdy_sem;
-static mutex_t data_mtx;
 static uint8_t sensors_ready;
 
 #define SENSOR_RDY_ACC   0x1
@@ -108,7 +107,6 @@ static void lsm9ds0_drdy_cb(EXTDriver *extp, expchannel_t channel)
   }
 
   chSysLockFromISR();
-  // No need to lock mutex inside chSysLockFromISR()
   sensors_ready |= rdy;
 
   chBSemSignalI(&lsm9ds0_drdy_sem);
@@ -124,7 +122,6 @@ void sc_lsm9ds0_init(void)
   int8_t i2c_n;
 
   sensors_ready = 0;
-  chMtxObjectInit(&data_mtx);
   chBSemObjectInit(&lsm9ds0_drdy_sem, TRUE);
 
   // Pinmux
@@ -256,6 +253,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
     {
       // FIXME: assuming here >>30Hz
       now = ST2MS(chVTGetSystemTime());
+      chSysLock();
       if (now - acc_read_last > 10) {
         sensors_ready |= SENSOR_RDY_ACC;
       }
@@ -265,6 +263,7 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
       if (now - gyro_read_last > 10) {
         sensors_ready |= SENSOR_RDY_GYRO;
       }
+      chSysUnlock();
     }
 #endif
 
@@ -279,9 +278,9 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
             LSM9DS0_ACC_SENSITIVITY;
         }
 
-        chMtxLock(&data_mtx);
+        chSysLock();
         sensors_ready &= ~SENSOR_RDY_ACC;
-        chMtxUnlock(&data_mtx);
+        chSysUnlock();
         sensors_done |= SENSOR_RDY_ACC;
         acc_read_last = now;
       }
@@ -295,9 +294,9 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
             LSM9DS0_MAGN_SENSITIVITY;
         }
 
-        chMtxLock(&data_mtx);
+        chSysLock();
         sensors_ready &= ~SENSOR_RDY_MAGN;
-        chMtxUnlock(&data_mtx);
+        chSysUnlock();
         sensors_done |= SENSOR_RDY_MAGN;
         magn_read_last = now;
       }
@@ -311,9 +310,9 @@ void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
             LSM9DS0_GYRO_SENSITIVITY;
         }
 
-        chMtxLock(&data_mtx);
+        chSysLock();
         sensors_ready &= ~SENSOR_RDY_GYRO;
-        chMtxUnlock(&data_mtx);
+        chSysUnlock();
         sensors_done |= SENSOR_RDY_GYRO;
         gyro_read_last = now;
       }
