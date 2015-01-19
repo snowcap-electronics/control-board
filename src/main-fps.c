@@ -1,7 +1,7 @@
 /*
  * Light sensor based FPS counter
  *
- * Copyright 2011,2012 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
+ * Copyright 2011,2015 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
  *                     Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
@@ -44,6 +44,12 @@ LDR ohms on my 22" IPS monitor:
 - black xterm: 45k
 */
 
+/*
+ * Include support for F4 discovery microphone to detect A/V sync:
+ * https://www.youtube.com/watch?v=1MdDIS7Z0y8
+ */
+
+
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc.h"
@@ -51,22 +57,40 @@ LDR ohms on my 22" IPS monitor:
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+static void cb_audio_available(void);
+static sc_filter_pdm_fir_state pdm_state;
+#endif
+static uint32_t loudness = -1;
 
 int main(void)
 {
   halInit();
   /* Initialize ChibiOS core */
   chSysInit();
+  uint32_t subsystems =
+    SC_MODULE_UART1 |
+    SC_MODULE_PWM |
+    SC_MODULE_ADC |
+    SC_MODULE_GPIO |
+    SC_MODULE_LED;
 
   // Init SC framework, with USB if not F1 Discovery
-#if defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO);
-#else
-  sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_SDU | SC_MODULE_ADC | SC_MODULE_GPIO);
-  sc_uart_default_usb(TRUE);
+#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+  subsystems |= SC_MODULE_SDU;
 #endif
 
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+  subsystems |= SC_MODULE_I2S;
+  sc_filter_pdm_fir_init(&pdm_state);
+#endif
+
+  sc_init(subsystems);
+
+#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+  sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
+#endif
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -76,6 +100,11 @@ int main(void)
   // calculations etc. time consuming there, but not to sleep or block.
   sc_event_register_handle_byte(cb_handle_byte);
   sc_event_register_adc_available(cb_adc_available);
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+  sc_event_register_audio_available(cb_audio_available);
+  // Start reading PDM from F4 microphone
+  sc_i2s_start();
+#endif
 
   // Start periodic ADC readings
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
@@ -113,11 +142,46 @@ static void cb_adc_available(void)
   // Get ADC reading for light sensors
   sc_adc_channel_get(adc_value, &timestamp_ms);
 
-  SC_LOG_PRINTF("adc: %d, %d, %d\r\n", timestamp_ms, adc_value[0], adc_value[1]);
+  // Light values are read @ 1000Hz, audio detection runs @ 500Hz
+  SC_LOG_PRINTF("adc: %d, %d, %d, %d\r\n",
+                timestamp_ms, loudness, adc_value[0], adc_value[1]);
 }
 
 
+#if defined(BOARD_ST_STM32F4_DISCOVERY)
+static void cb_audio_available(void)
+{
+  uint16_t *data;
+  size_t len;
+  size_t i;
+  uint8_t pdm_i = 0;
+  uint32_t sum = 0;
 
+  data = sc_i2s_get_data(&len);
+
+  for (i = 0; i < len; ++i) {
+    sc_filter_pdm_fir_put(&pdm_state, data[i]);
+
+    // len == 128 x 16bits every 2ms with 1MHz PDM
+    // Convert after every 8th sample to PCM == 16x16 bits every 2ms == 8KHz
+    if (++pdm_i == 8) {
+      const uint8_t pcm_bits = 16;
+      int pcm_data_tmp;
+
+      pdm_i = 0;
+
+      pcm_data_tmp = sc_filter_pdm_fir_get(&pdm_state, pcm_bits);
+      if (pcm_data_tmp < 0) {
+        sum -= pcm_data_tmp;
+      } else {
+        sum += pcm_data_tmp;
+      }
+    }
+  }
+
+  loudness = sum >> 4;
+}
+#endif
 
 /* Emacs indentatation information
    Local Variables:
