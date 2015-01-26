@@ -182,14 +182,9 @@ void sc_pwm_stop(int pwm)
 	pwmDisableChannel(&PWMDX1, pwm - 1);
   }
 
-  if (pwm >= 5 && pwm <= 6) {
-	// Not enabled, do nothing
-	return;
-  }
-
-  if (pwm >= 7 && pwm <= 8) {
+  if (pwm >= 5 && pwm <= 8) {
 #ifdef PWMDX2
-	pwmDisableChannel(&PWMDX2, pwm - 7);
+	pwmDisableChannel(&PWMDX2, pwm - 5);
 #else
 	chDbgAssert(0, "PWMDX2 not defined");
 #endif
