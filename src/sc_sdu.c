@@ -368,7 +368,7 @@ static const SerialUSBConfig serusbcfg = {
 /*
  * Setup a working area with a stack for reading SDU messages
  */
-static THD_WORKING_AREA(sc_sdu_read_thread, 256);
+static THD_WORKING_AREA(sc_sdu_read_thread, 512);
 THD_FUNCTION(scSduReadThread, arg)
 {
   int retval;
