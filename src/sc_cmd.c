@@ -39,6 +39,7 @@ static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
 #endif
+static void parse_command_ping(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_power(uint8_t *cmd, uint8_t cmd_len);
@@ -92,6 +93,7 @@ void sc_cmd_init(void)
   sc_cmd_register('G', parse_command_gpio_all);
   sc_cmd_register('l', parse_command_led);
 #endif
+  sc_cmd_register('P', parse_command_ping);
 #if HAL_USE_PWM
   sc_cmd_register('p', parse_command_pwm);
 #endif
@@ -416,6 +418,22 @@ static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
   sc_gpio_set_state_all(gpios);
 }
 #endif
+
+
+
+/*
+ * Parse ping command
+ */
+static void parse_command_ping(uint8_t *cmd, uint8_t cmd_len)
+{
+  (void)cmd;
+  (void)cmd_len;
+
+  msg_t pingmsg;
+
+  pingmsg = sc_event_msg_create_type(SC_EVENT_TYPE_PING);
+  sc_event_msg_post(pingmsg, SC_EVENT_MSG_POST_FROM_NORMAL);
+}
 
 
 

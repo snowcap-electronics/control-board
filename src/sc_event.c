@@ -77,6 +77,7 @@ static sc_event_cb_extint         cb_extint[EXT_MAX_CHANNELS] = {NULL};
 
 static sc_event_cb_gsm_state_changed cb_gsm_state_changed = NULL;
 static sc_event_cb_gsm_cmd_done   cb_gsm_cmd_done = NULL;
+static sc_event_cb_ping           cb_ping = NULL;
 
 #if HAL_USE_ADC
 static sc_event_cb_adc_available  cb_adc_available = NULL;
@@ -152,6 +153,11 @@ static THD_FUNCTION(eventLoopThread, arg)
     case SC_EVENT_TYPE_GSM_CMD_DONE:
       if (cb_gsm_cmd_done != NULL) {
         cb_gsm_cmd_done();
+      }
+      break;
+    case SC_EVENT_TYPE_PING:
+      if (cb_ping != NULL) {
+        cb_ping();
       }
       break;
 #if HAL_USE_ADC
@@ -254,6 +260,7 @@ void sc_event_loop_stop(void)
 
   cb_gsm_state_changed = NULL;
   cb_gsm_cmd_done = NULL;
+  cb_ping = NULL;
 
 #if HAL_USE_ADC
   cb_adc_available = NULL;
@@ -388,6 +395,14 @@ void sc_event_register_gsm_state_changed(sc_event_cb_gsm_state_changed func)
 void sc_event_register_gsm_cmd_done(sc_event_cb_gsm_cmd_done func)
 {
   cb_gsm_cmd_done = func;
+}
+
+/*
+ * Register callback for external ping message
+ */
+void sc_event_register_ping(sc_event_cb_ping func)
+{
+  cb_ping = func;
 }
 
 #if HAL_USE_ADC
