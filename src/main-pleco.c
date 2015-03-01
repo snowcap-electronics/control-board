@@ -29,11 +29,18 @@
 
 #include "sc.h"
 
+#define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
+
+static void stop_engines(void);
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
+static void cb_ping(void);
+
+static systime_t last_ping = 0;
 
 int main(void)
 {
+  uint8_t loop_counter = 0;
   halInit();
   /* Initialize ChibiOS core */
   chSysInit();
@@ -44,6 +51,7 @@ int main(void)
 #else
   sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_SDU | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);
   sc_uart_default_usb(TRUE);
+  sc_log_output_uart(SC_UART_USB);
 #endif
 
   // Start event loop. This will start a new thread and return
@@ -54,6 +62,7 @@ int main(void)
   // calculations etc. time consuming there, but not to sleep or block.
   sc_event_register_handle_byte(cb_handle_byte);
   sc_event_register_adc_available(cb_adc_available);
+  sc_event_register_ping(cb_ping);
 
   // Start periodic ADC readings
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
@@ -65,12 +74,57 @@ int main(void)
 
   // Loop forever waiting for callbacks
   while(1) {
-    uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
-    chThdSleepMilliseconds(1000);
-    sc_uart_send_msg(SC_UART_LAST, msg, 9);
+    systime_t now;
+    chThdSleepMilliseconds(100);
+
+    if (++loop_counter == 10) {
+      SC_LOG_PRINTF("d: ping\r\n");
+      loop_counter = 0;
+    }
+
+    // Stop engines and start blinging lights for an error if no ping
+    // from host for 500 ms
+    now = ST2MS(chVTGetSystemTime());
+    if (last_ping > 0 && now > last_ping && now - last_ping > 500) {
+      stop_engines();
+      if (loop_counter % 2 == 0) {
+        sc_led_toggle();
+      }
+    }
+
   }
 
   return 0;
+}
+
+
+
+static void stop_engines(void)
+{
+#ifdef SC_PWM1_1_PIN
+  sc_pwm_stop(1);
+#endif
+#ifdef SC_PWM1_2_PIN
+  sc_pwm_stop(2);
+#endif
+#ifdef SC_PWM1_3_PIN
+  sc_pwm_stop(3);
+#endif
+#ifdef SC_PWM1_4_PIN
+  sc_pwm_stop(4);
+#endif
+#ifdef SC_PWM2_1_PIN
+  sc_pwm_stop(5);
+#endif
+#ifdef SC_PWM2_2_PIN
+  sc_pwm_stop(6);
+#endif
+#ifdef SC_PWM2_3_PIN
+  sc_pwm_stop(7);
+#endif
+#ifdef SC_PWM2_4_PIN
+  sc_pwm_stop(8);
+#endif
 }
 
 
@@ -151,6 +205,14 @@ static void cb_adc_available(void)
   sc_uart_send_msg(SC_UART_LAST, msg, len);
 
 }
+
+
+
+static void cb_ping(void)
+{
+  last_ping = ST2MS(chVTGetSystemTime());
+}
+
 
 
 /* Emacs indentatation information
