@@ -82,7 +82,7 @@ int main(void)
       loop_counter = 0;
     }
 
-    // Stop engines and start blinging lights for an error if no ping
+    // Stop engines and start blinking lights for an error if no ping
     // from host for 500 ms
     now = ST2MS(chVTGetSystemTime());
     if (last_ping > 0 && now > last_ping && now - last_ping > 500) {
