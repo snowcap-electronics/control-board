@@ -163,9 +163,9 @@ CSRC = $(PORTSRC) \
        $(OSALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
-       $(CHIBIOS)/os/various/memstreams.c \
+       $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
+       $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        $(CHIBIOS)/os/various/syscalls.c \
-       $(CHIBIOS)/os/various/chprintf.c \
        drivers/sc_lis302dl.c \
        drivers/sc_lsm9ds0.c \
        drivers/gsm.c \
@@ -224,10 +224,11 @@ TCPPSRC =
 # List ASM source files here
 ASMSRC = $(PORTASM)
 
-INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
+INCDIR = $(PORTINC) $(KERNINC) \
          $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
          $(CHIBIOS)/os/various \
          $(CHIBIOS)/os/hal/include \
+         $(CHIBIOS)/os/hal/lib/streams \
          config include
 
 #
