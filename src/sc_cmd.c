@@ -270,6 +270,10 @@ static void parse_command_pwm(uint8_t *cmd, uint8_t len)
   case '6':
   case '7':
   case '8':
+  case '9':
+  case 'a':
+  case 'b':
+  case 'c':
     parse_command_pwm_duty(cmd, len);
 	break;
   default:
@@ -305,8 +309,12 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
   int str_len;
   uint8_t str_duty[10];
 
-  // Parse the PWM number as integer
-  pwm = cmd[1] - '0';
+  // Parse the PWM number as hex
+  if (cmd[1] >= '0' && cmd[1] <= '9') {
+    pwm = cmd[1] - '0';
+  } else {
+    pwm = cmd[1] - 'a' + 10;
+  }
 
   // Check for stop command
   if (cmd[2] == 's') {
