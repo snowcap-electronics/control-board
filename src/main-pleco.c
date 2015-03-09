@@ -31,6 +31,10 @@
 
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
+#define PLECO_GPIO_HEAD_LIGHTS     5
+#define PLECO_GPIO_REAR_LIGHTS     6
+#define PLECO_PWM_GLOW             10
+
 static void stop_engines(void);
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
@@ -41,6 +45,8 @@ static systime_t last_ping = 0;
 int main(void)
 {
   uint8_t loop_counter = 0;
+  uint16_t glow[20] = {0,287,1114,2388,3960,5653,7270,8627,9568,9985,9830,9121,7939,6420,4738,3087,1654,606,62,0};
+
   halInit();
   /* Initialize ChibiOS core */
   chSysInit();
@@ -77,9 +83,8 @@ int main(void)
     systime_t now;
     chThdSleepMilliseconds(100);
 
-    if (++loop_counter == 10) {
+    if (loop_counter == 9 || loop_counter == 19) {
       SC_LOG_PRINTF("d: ping\r\n");
-      loop_counter = 0;
     }
 
     // Stop engines and start blinking lights for an error if no ping
@@ -89,9 +94,16 @@ int main(void)
       stop_engines();
       if (loop_counter % 2 == 0) {
         sc_led_toggle();
+        sc_gpio_toggle(PLECO_GPIO_HEAD_LIGHTS);
+        sc_gpio_toggle(PLECO_GPIO_REAR_LIGHTS);
       }
     }
 
+    sc_pwm_set_duty(PLECO_PWM_GLOW, glow[loop_counter]);
+
+    if (++loop_counter == 20) {
+      loop_counter = 0;
+    }
   }
 
   return 0;
