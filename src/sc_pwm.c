@@ -65,6 +65,7 @@ static PWMConfig pwmcfg1 = {
   0, // TIM BDTR (break & dead-time) register initialization data.
 };
 
+#ifdef PWMDX2
 static PWMConfig pwmcfg2 = {
   SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
   SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
@@ -95,7 +96,40 @@ static PWMConfig pwmcfg2 = {
   0, // TIM CR2 register initialization data
   0, // TIM BDTR (break & dead-time) register initialization data.
 };
+#endif
 
+#ifdef PWMDX3
+static PWMConfig pwmcfg3 = {
+  SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
+  SC_PWM_CLOCK / 10000, // 10 kHz initial frequency
+  NULL,              // No periodic callback.
+  {
+#ifdef SC_PWM3_1_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM3_2_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM3_3_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+#else
+    {PWM_OUTPUT_DISABLED, NULL},
+#endif
+#ifdef SC_PWM3_4_PIN
+    {PWM_OUTPUT_ACTIVE_HIGH, NULL}
+#else
+    {PWM_OUTPUT_DISABLED, NULL}
+#endif
+  },
+  // HW dependent part
+  0, // TIM CR2 register initialization data
+  0, // TIM BDTR (break & dead-time) register initialization data.
+};
+#endif
 
 /*
  * Initialize PWM
@@ -119,6 +153,10 @@ void sc_pwm_init(void)
   palSetPadMode(SC_PWM1_4_PORT, SC_PWM1_4_PIN, PAL_MODE_ALTERNATE(SC_PWM1_4_AF));
 #endif
 
+#ifdef PWMDX1
+  pwmStart(&PWMDX1, &pwmcfg1);
+#endif
+
 #ifdef SC_PWM2_1_PIN
   palSetPadMode(SC_PWM2_1_PORT, SC_PWM2_1_PIN, PAL_MODE_ALTERNATE(SC_PWM2_1_AF));
 #endif
@@ -135,12 +173,28 @@ void sc_pwm_init(void)
   palSetPadMode(SC_PWM2_4_PORT, SC_PWM2_4_PIN, PAL_MODE_ALTERNATE(SC_PWM2_4_AF));
 #endif
 
-#ifdef PWMDX1
-  pwmStart(&PWMDX1, &pwmcfg1);
-#endif
-
 #ifdef PWMDX2
   pwmStart(&PWMDX2, &pwmcfg2);
+#endif
+
+#ifdef SC_PWM3_1_PIN
+  palSetPadMode(SC_PWM3_1_PORT, SC_PWM3_1_PIN, PAL_MODE_ALTERNATE(SC_PWM3_1_AF));
+#endif
+
+#ifdef SC_PWM3_2_PIN
+  palSetPadMode(SC_PWM3_2_PORT, SC_PWM3_2_PIN, PAL_MODE_ALTERNATE(SC_PWM3_2_AF));
+#endif
+
+#ifdef SC_PWM3_3_PIN
+  palSetPadMode(SC_PWM3_3_PORT, SC_PWM3_3_PIN, PAL_MODE_ALTERNATE(SC_PWM3_3_AF));
+#endif
+
+#ifdef SC_PWM3_4_PIN
+  palSetPadMode(SC_PWM3_4_PORT, SC_PWM3_4_PIN, PAL_MODE_ALTERNATE(SC_PWM3_4_AF));
+#endif
+
+#ifdef PWMDX3
+  pwmStart(&PWMDX3, &pwmcfg3);
 #endif
 }
 
@@ -155,6 +209,10 @@ void sc_pwm_deinit(void)
 #ifdef PWMDX2
   pwmStop(&PWMDX2);
 #endif
+
+#ifdef PWMDX3
+  pwmStop(&PWMDX3);
+#endif
 }
 
 
@@ -162,6 +220,7 @@ void sc_pwm_deinit(void)
 /*
  * Set frequency in Hz (e.g. 50 for standard servo/ESC, 400 for fast servo/ESC)
  */
+// FIXME: Need to be able to control this per PWMDX
 void sc_pwm_set_freq(uint16_t freq)
 {
   pwmChangePeriod(&PWMDX1, SC_PWM_CLOCK / freq);
@@ -189,6 +248,14 @@ void sc_pwm_stop(int pwm)
 	chDbgAssert(0, "PWMDX2 not defined");
 #endif
   }
+
+  if (pwm >= 9 && pwm <= 12) {
+#ifdef PWMDX3
+	pwmDisableChannel(&PWMDX3, pwm - 9);
+#else
+	chDbgAssert(0, "PWMDX3 not defined");
+#endif
+  }
 }
 
 
@@ -212,6 +279,14 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
   if (pwm >= 5 && pwm <= 8) {
 #ifdef PWMDX2
 	pwmEnableChannel(&PWMDX2, pwm - 5, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
+#else
+	chDbgAssert(0, "PWMDX2 not defined");
+#endif
+  }
+
+  if (pwm >= 9 && pwm <= 12) {
+#ifdef PWMDX3
+	pwmEnableChannel(&PWMDX3, pwm - 9, PWM_PERCENTAGE_TO_WIDTH(&PWMDX3, duty));
 #else
 	chDbgAssert(0, "PWMDX2 not defined");
 #endif
