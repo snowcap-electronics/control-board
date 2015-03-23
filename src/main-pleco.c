@@ -39,8 +39,10 @@ static void stop_engines(void);
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
 static void cb_ping(void);
+static void pleco_parse_glow(uint8_t *cmd, uint8_t cmd_len);
 
 static systime_t last_ping = 0;
+static uint8_t glow_enable = 0;
 
 int main(void)
 {
@@ -59,6 +61,8 @@ int main(void)
   sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
 #endif
+
+  sc_cmd_register('w', pleco_parse_glow);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -99,7 +103,9 @@ int main(void)
       }
     }
 
-    sc_pwm_set_duty(PLECO_PWM_GLOW, glow[loop_counter]);
+    if (glow_enable) {
+      sc_pwm_set_duty(PLECO_PWM_GLOW, glow[loop_counter]);
+    }
 
     if (++loop_counter == 20) {
       loop_counter = 0;
@@ -225,7 +231,25 @@ static void cb_ping(void)
   last_ping = ST2MS(chVTGetSystemTime());
 }
 
+/*
+ * Parse glow command
+ */
+static void pleco_parse_glow(uint8_t *cmd, uint8_t cmd_len)
+{
+  (void)cmd_len;
 
+  switch (cmd[1]) {
+  case '0':
+    glow_enable = 0;
+    break;
+  case '1':
+    glow_enable = 1;
+    break;
+  default:
+    // Invalid value, ignoring command
+	return;
+  }
+}
 
 /* Emacs indentatation information
    Local Variables:
