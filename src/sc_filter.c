@@ -38,8 +38,8 @@
 void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16_t samples)
 {
   if (!state) {
-	chDbgAssert(0, "Null state");
-	return;
+    chDbgAssert(0, "Null state");
+    return;
   }
 
   state->offset        = 0;
@@ -54,18 +54,18 @@ void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16
 sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_float x)
 {
   if (!state) {
-	chDbgAssert(0, "Null state");
-	return 0;
+    chDbgAssert(0, "Null state");
+    return 0;
   }
 
   if (!state->initialised) {
-	state->sum += x;
+    state->sum += x;
 
-	if (++state->samples == state->samples_total) {
-	  // CHECKME: assuming here that sum fits float
-	  state->offset = (sc_float)(state->sum / (sc_float)(state->samples_total));
-	  state->initialised = 1;
-	}
+    if (++state->samples == state->samples_total) {
+      // CHECKME: assuming here that sum fits float
+      state->offset = (sc_float)(state->sum / (sc_float)(state->samples_total));
+      state->initialised = 1;
+    }
   }
 
   return x - state->offset;
@@ -78,8 +78,8 @@ sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_floa
 void sc_filter_brown_linear_expo_init(sc_filter_brown_linear_expo_state *state, sc_float factor)
 {
   if (!state) {
-	chDbgAssert(0, "Null state");
-	return;
+    chDbgAssert(0, "Null state");
+    return;
   }
 
   state->s1          = 0;
@@ -96,15 +96,15 @@ sc_float sc_filter_brown_linear_expo(sc_filter_brown_linear_expo_state *state, s
   sc_float at, bt;
 
   if (!state) {
-	chDbgAssert(0, "Null state");
-	return 0;
+    chDbgAssert(0, "Null state");
+    return 0;
   }
 
   if (!state->initialised) {
-	state->s1 = x;
-	state->s2 = x;
-	state->initialised = 1;
-	return x;
+    state->s1 = x;
+    state->s2 = x;
+    state->initialised = 1;
+    return x;
   }
 
   a = state->a;
