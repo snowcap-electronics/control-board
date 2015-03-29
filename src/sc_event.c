@@ -207,8 +207,6 @@ static THD_FUNCTION(eventLoopThread, arg)
       break;
     }
   }
-
-  return MSG_OK;
 }
 
 

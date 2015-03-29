@@ -62,8 +62,8 @@ static uint8_t previous_full = SDU_MAX_SEND_BUFFERS - 1;
 
 static thread_t *sdu_send_thread = NULL;
 static thread_t *sdu_read_thread = NULL;
-static msg_t scSduReadThread(void *UNUSED(arg));
-static msg_t scSduSendThread(void *UNUSED(arg));
+static void scSduReadThread(void *UNUSED(arg));
+static void scSduSendThread(void *UNUSED(arg));
 
 /*
  * Endpoints to be used for USBDX.
@@ -417,8 +417,6 @@ THD_FUNCTION(scSduReadThread, arg)
       sc_uart_revc_usb_byte((uint8_t)retval);
     }
   }
-
-  return 0;
 }
 
 /*
@@ -456,8 +454,6 @@ THD_FUNCTION(scSduSendThread, arg)
                             &send_buf[previous_full][1],
                             send_buf[previous_full][0]);
   }
-
-  return 0;
 }
 
 

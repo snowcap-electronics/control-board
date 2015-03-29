@@ -42,7 +42,7 @@
 /* How many samples to read before processing */
 #define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
-static msg_t adcThread(void *UNUSED(arg));
+static void adcThread(void *UNUSED(arg));
 static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
 static systime_t adc_latest_ts = 0;
@@ -156,8 +156,6 @@ THD_FUNCTION(adcThread, arg)
   adcStop(&ADCDX);
 
   //FIXME: adcReleaseBus?
-
-  return 0;
 }
 
 

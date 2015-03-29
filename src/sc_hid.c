@@ -137,31 +137,6 @@
 #define HID_INPUT_DATA_VAR_REL	0x06
 
 
-/**
- * @brief   Helper macro for index values into descriptor strings.
- */
-#define USB_DESC_INDEX(i) ((uint8_t)(i))
-
-/**
- * @brief   Helper macro for byte values into descriptor strings.
- */
-#define USB_DESC_BYTE(b) ((uint8_t)(b))
-
-/**
- * @brief   Helper macro for word values into descriptor strings.
- */
-#define USB_DESC_WORD(w)                        \
-  (uint8_t)((w) & 255),                         \
-    (uint8_t)(((w) >> 8) & 255)
-
-/**
- * @brief   Helper macro for BCD values into descriptor strings.
- */
-#define USB_DESC_BCD(bcd)                       \
-  (uint8_t)((bcd) & 255),                       \
-    (uint8_t)(((bcd) >> 8) & 255)
-
-
 #define USB_DESC_HID(bcdHID, bCountryCode, bNumDescriptors, bDescriptorType, wDescriptorLength) \
   USB_DESC_BYTE(9),                                                     \
     USB_DESC_BYTE(USB_DESCRIPTOR_HID),                                  \
@@ -361,6 +336,15 @@ static const USBDescriptor hid_strings[] = {
 
 
 
+static uint16_t get_hword(uint8_t *p)
+{
+  uint16_t hw;
+
+  hw  = (uint16_t)*p++;
+  hw |= (uint16_t)*p << 8U;
+  return hw;
+}
+
 static bool hidRequestsHook(USBDriver *usbp)
 {
   const USBDescriptor *dp;
@@ -370,7 +354,7 @@ static bool hidRequestsHook(USBDriver *usbp)
     case USB_REQ_GET_DESCRIPTOR:
       dp = usbp->config->get_descriptor_cb(
                                            usbp, usbp->setup[3], usbp->setup[2],
-                                           usbFetchWord(&usbp->setup[4]));
+                                           get_hword(&usbp->setup[4]));
       if (dp == NULL)
         return FALSE;
       usbSetupTransfer(usbp, (uint8_t *)dp->ud_string, dp->ud_size, NULL);

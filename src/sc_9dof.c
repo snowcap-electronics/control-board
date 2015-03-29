@@ -99,8 +99,6 @@ THD_FUNCTION(sc9dofThread, arg)
 #else
   chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
-
-  return 0;
 }
 
 

@@ -161,7 +161,6 @@ THD_FUNCTION(scAhrsThread, arg)
     // Send data ready notification
     sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
   }
-  return 0;
 }
 
 

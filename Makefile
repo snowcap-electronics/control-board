@@ -103,64 +103,71 @@ CHIBIOS = ChibiOS
 
 ifeq ($(SC_BOARD),SC_SNOWCAP_V1)
 # STM32F2 not supported by Chibios v3 (currently, 2015-01-13)
-LDSCRIPT= $(PORTLD)/STM32F405xG.ld
+LDSCRIPT = $(STARTUPLD)/STM32F405xG.ld
 MCU = cortex-m4
 USE_FPU = hard
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 include $(CHIBIOS)/os/hal/hal.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 include boards/SNOWCAP_CONTROL_BOARD_V1/board.mk
-include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else ifeq ($(SC_BOARD),SC_SNOWCAP_STM32F4_V1)
-LDSCRIPT= $(PORTLD)/STM32F405xG.ld
+LDSCRIPT = $(STARTUPLD)/STM32F405xG.ld
 MCU = cortex-m4
 USE_FPU = hard
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 include $(CHIBIOS)/os/hal/hal.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 include boards/SNOWCAP_STM32F4_V1/board.mk
-include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else ifeq ($(SC_BOARD),SC_F4_DISCOVERY)
-LDSCRIPT= $(PORTLD)/STM32F407xG.ld
+LDSCRIPT = $(STARTUPLD)/STM32F407xG.ld
 MCU = cortex-m4
 USE_FPU = hard
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else ifeq ($(SC_BOARD),SC_F1_DISCOVERY)
-LDSCRIPT= $(PORTLD)/STM32F100xB.ld
+LDSCRIPT = $(STARTUPLD)/STM32F100xB.ld
 MCU = cortex-m3
 USE_FPU = no
-include $(CHIBIOS)/os/hal/boards/ST_STM32VL_DISCOVERY/board.mk
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f1xx.mk
+include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F1xx/platform.mk
+include $(CHIBIOS)/os/hal/boards/ST_STM32VL_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f1xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else ifeq ($(SC_BOARD),RT_C2)
-LDSCRIPT= $(PORTLD)/STM32F405xG.ld
+LDSCRIPT = $(STARTUPLD)/STM32F405xG.ld
 MCU = cortex-m4
 USE_FPU = hard
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 include $(CHIBIOS)/os/hal/hal.mk
-include boards/RT_C2/board.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include boards/RT_C2/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else
 $(error SC_BOARD not defined or unknown)
 endif
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
-CSRC = $(PORTSRC) \
+CSRC = $(STARTUPSRC) \
        $(KERNSRC) \
-       $(HALSRC) \
+       $(PORTSRC) \
        $(OSALSRC) \
+       $(HALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
        $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
@@ -222,10 +229,10 @@ TCSRC =
 TCPPSRC =
 
 # List ASM source files here
-ASMSRC = $(PORTASM)
+ASMSRC = $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR = $(PORTINC) $(KERNINC) \
-         $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
+INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC)\
+         $(HALINC) $(PLATFORMINC) $(BOARDINC) \
          $(CHIBIOS)/os/various \
          $(CHIBIOS)/os/hal/include \
          $(CHIBIOS)/os/hal/lib/streams \
