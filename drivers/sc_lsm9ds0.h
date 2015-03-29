@@ -33,7 +33,7 @@
 #define SC_LSM9DS0_H
 
 void sc_lsm9ds0_init(void);
-void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro);
+uint8_t sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro);
 void sc_lsm9ds0_shutdown(void);
 
 #endif

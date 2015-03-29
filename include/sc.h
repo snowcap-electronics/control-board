@@ -52,6 +52,7 @@
 #include "sc_hid.h"
 #include "sc_i2s.h"
 #include "sc_filter.h"
+#include "sc_ahrs.h"
 
 #define SC_MODULE_UART1       (0x1 <<  1)
 #define SC_MODULE_UART2       (0x1 <<  2)
@@ -67,6 +68,10 @@
 #define SC_MODULE_RADIO       (0x1 << 12)
 #define SC_MODULE_HID         (0x1 << 13)
 #define SC_MODULE_I2S         (0x1 << 14)
+
+#define SC_SENSOR_ACC         (0x1 <<  0)
+#define SC_SENSOR_MAGN        (0x1 <<  1)
+#define SC_SENSOR_GYRO        (0x1 <<  2)
 
 void sc_init(uint32_t subsystems);
 void sc_deinit(uint32_t subsystems);

@@ -28,6 +28,7 @@
 
 
 #include "sc_utils.h"
+#include "sc.h"
 #include "sc_lsm9ds0.h"
 #include "sc_i2c.h"
 #include "sc_extint.h"
@@ -55,6 +56,7 @@
 
 #define LSM9DS0_CTRL_REG0_XM       0x1F
 #define LSM9DS0_CTRL_REG1_XM       0x20
+#define LSM9DS0_CTRL_REG2_XM       0x21
 #define LSM9DS0_CTRL_REG3_XM       0x22
 #define LSM9DS0_CTRL_REG4_XM       0x23
 #define LSM9DS0_CTRL_REG5_XM       0x24
@@ -71,19 +73,97 @@
 
 // +-2 g: 0.061 mg/bit
 #define LSM9DS0_ACC_SENSITIVITY    (0.061 / 1000.0)
-// +-2 gauss: 0.08 mgauss/bit
-#define LSM9DS0_MAGN_SENSITIVITY   (0.08 / 1000.0)
+// +-4 gauss: 0.16 mgauss/bit
+#define LSM9DS0_MAGN_SENSITIVITY   (0.16 / 1000.0)
+// +-12 gauss: 0.48 mgauss/bit
+//#define LSM9DS0_MAGN_SENSITIVITY   (0.48 / 1000.0)
+// +-245 mdps: 8.75 mdps/bit
+#define LSM9DS0_GYRO_SENSITIVITY   (8.75 / 1000.0)
 // +-500 mdps: 17.50 mdps/bit
-#define LSM9DS0_GYRO_SENSITIVITY   (17.50 / 1000.0)
+//#define LSM9DS0_GYRO_SENSITIVITY   (17.50 / 1000.0)
+
+
+enum Ascale { // set of allowable accel full scale settings
+  AFS_2G = 0,
+  AFS_4G,
+  AFS_6G,
+  AFS_8G,
+  AFS_16G
+};
+
+enum Aodr { // set of allowable gyro sample rates
+  AODR_PowerDown = 0,
+  AODR_3_125Hz,
+  AODR_6_25Hz,
+  AODR_12_5Hz,
+  AODR_25Hz,
+  AODR_50Hz,
+  AODR_100Hz,
+  AODR_200Hz,
+  AODR_400Hz,
+  AODR_800Hz,
+  AODR_1600Hz
+};
+
+enum Abw { // set of allowable accewl bandwidths
+  ABW_773Hz = 0,
+  ABW_194Hz,
+  ABW_362Hz,
+  ABW_50Hz
+};
+
+enum Gscale { // set of allowable gyro full scale settings
+  GFS_245DPS = 0,
+  GFS_500DPS,
+  GFS_NoOp,
+  GFS_2000DPS
+};
+
+enum Godr { // set of allowable gyro sample rates
+  GODR_95Hz = 0,
+  GODR_190Hz,
+  GODR_380Hz,
+  GODR_760Hz
+};
+
+enum Gbw { // set of allowable gyro data bandwidths
+  GBW_low = 0, // 12.5 Hz at Godr = 95 Hz, 12.5 Hz at Godr = 190 Hz, 30 Hz  at Godr = 760 Hz
+  GBW_med,     // 25 Hz   at Godr = 95 Hz, 25 Hz   at Godr = 190 Hz, 35 Hz  at Godr = 760 Hz
+  GBW_high,    // 25 Hz   at Godr = 95 Hz, 50 Hz   at Godr = 190 Hz, 50 Hz  at Godr = 760 Hz
+  GBW_highest  // 25 Hz   at Godr = 95 Hz, 70 Hz   at Godr = 190 Hz, 100 Hz at Godr = 760 Hz
+};
+
+enum Mscale { // set of allowable mag full scale settings
+  MFS_2G = 0,
+  MFS_4G,
+  MFS_8G,
+  MFS_12G
+};
+
+enum Mres {
+  MRES_LowResolution = 0,
+  MRES_NoOp,
+  MRES_HighResolution
+};
+
+enum Modr { // set of allowable mag sample rates
+  MODR_3_125Hz = 0,
+  MODR_6_25Hz,
+  MODR_12_5Hz,
+  MODR_25Hz,
+  MODR_50Hz,
+  MODR_100Hz
+};
+
+enum Temp {
+  TEMP_Disable = 0,
+  TEMP_Enable
+};
 
 static uint8_t i2cn_xm;
 static uint8_t i2cn_g;
 static binary_semaphore_t lsm9ds0_drdy_sem;
 static uint8_t sensors_ready;
-
-#define SENSOR_RDY_ACC   0x1
-#define SENSOR_RDY_MAGN  0x2
-#define SENSOR_RDY_GYRO  0x4
 
 static void lsm9ds0_drdy_cb(EXTDriver *extp, expchannel_t channel)
 {
@@ -93,19 +173,18 @@ static void lsm9ds0_drdy_cb(EXTDriver *extp, expchannel_t channel)
 
   switch(channel) {
   case SC_LSM9DS0_INT1_XM_PIN:
-	  rdy = SENSOR_RDY_ACC;
+	  rdy = SC_SENSOR_ACC;
     break;
   case SC_LSM9DS0_INT2_XM_PIN:
-	  rdy = SENSOR_RDY_MAGN;
+	  rdy = SC_SENSOR_MAGN;
     break;
   case SC_LSM9DS0_DRDY_G_PIN:
-	  rdy = SENSOR_RDY_GYRO;
+	  rdy = SC_SENSOR_GYRO;
     break;
   default:
     chDbgAssert(0, "Invalid channel");
     return;
   }
-
   chSysLockFromISR();
   sensors_ready |= rdy;
 
@@ -174,6 +253,23 @@ void sc_lsm9ds0_init(void)
   // interrupts even if the chip was already running
   sc_lsm9ds0_shutdown();
 
+  // Setup and start gyro
+
+  // Enable gyro data ready interrupt
+  txbuf[0] = LSM9DS0_CTRL_REG3_G;
+  txbuf[1] = 0x08; //  I2_DRDY, gyroscope data ready
+  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
+
+  // Set gyro sensitivy
+  txbuf[0] = LSM9DS0_CTRL_REG4_G;
+  txbuf[1] = GFS_245DPS << 4;
+  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
+
+  // Enable gyroscope X,Y,Z with powerdown mode disabled
+  txbuf[0] = LSM9DS0_CTRL_REG1_G;
+  txbuf[1] = GODR_190Hz << 6 | GBW_low << 4 | 0x0F;
+  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
+
   // Configure INT1_XM as acc data ready
   txbuf[0] = LSM9DS0_CTRL_REG3_XM;
   txbuf[1] = 0x04; // P1_DRDYA
@@ -184,20 +280,22 @@ void sc_lsm9ds0_init(void)
   txbuf[1] = 0x04; // P2_DRDYM
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
-  // Enable 100Hz acc
+  // Enable acc
   txbuf[0] = LSM9DS0_CTRL_REG1_XM;
-  txbuf[1] = 0x67; // XEN + YEN + ZEN + 100Hz
+  txbuf[1] = AODR_200Hz << 4 | 0x07; // XEN + YEN + ZEN
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
-  // Configure 100Hz magn (and temperature)
+  txbuf[0] = LSM9DS0_CTRL_REG2_XM;
+  txbuf[1] = ABW_50Hz << 6 | AFS_2G << 3;
+  sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
+
+  // Configure magn and temperature
   txbuf[0] = LSM9DS0_CTRL_REG5_XM;
-  txbuf[1] = 0xF4; // High res, 100Hz, temp
-  //txbuf[1] = 0x94; // Low res, 100Hz, temp
+  txbuf[1] = TEMP_Enable << 7 | MRES_HighResolution << 5 | MODR_50Hz << 2;
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
-  // Configure full scale selection to 2 gauss
   txbuf[0] = LSM9DS0_CTRL_REG6_XM;
-  txbuf[1] = 0x00; // +- 2 gaus
+  txbuf[1] = MFS_4G << 5;
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
 
   // Enable magn in continuous conversion mode
@@ -209,115 +307,108 @@ void sc_lsm9ds0_init(void)
   txbuf[0] = LSM9DS0_INT_CTRL_REG_M;
   txbuf[1] = 0xE9; // XEN + YEN + ZEN + int + active high
   sc_i2c_write(i2cn_xm, txbuf, sizeof(txbuf));
-
-  // Setup and start gyro
-
-  // Enable gyro data ready interrupt
-  txbuf[0] = LSM9DS0_CTRL_REG3_G;
-  txbuf[1] = 0x08; //  I2_DRDY, gyroscope data ready
-  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
-
-  // Set gyro sensitivy to 500dps
-  txbuf[0] = LSM9DS0_CTRL_REG4_G;
-  txbuf[1] = 0x10; // FS0, 500 dps
-  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
-
-  // Enable gyroscope (95Hz with 25 cutoff (FIXME: what?))
-  txbuf[0] = LSM9DS0_CTRL_REG1_G;
-  txbuf[1] = 0x3F; // XEN + YEN + ZEN + PD + BW
-  sc_i2c_write(i2cn_g, txbuf, sizeof(txbuf));
 }
 
 
 
-void sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
+uint8_t sc_lsm9ds0_read(sc_float *acc, sc_float *magn, sc_float *gyro)
 {
   uint8_t txbuf[1];
   uint8_t rxbuf[6];
   uint8_t sensors_done = 0;
   uint8_t i;
-  const uint8_t all_done = SENSOR_RDY_ACC | SENSOR_RDY_MAGN | SENSOR_RDY_GYRO;
+  uint32_t now = 0;
 
   static uint32_t acc_read_last = 0;
   static uint32_t magn_read_last = 0;
   static uint32_t gyro_read_last = 0;
 
-  // Read all sensors at least once
-  while (sensors_done != all_done){
-    uint32_t now;
+  if (!sensors_ready) {
     // Wait for data ready signal
     chBSemWaitTimeout(&lsm9ds0_drdy_sem, 50);
+  }
 
 #ifdef SC_WAR_ISSUE_1
-    // WAR: read data if there hasn't been a data ready interrupt in a while
-    {
-      // FIXME: assuming here >>30Hz
-      now = ST2MS(chVTGetSystemTime());
-      chSysLock();
-      if (now - acc_read_last > 10) {
-        sensors_ready |= SENSOR_RDY_ACC;
-      }
-      if (now - magn_read_last > 10) {
-        sensors_ready |= SENSOR_RDY_MAGN;
-      }
-      if (now - gyro_read_last > 10) {
-        sensors_ready |= SENSOR_RDY_GYRO;
-      }
-      chSysUnlock();
+  // WAR: read data if there hasn't been a data ready interrupt in a while
+  {
+    // FIXME: assuming certain rates here
+    now = ST2MS(chVTGetSystemTime());
+    chSysLock();
+    if (now - acc_read_last > 100) {
+      sensors_ready |= SC_SENSOR_ACC;
     }
+    if (now - magn_read_last > 100) {
+      sensors_ready |= SC_SENSOR_MAGN;
+    }
+    if (now - gyro_read_last > 100) {
+      sensors_ready |= SC_SENSOR_GYRO;
+    }
+    chSysUnlock();
+  }
+#else
+  (void)acc_read_last;
+  (void)magn_read_last;
+  (void)gyro_read_last;
 #endif
 
-    while (sensors_ready && sensors_done != all_done) {
+  if (sensors_ready & SC_SENSOR_ACC) {
 
-      if (sensors_ready & SENSOR_RDY_ACC) {
-        txbuf[0] = LSM9DS0_OUT_X_L_A | LSM9DS0_SUBADDR_AUTO_INC_BIT;
-        sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
+    chSysLock();
+    sensors_ready &= ~SC_SENSOR_ACC;
+    chSysUnlock();
 
-        for (i = 0; i < 3; ++i) {
-          acc[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
-            LSM9DS0_ACC_SENSITIVITY;
-        }
+    txbuf[0] = LSM9DS0_OUT_X_L_A | LSM9DS0_SUBADDR_AUTO_INC_BIT;
+    sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
 
-        chSysLock();
-        sensors_ready &= ~SENSOR_RDY_ACC;
-        chSysUnlock();
-        sensors_done |= SENSOR_RDY_ACC;
-        acc_read_last = now;
-      }
-
-      if (sensors_ready & SENSOR_RDY_MAGN) {
-        txbuf[0] = LSM9DS0_OUT_X_L_M | LSM9DS0_SUBADDR_AUTO_INC_BIT;
-        sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
-
-        for (i = 0; i < 3; ++i) {
-          magn[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
-            LSM9DS0_MAGN_SENSITIVITY;
-        }
-
-        chSysLock();
-        sensors_ready &= ~SENSOR_RDY_MAGN;
-        chSysUnlock();
-        sensors_done |= SENSOR_RDY_MAGN;
-        magn_read_last = now;
-      }
-
-      if (sensors_ready & SENSOR_RDY_GYRO) {
-        txbuf[0] = LSM9DS0_OUT_X_L_G | LSM9DS0_SUBADDR_AUTO_INC_BIT;
-        sc_i2c_transmit(i2cn_g, txbuf, 1, rxbuf, 6);
-
-        for (i = 0; i < 3; ++i) {
-          gyro[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
-            LSM9DS0_GYRO_SENSITIVITY;
-        }
-
-        chSysLock();
-        sensors_ready &= ~SENSOR_RDY_GYRO;
-        chSysUnlock();
-        sensors_done |= SENSOR_RDY_GYRO;
-        gyro_read_last = now;
-      }
+    for (i = 0; i < 3; ++i) {
+      acc[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
+        LSM9DS0_ACC_SENSITIVITY;
     }
+
+    sensors_done |= SC_SENSOR_ACC;
+    acc_read_last = now;
   }
+
+  if (sensors_ready & SC_SENSOR_MAGN) {
+
+    chSysLock();
+    sensors_ready &= ~SC_SENSOR_MAGN;
+    chSysUnlock();
+
+    txbuf[0] = LSM9DS0_OUT_X_L_M | LSM9DS0_SUBADDR_AUTO_INC_BIT;
+    sc_i2c_transmit(i2cn_xm, txbuf, 1, rxbuf, 6);
+
+    for (i = 0; i < 3; ++i) {
+      magn[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
+        LSM9DS0_MAGN_SENSITIVITY;
+    }
+
+    // AHRS algorithm seems to assume that magnetometer's Z-axis is reversed
+    magn[2] *= -1;
+
+    sensors_done |= SC_SENSOR_MAGN;
+    magn_read_last = now;
+  }
+
+  if (sensors_ready & SC_SENSOR_GYRO) {
+
+    chSysLock();
+    sensors_ready &= ~SC_SENSOR_GYRO;
+    chSysUnlock();
+
+    txbuf[0] = LSM9DS0_OUT_X_L_G | LSM9DS0_SUBADDR_AUTO_INC_BIT;
+    sc_i2c_transmit(i2cn_g, txbuf, 1, rxbuf, 6);
+
+    for (i = 0; i < 3; ++i) {
+      gyro[i] = ((int16_t)(((uint16_t)rxbuf[2*i + 1]) << 8 | rxbuf[2*i])) *
+        LSM9DS0_GYRO_SENSITIVITY;
+    }
+
+    sensors_done |= SC_SENSOR_GYRO;
+    gyro_read_last = now;
+  }
+
+  return sensors_done;
 }
 
 

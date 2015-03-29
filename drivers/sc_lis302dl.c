@@ -28,6 +28,7 @@
 
 
 #include "sc_utils.h"
+#include "sc.h"
 #include "sc_lis302dl.h"
 #include "sc_spi.h"
 #include "sc_extint.h"
@@ -95,7 +96,7 @@ void sc_lis302dl_init(void)
 
 
 
-void sc_lis302dl_read(sc_float *acc)
+uint8_t sc_lis302dl_read(sc_float *acc)
 {
   uint8_t txbuf[2];
   uint8_t rxbuf[2];
@@ -122,6 +123,8 @@ void sc_lis302dl_read(sc_float *acc)
   txbuf[1] = 0xff;
   sc_spi_exchange(spin, txbuf, rxbuf, sizeof(rxbuf));
   acc[2] = rxbuf[1] * LIS302DL_SENSIVITY;
+
+  return SC_SENSOR_ACC;
 }
 
 

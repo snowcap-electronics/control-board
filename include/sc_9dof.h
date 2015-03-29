@@ -41,10 +41,10 @@ void sc_9dof_init(void);
 void sc_9dof_shutdown(void);
 
 /* Get timestamp and latest values. Use NULL for skipping any of the sensors */
-void sc_9dof_get_data(uint32_t *ts,
-                      sc_float *acc,
-                      sc_float *magn,
-                      sc_float *gyro);
+uint8_t sc_9dof_get_data(uint32_t *ts,
+                         sc_float *acc,
+                         sc_float *magn,
+                         sc_float *gyro);
 
 
 #endif

@@ -84,7 +84,7 @@ int main(void)
   chThdSleepMilliseconds(100);
 
   sc_9dof_init();
-  sc_ahrs_init(0.2);
+  sc_ahrs_init();
 
   // Loop forever waiting for callbacks
   while(1) {
@@ -163,13 +163,14 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 static void cb_9dof_available(void)
 {
   uint32_t ts;
-  sc_float acc[3];
-  sc_float magn[3];
-  sc_float gyro[3];
-  sc_float *sensors[3] = {acc, magn, gyro};
+  // Static so that old values are debug printed if new read didn't return data for a sensor
+  static sc_float acc[3];
+  static sc_float magn[3];
+  static sc_float gyro[3];
+  uint8_t sensors_read;
   static uint8_t warmup = 64;
 
-  sc_9dof_get_data(&ts, acc, magn, gyro);
+  sensors_read = sc_9dof_get_data(&ts, acc, magn, gyro);
 
   // FIXME: for some reason the initial values might contain
   // garbage. Ignore them. Why aren't they valid..?
@@ -178,27 +179,57 @@ static void cb_9dof_available(void)
     return;
   }
 
-  // Apply smoothing filter
-  if (1) {
-    uint8_t a, b;
+#if 1
+  // Apply smoothing filter for gyro
+  if (sensors_read & SC_SENSOR_GYRO) {
+    uint8_t a;
     for (a = 0; a < 3; ++a) {
-      for (b = 0; b < 3; ++b) {
-        // Test: only for gyro
-        if (a != 2)
-          continue;
-        sensors[a][b] = sc_filter_brown_linear_expo(&filter_state_smooth[a*3 + b], sensors[a][b]);
-      }
+      gyro[a] = sc_filter_brown_linear_expo(&filter_state_smooth[2*3 + a], gyro[a]);
     }
   }
+#endif
 
+#if 0
+  // Apply smoothing filter for magnetometer
+  if (sensors_read & SC_SENSOR_MAGN) {
+    uint8_t a;
+    for (a = 0; a < 3; ++a) {
+      magn[a] = sc_filter_brown_linear_expo(&filter_state_smooth[1*3 + a], magn[a]);
+    }
+  }
+#endif
+
+#if 1
   // Apply gyro zero level calibration
-  if (1) {
+  if (sensors_read & SC_SENSOR_GYRO) {
     uint8_t a;
     for (a = 0; a < 3; ++a) {
         gyro[a] = sc_filter_zero_calibrate(&filter_state_calibrate[a], gyro[a]);
     }
   }
+#endif
 
+#if 0
+  if (sensors_read & SC_SENSOR_MAGN) {
+    // Apply manually measured magn calibration
+    magn[0] -= -0.090;
+    magn[1] -= -0.036;
+    magn[2] -= -0.018;
+
+    magn[0] *= 1;
+    magn[1] *= 1.053;
+    magn[2] *= 1.048;
+  }
+#endif
+
+#if 1
+  if (sensors_read & SC_SENSOR_ACC) {
+    // Apply manually measured acc calibration
+    acc[0] -= -0.0821;
+    acc[1] -= -0.0129;
+    acc[2] -= -0.0478;
+  }
+#endif
   // Let's not do AHRS on F4 disco's accelerometer only. HID only.
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
 #if AHRS_USB_HID
@@ -219,7 +250,11 @@ static void cb_9dof_available(void)
   }
 #endif
 #else
-  sc_ahrs_push_9dof(ts, acc, magn, gyro);
+  if (sensors_read) {
+    sc_ahrs_push_9dof((sensors_read & SC_SENSOR_ACC)  ? acc  : NULL,
+                      (sensors_read & SC_SENSOR_GYRO) ? gyro : NULL,
+                      (sensors_read & SC_SENSOR_MAGN) ? magn : NULL);
+  }
 #endif
 
 #if 1
@@ -230,7 +265,6 @@ static void cb_9dof_available(void)
     if (++data_counter == 1) {
       data_counter = 0;
       sc_led_toggle();
-
       SC_LOG_PRINTF("9dof: %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n",
                     acc[0], acc[1], acc[2], magn[0], magn[1], magn[2], gyro[0], gyro[1], gyro[2]);
     }
@@ -300,7 +334,6 @@ static void cb_ahrs_available(void)
     // Let's print only every Nth data
     if (++data_counter == 1) {
       data_counter = 0;
-      sc_led_toggle();
 
       SC_LOG_PRINTF("ahrs: %d, %f, %f, %f\r\n", ts - old_ts, roll, pitch, yaw);
     }

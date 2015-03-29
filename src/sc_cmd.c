@@ -29,6 +29,11 @@
 
 #include "sc.h"
 
+#if SC_USE_AHRS
+static void parse_command_ahrs(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_ahrs_beta(uint8_t *cmd, uint8_t cmd_len);
+#endif
+
 #if HAL_USE_PWM
 static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
@@ -86,6 +91,10 @@ void sc_cmd_init(void)
 {
   chMtxObjectInit(&blob_mtx);
 
+#if SC_USE_AHRS
+  sc_cmd_register('A', parse_command_ahrs);
+  sc_cmd_register('B', parse_command_ahrs_beta);
+#endif
   sc_cmd_register('b', parse_command_blob);
   sc_cmd_register('c', parse_command_power);
 #if HAL_USE_PAL
@@ -343,6 +352,46 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 }
 #endif
 
+
+
+#if SC_USE_AHRS
+/*
+ * Parse AHRS start/stop command
+ */
+static void parse_command_ahrs(uint8_t *cmd, uint8_t cmd_len)
+{
+
+  (void)cmd_len;
+
+  switch (cmd[1]) {
+  case '0':
+    sc_ahrs_shutdown();
+    break;
+  case '1':
+    sc_ahrs_init();
+    break;
+  default:
+    // Invalid value, ignoring command
+	return;
+  }
+}
+
+/*
+ * Parse AHRS beta value command as 100x
+ */
+static void parse_command_ahrs_beta(uint8_t *cmd, uint8_t cmd_len)
+{
+  sc_float beta;
+
+  (void)cmd_len;
+
+  beta = (sc_atoi(&cmd[1], cmd_len - 1))/100.0f;
+
+  sc_ahrs_set_beta(beta);
+}
+
+
+#endif
 
 
 #if HAL_USE_PAL

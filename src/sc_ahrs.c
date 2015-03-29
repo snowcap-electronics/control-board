@@ -31,26 +31,37 @@
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc_utils.h"
-#include "sc_event.h"
-#include "sc_9dof.h"
-#include "sc_ahrs.h"
-#include "sc_log.h"
+#include "sc.h"
 
 #include <string.h>       // memcpy
 #include <math.h>         // atan2 etc.
 
 #ifdef SC_USE_AHRS
 
+// From: https://github.com/kriswiner/LSM9DS0/blob/master/Teensy3.1/LSM9DS0-MS5637/LSM9DS0_MS5637_Mini_Add_On.ino
+// global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
+#define GYRO_ERROR_DEG   40.0f                          // gyroscope measurement error in degs/s (start at 40 deg/s)
+#define GYRO_MEAS_ERROR  (M_PI * (GYRO_ERROR_DEG / 180.0f)) // gyroscope measurement error in rads/s
+// There is a tradeoff in the beta parameter between accuracy and response speed.
+// In the original Madgwick study, beta of 0.041 (corresponding to GyroMeasError of 2.7 degrees/s) was found to give optimal accuracy.
+// However, with this value, the LSM9SD0 response time is about 10 seconds to a stable initial quaternion.
+// Subsequent changes also require a longish lag time to a stable output, not fast enough for a quadcopter or robot car!
+// By increasing beta (GyroMeasError) by about a factor of fifteen, the response time constant is reduced to ~2 sec
+// I haven't noticed any reduction in solution accuracy. This is essentially the I coefficient in a PID control sense;
+// the bigger the feedback coefficient, the faster the solution converges, usually at the expense of accuracy.
+// In any case, this is the free parameter in the Madgwick filtering and fusion scheme.
+// Actual beta calculated in sc_ahrs_init()
+
+#define AHRS_LOOP_INTERVAL_ST    (MS2ST(3))
+
 static mutex_t ahrs_mtx;
-static binary_semaphore_t ahrs_new_data_sem;
 
 static uint8_t running = 0;
-
-static uint32_t new_ts;
-static sc_float new_acc[3];
-static sc_float new_magn[3];
-static sc_float new_gyro[3];
-static uint32_t latest_ts = 0;
+static uint8_t initialised = 0;
+static sc_float new_acc[3] = {0, 0, 0};
+static sc_float new_magn[3] = {0, 0, 0};
+static sc_float new_gyro[3] = {0, 0, 0};
+static systime_t latest_ts = 0;
 static sc_float latest_roll = 0;
 static sc_float latest_pitch = 0;
 static sc_float latest_yaw = 0;
@@ -59,13 +70,16 @@ static sc_float beta;
 
 #ifdef SC_ALLOW_GPL
 // From MadgwickAHRS.[ch]
-static sc_float q0 = 1, q1 = 0, q2 = 0, q3 = 0; // quaternion of sensor frame relative to auxiliary frame
+static sc_float q[4] = {1, 0, 0, 0}; // quaternion of sensor frame relative to auxiliary frame
 static sc_float invSqrt(sc_float x);
 static void q_init(sc_float *acc, sc_float *magn);
-static void MadgwickAHRSupdate(sc_float dt,
-                               sc_float gx, sc_float gy, sc_float gz,
-                               sc_float ax, sc_float ay, sc_float az,
-                               sc_float mx, sc_float my, sc_float mz);
+
+static bool MadgwickAHRSupdate(sc_float dt,
+                               sc_float *gyro,
+                               sc_float *acc,
+                               sc_float *magn);
+static void reset_state(void);
+
 #endif
 
 static thread_t * sc_ahrs_thread_ptr;
@@ -74,7 +88,7 @@ static THD_WORKING_AREA(sc_ahrs_thread, 2048);
 THD_FUNCTION(scAhrsThread, arg)
 {
   msg_t drdy;
-  uint8_t initialised = 0;
+  systime_t last_ts = 0;
 
   (void)arg;
 
@@ -83,88 +97,87 @@ THD_FUNCTION(scAhrsThread, arg)
   // Create data ready notification
   drdy = sc_event_msg_create_type(SC_EVENT_TYPE_AHRS_AVAILABLE);
 
+  // FIXME: Use shouldexit() etc.
   while (running) {
-    uint32_t ts;
+    systime_t ts;
     sc_float acc[3];
     sc_float magn[3];
     sc_float gyro[3];
     sc_float roll = 0, pitch = 0, yaw = 0;
     sc_float dt;
 
-    chBSemWait(&ahrs_new_data_sem);
+    // We don't need to run exactly at certain interval, so sleeping
+    // the same amount of ticks on every run is ok.
+    chThdSleep(AHRS_LOOP_INTERVAL_ST);
 
-    if (!running) {
-      return 0;
-    }
-
-    if (latest_ts == 0) {
-      latest_ts = new_ts;
-      continue;
-    }
-
-    // Copy global data for local handling.
+    // Copy global data for local handling. Not all of them contain necessarily new data
     chMtxLock(&ahrs_mtx);
-    ts = new_ts;
     memcpy(acc, new_acc, sizeof(new_acc));
     memcpy(magn, new_magn, sizeof(new_magn));
     memcpy(gyro, new_gyro, sizeof(new_gyro));
-    dt = (new_ts - latest_ts) / 1000.0;
     chMtxUnlock(&ahrs_mtx);
 
-#ifdef SC_ALLOW_GPL
-    // Should be rare cases, so just ignore values that would lead to NaN
-    if ((magn[0] == 0.0f && magn[1] == 0.0f && magn[2] == 0.0f) ||
-        (acc[0] == 0.0f && acc[1] == 0.0f && acc[2] == 0.0f)) {
+    // These should really rarely be exactly zero, so ignore cases where any of the sensors are just zeros
+    if ((acc[0]  == 0 && acc[1]  == 0 && acc[2]  == 0) ||
+        (magn[0] == 0 && magn[1] == 0 && magn[2] == 0) ||
+        (gyro[0] == 0 && gyro[1] == 0 && gyro[2] == 0)) {
       continue;
     }
 
+    ts = chVTGetSystemTime();
+
+#ifdef SC_ALLOW_GPL
+
     if (!initialised) {
-      q_init(acc, magn);
+      if (0) q_init(acc, magn);
+      last_ts = ts;
       initialised = 1;
+      continue;
     } else {
       // Degrees to radians
-      gyro[0] *= M_PI / 180.0;
-      gyro[1] *= M_PI / 180.0;
-      gyro[2] *= M_PI / 180.0;
+      gyro[0] *= M_PI / 180.0f;
+      gyro[1] *= M_PI / 180.0f;
+      gyro[2] *= M_PI / 180.0f;
 
-      // http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/
-      MadgwickAHRSupdate(dt,
-                         gyro[0], gyro[1], gyro[2],
-                         acc[0], acc[1], acc[2],
-                         magn[0], magn[1], magn[2]);
+      dt = ST2US(chVTTimeElapsedSinceX(last_ts)) / 1000000.0f;
+      last_ts = ts;
+      if (!MadgwickAHRSupdate(dt, gyro, acc, magn)) {
+        SC_LOG_PRINTF("error: %s\r\n", __func__);
+        reset_state();
+        continue;
+      }
     }
-
-    // http://stackoverflow.com/questions/11492299/quaternion-to-euler-angles-algorithm-how-to-convert-to-y-up-and-between-ha
-    // http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-    // Creative Commons Attribution-ShareAlike License
-    roll = (sc_float)atan2(2.0f * q1 * q0 + 2.0f * q2 * q3, 1 - 2.0f * (q3*q3  + q0*q0));
-    pitch = (sc_float)asin(2.0f * ( q1 * q3 - q0 * q2 ) );
-    yaw = (sc_float)atan2(2.0f * q1 * q2 + 2.0f * q3 * q0, 1 - 2.0f * (q2*q2 + q3*q3));
-
-    // Radians to degrees
-    yaw   *= 180 / M_PI;
-    pitch *= 180 / M_PI;
-    roll  *= 180 / M_PI;
 #else
     (void)dt;
     chDbgAssert(0, "Only GPL licensed AHRS supported currently");
 #endif
 
-    // Store latest values for later use
+    // https://github.com/kriswiner/LSM9DS0/blob/master/Teensy3.1/LSM9DS0-MS5637/LSM9DS0_MS5637_Mini_Add_On.ino#L537
+    yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+    pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+    roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+    if (!isnormal(yaw)) yaw = 0;
+    if (!isnormal(pitch)) pitch = 0;
+    if (!isnormal(roll)) roll = 0;
+    // Radians to degrees
+    yaw   *= 180 / M_PI;
+    pitch *= 180 / M_PI;
+    roll  *= 180 / M_PI;
+
     chMtxLock(&ahrs_mtx);
+    // Store latest values for later use
     latest_ts = ts;
-    latest_roll = roll;
-    latest_pitch = pitch;
     latest_yaw = yaw;
+    latest_pitch = pitch;
+    latest_roll = roll;
     chMtxUnlock(&ahrs_mtx);
 
-    // Send data ready notification
     sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
   }
 }
 
 
-void sc_ahrs_init(sc_float user_beta)
+void sc_ahrs_init(void)
 {
   if (running == 1) {
     chDbgAssert(0, "AHRS already running");
@@ -172,10 +185,9 @@ void sc_ahrs_init(sc_float user_beta)
   }
 
   chMtxObjectInit(&ahrs_mtx);
-  chBSemObjectInit(&ahrs_new_data_sem, TRUE);
 
   running = 1;
-  beta = user_beta;
+  beta = sqrt(3.0f / 4.0f) * GYRO_MEAS_ERROR;
 
   // Heavy math, setting low priority
   sc_ahrs_thread_ptr = chThdCreateStatic(sc_ahrs_thread,
@@ -196,18 +208,17 @@ void sc_ahrs_shutdown(void)
   }
 
   running = 0;
-  chBSemSignalI(&ahrs_new_data_sem);
 
   chThdWait(sc_ahrs_thread_ptr);
   sc_ahrs_thread_ptr = NULL;
+  reset_state();
 }
 
 
 
-void sc_ahrs_push_9dof(uint32_t ts,
-                       sc_float *acc,
-                       sc_float *magn,
-                       sc_float *gyro)
+void sc_ahrs_push_9dof(sc_float *acc,
+                       sc_float *gyro,
+                       sc_float *magn)
 {
   if (running == 0) {
     chDbgAssert(0, "AHRS not running");
@@ -215,13 +226,16 @@ void sc_ahrs_push_9dof(uint32_t ts,
   }
 
   chMtxLock(&ahrs_mtx);
-  new_ts = ts;
-  memcpy(new_acc, acc, sizeof(new_acc));
-  memcpy(new_magn, magn, sizeof(new_magn));
-  memcpy(new_gyro, gyro, sizeof(new_gyro));
+  if (acc) {
+    memcpy(new_acc, acc, sizeof(new_acc));
+  }
+  if (magn) {
+    memcpy(new_magn, magn, sizeof(new_magn));
+  }
+  if (gyro) {
+    memcpy(new_gyro, gyro, sizeof(new_gyro));
+  }
   chMtxUnlock(&ahrs_mtx);
-
-  chBSemSignal(&ahrs_new_data_sem);
 }
 
 
@@ -238,7 +252,7 @@ void sc_ahrs_get_orientation(uint32_t *ts,
   }
 
   chMtxLock(&ahrs_mtx);
-  *ts = latest_ts;
+  *ts = ST2MS(latest_ts);
   *roll = latest_roll;
   *pitch = latest_pitch;
   *yaw = latest_yaw;
@@ -249,14 +263,27 @@ void sc_ahrs_get_orientation(uint32_t *ts,
 
 #ifdef SC_ALLOW_GPL
 
-static void vector_normalise(sc_float *a)
+static bool vector_normalise(uint8_t n, sc_float *a)
 {
   sc_float recipNorm;
+  sc_float x;
 
-  recipNorm = invSqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+  x = a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
+  if (n == 4) {
+    x += (a[3] * a[3]);
+  }
+  recipNorm = invSqrt(x);
+  if (!isnormal(recipNorm) || recipNorm == 0.0f) {
+    return false;
+  }
+
   a[0] *= recipNorm;
   a[1] *= recipNorm;
   a[2] *= recipNorm;
+  if (n == 4) {
+    a[3] *= recipNorm;
+  }
+  return true;
 }
 
 // From http://sourceforge.net/p/ce10dofahrs/code/ci/b2f7428b98ba09953f4a2cfadd6e64960070b2ad/tree/vector.h#l125
@@ -281,9 +308,9 @@ static void q_init(sc_float acc[3], sc_float magn[3])
   vector_cross(down, magn, east);
   vector_cross(east, down, north);
 
-  vector_normalise(down);
-  vector_normalise(east);
-  vector_normalise(north);
+  if (!vector_normalise(3, down)) return;
+  if (!vector_normalise(3, east)) return;
+  if (!vector_normalise(3, north)) return;
 
   // (down, east, north) => (q0, q1, q2, q3)
   // From http://sourceforge.net/p/ce10dofahrs/code/ci/b2f7428b98ba09953f4a2cfadd6e64960070b2ad/tree/quaternion.h#l112
@@ -293,138 +320,141 @@ static void q_init(sc_float acc[3], sc_float magn[3])
     float S = 0.0;
     if (tr > 0) {
       S = sqrt(tr+1.0) * 2;
-      q0 = 0.25 * S;
-      q1 = (down[1] - east[2]) / S;
-      q2 = (north[2] - down[0]) / S;
-      q3 = (east[0] - north[1]) / S;
+      q[0] = 0.25 * S;
+      q[1] = (down[1] - east[2]) / S;
+      q[2] = (north[2] - down[0]) / S;
+      q[3] = (east[0] - north[1]) / S;
     } else if ((north[0] < east[1]) && (north[0] < down[2])) {
       S = sqrt(1.0 + north[0] - east[1] - down[2]) * 2;
-      q0 = (down[1] - east[2]) / S;
-      q1 = 0.25 * S;
-      q2 = (north[1] + east[0]) / S;
-      q3 = (north[2] + down[0]) / S;
+      q[0] = (down[1] - east[2]) / S;
+      q[1] = 0.25 * S;
+      q[2] = (north[1] + east[0]) / S;
+      q[3] = (north[2] + down[0]) / S;
     } else if (east[1] < down[2]) {
       S = sqrt(1.0 + east[1] - north[0] - down[2]) * 2;
-      q0 = (north[2] - down[0]) / S;
-      q1 = (north[1] + east[0]) / S;
-      q2 = 0.25 * S;
-      q3 = (east[2] + down[1]) / S;
+      q[0] = (north[2] - down[0]) / S;
+      q[1] = (north[1] + east[0]) / S;
+      q[2] = 0.25 * S;
+      q[3] = (east[2] + down[1]) / S;
     } else {
       S = sqrt(1.0 + down[2] - north[0] - east[1]) * 2;
-      q0 = (east[0] - north[1]) / S;
-      q1 = (north[2] + down[0]) / S;
-      q2 = (east[2] + down[1]) / S;
-      q3 = 0.25 * S;
+      q[0] = (east[0] - north[1]) / S;
+      q[1] = (north[2] + down[0]) / S;
+      q[2] = (east[2] + down[1]) / S;
+      q[3] = 0.25 * S;
     }
   }
 }
 
-// From http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/ (MadgwickAHRS.c)
-// Modified to use time stamps
-static void MadgwickAHRSupdate(sc_float dt,
-                               sc_float gx, sc_float gy, sc_float gz,
-                               sc_float ax, sc_float ay, sc_float az,
-                               sc_float mx, sc_float my, sc_float mz)
+// http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/
+// https://raw.githubusercontent.com/kriswiner/LSM9DS0/master/Teensy3.1/LSM9DS0-MS5637/quaternionFilters.ino
+static bool MadgwickAHRSupdate(sc_float dt,
+                               sc_float *gyro,
+                               sc_float *acc,
+                               sc_float *magn)
 {
-  sc_float recipNorm;
-  sc_float s0, s1, s2, s3;
+  sc_float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
+  sc_float hx, hy, _2bx, _2bz;
   sc_float qDot1, qDot2, qDot3, qDot4;
-  sc_float hx, hy;
-  sc_float _2q0mx, _2q0my, _2q0mz, _2q1mx, _2bx, _2bz, _4bx, _4bz, _8bx, _8bz;
-  sc_float _2q0, _2q1, _2q2, _2q3, q0q0, q0q1, q0q2, q0q3;
-  sc_float q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
+  sc_float ax, ay, az;
+  sc_float mx, my, mz;
+  sc_float gx, gy, gz;
+  sc_float s[4];
 
-  // Rate of change of quaternion from gyroscope
-  qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
-  qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy);
-  qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx);
-  qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx);
+  // Auxiliary variables to avoid repeated arithmetic
+  sc_float _2q1mx;
+  sc_float _2q1my;
+  sc_float _2q1mz;
+  sc_float _2q2mx;
+  sc_float _4bx;
+  sc_float _4bz;
+  sc_float _2q1 = 2.0f * q1;
+  sc_float _2q2 = 2.0f * q2;
+  sc_float _2q3 = 2.0f * q3;
+  sc_float _2q4 = 2.0f * q4;
+  sc_float _2q1q3 = 2.0f * q1 * q3;
+  sc_float _2q3q4 = 2.0f * q3 * q4;
+  sc_float q1q1 = q1 * q1;
+  sc_float q1q2 = q1 * q2;
+  sc_float q1q3 = q1 * q3;
+  sc_float q1q4 = q1 * q4;
+  sc_float q2q2 = q2 * q2;
+  sc_float q2q3 = q2 * q3;
+  sc_float q2q4 = q2 * q4;
+  sc_float q3q3 = q3 * q3;
+  sc_float q3q4 = q3 * q4;
+  sc_float q4q4 = q4 * q4;
 
-  if(1) {
+  if (!vector_normalise(3, acc)) return false;
+  if (!vector_normalise(3, magn)) return false;
 
-    // Normalise accelerometer measurement
-    recipNorm = invSqrt(ax * ax + ay * ay + az * az);
-    ax *= recipNorm;
-    ay *= recipNorm;
-    az *= recipNorm;
+  ax = acc[0];
+  ay = acc[1];
+  az = acc[2];
+  mx = magn[0];
+  my = magn[1];
+  mz = magn[2];
+  gx = gyro[0];
+  gy = gyro[1];
+  gz = gyro[2];
 
-    // Normalise magnetometer measurement
-    recipNorm = invSqrt(mx * mx + my * my + mz * mz);
-    mx *= recipNorm;
-    my *= recipNorm;
-    mz *= recipNorm;
+  // Reference direction of Earth's magnetic field
+  _2q1mx = 2.0f * q1 * mx;
+  _2q1my = 2.0f * q1 * my;
+  _2q1mz = 2.0f * q1 * mz;
+  _2q2mx = 2.0f * q2 * mx;
+  hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3 - mx * q4q4;
+  hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
+  _2bx = sqrt(hx * hx + hy * hy);
+  _2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3 + mz * q4q4;
+  _4bx = 2.0f * _2bx;
+  _4bz = 2.0f * _2bz;
 
-    // Auxiliary variables to avoid repeated arithmetic
-    _2q0mx = 2.0f * q0 * mx;
-    _2q0my = 2.0f * q0 * my;
-    _2q0mz = 2.0f * q0 * mz;
-    _2q1mx = 2.0f * q1 * mx;
-    _2q0 = 2.0f * q0;
-    _2q1 = 2.0f * q1;
-    _2q2 = 2.0f * q2;
-    _2q3 = 2.0f * q3;
-    q0q0 = q0 * q0;
-    q0q1 = q0 * q1;
-    q0q2 = q0 * q2;
-    q0q3 = q0 * q3;
-    q1q1 = q1 * q1;
-    q1q2 = q1 * q2;
-    q1q3 = q1 * q3;
-    q2q2 = q2 * q2;
-    q2q3 = q2 * q3;
-    q3q3 = q3 * q3;
+  // Gradient decent algorithm corrective step
+  s[0] = -_2q3 * (2.0f * q2q4 - _2q1q3 - ax) + _2q2 * (2.0f * q1q2 + _2q3q4 - ay) - _2bz * q3 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q4 + _2bz * q2) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q3 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+  s[1] = _2q4 * (2.0f * q2q4 - _2q1q3 - ax) + _2q1 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q2 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + _2bz * q4 * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q3 + _2bz * q1) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q4 - _4bz * q2) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+  s[2] = -_2q1 * (2.0f * q2q4 - _2q1q3 - ax) + _2q4 * (2.0f * q1q2 + _2q3q4 - ay) - 4.0f * q3 * (1.0f - 2.0f * q2q2 - 2.0f * q3q3 - az) + (-_4bx * q3 - _2bz * q1) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q2 + _2bz * q4) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q1 - _4bz * q3) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
+  s[3] = _2q2 * (2.0f * q2q4 - _2q1q3 - ax) + _2q3 * (2.0f * q1q2 + _2q3q4 - ay) + (-_4bx * q4 + _2bz * q2) * (_2bx * (0.5f - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q1 + _2bz * q3) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q2 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5f - q2q2 - q3q3) - mz);
 
-    // Updated from http://diydrones.com/xn/detail/705844:Comment:1755084
-		// Reference direction of Earth's magnetic field
-    hx = mx * q0q0 - _2q0my * q3 + _2q0mz * q2 + mx * q1q1 + _2q1 * my * q2 + _2q1 * mz * q3 - mx * q2q2 - mx * q3q3;
-    hy = _2q0mx * q3 + my * q0q0 - _2q0mz * q1 + _2q1mx * q2 - my * q1q1 + my * q2q2 + _2q2 * mz * q3 - my * q3q3;
-    _2bx = sqrt(hx * hx + hy * hy);
-    _2bz = -_2q0mx * q2 + _2q0my * q1 + mz * q0q0 + _2q1mx * q3 - mz * q1q1 + _2q2 * my * q3 - mz * q2q2 + mz * q3q3;
-    _4bx = 2.0f * _2bx;
-    _4bz = 2.0f * _2bz;
-    _8bx = 2.0f * _4bx;
-    _8bz = 2.0f * _4bz;
+  if (!vector_normalise(4, s)) return false;
 
-    // Gradient decent algorithm corrective step
-    s0= -_2q2*(2.0f*(q1q3 - q0q2) - ax)    +   _2q1*(2.0f*(q0q1 + q2q3) - ay)   +  -_4bz*q2*(_4bx*(0.5 - q2q2 - q3q3) + _4bz*(q1q3 - q0q2) - mx)   +   (-_4bx*q3+_4bz*q1)*(_4bx*(q1q2 - q0q3) + _4bz*(q0q1 + q2q3) - my)    +   _4bx*q2*(_4bx*(q0q2 + q1q3) + _4bz*(0.5 - q1q1 - q2q2) - mz);
-    s1= _2q3*(2.0f*(q1q3 - q0q2) - ax) +   _2q0*(2.0f*(q0q1 + q2q3) - ay) +   -4.0f*q1*(2.0f*(0.5 - q1q1 - q2q2) - az)    +   _4bz*q3*(_4bx*(0.5 - q2q2 - q3q3) + _4bz*(q1q3 - q0q2) - mx)   + (_4bx*q2+_4bz*q0)*(_4bx*(q1q2 - q0q3) + _4bz*(q0q1 + q2q3) - my)   +   (_4bx*q3-_8bz*q1)*(_4bx*(q0q2 + q1q3) + _4bz*(0.5 - q1q1 - q2q2) - mz);             
-    s2= -_2q0*(2.0f*(q1q3 - q0q2) - ax)    +     _2q3*(2.0f*(q0q1 + q2q3) - ay)   +   (-4.0f*q2)*(2.0f*(0.5 - q1q1 - q2q2) - az) +   (-_8bx*q2-_4bz*q0)*(_4bx*(0.5 - q2q2 - q3q3) + _4bz*(q1q3 - q0q2) - mx)+(_4bx*q1+_4bz*q3)*(_4bx*(q1q2 - q0q3) + _4bz*(q0q1 + q2q3) - my)+(_4bx*q0-_8bz*q2)*(_4bx*(q0q2 + q1q3) + _4bz*(0.5 - q1q1 - q2q2) - mz);
-    s3= _2q1*(2.0f*(q1q3 - q0q2) - ax) +   _2q2*(2.0f*(q0q1 + q2q3) - ay)+(-_8bx*q3+_4bz*q1)*(_4bx*(0.5 - q2q2 - q3q3) + _4bz*(q1q3 - q0q2) - mx)+(-_4bx*q0+_4bz*q2)*(_4bx*(q1q2 - q0q3) + _4bz*(q0q1 + q2q3) - my)+(_4bx*q1)*(_4bx*(q0q2 + q1q3) + _4bz*(0.5 - q1q1 - q2q2) - mz);
+  // Compute rate of change of quaternion
+  #define GYRO_AFFECT 0.5f
+  qDot1 = GYRO_AFFECT * (-q2 * gx - q3 * gy - q4 * gz) - beta * s[0];
+  qDot2 = GYRO_AFFECT * (q1 * gx + q3 * gz - q4 * gy) - beta * s[1];
+  qDot3 = GYRO_AFFECT * (q1 * gy - q2 * gz + q4 * gx) - beta * s[2];
+  qDot4 = GYRO_AFFECT * (q1 * gz + q2 * gy - q3 * gx) - beta * s[3];
+  #undef GYRO_AFFECT
 
-    recipNorm = invSqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
-    s0 *= recipNorm;
-    s1 *= recipNorm;
-    s2 *= recipNorm;
-    s3 *= recipNorm;
+  // Integrate to yield quaternion
+  q1 += qDot1 * dt;
+  q2 += qDot2 * dt;
+  q3 += qDot3 * dt;
+  q4 += qDot4 * dt;
 
-    // Apply feedback step
-    qDot1 -= beta * s0;
-    qDot2 -= beta * s1;
-    qDot3 -= beta * s2;
-    qDot4 -= beta * s3;
-	}
+  q[0] = q1;
+  q[1] = q2;
+  q[2] = q3;
+  q[3] = q4;
 
-  // Integrate rate of change of quaternion to yield quaternion
-  q0 += qDot1 * dt;
-  q1 += qDot2 * dt;
-  q2 += qDot3 * dt;
-  q3 += qDot4 * dt;
+  if (!vector_normalise(4, q)) {
+#if 0
+    q[0] = 1;
+    q[1] = 0;
+    q[2] = 0;
+    q[3] = 0;
+#endif
+    return false;
+  }
 
-  // Normalise quaternion
-  recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-  q0 *= recipNorm;
-  q1 *= recipNorm;
-  q2 *= recipNorm;
-  q3 *= recipNorm;
+  return true;
 }
-
-
 
 // From https://github.com/TobiasSimon/MadgwickTests/blob/4f76ef1475219bedbdba7afab297e3468d9e7c44/MadgwickAHRS.c
 static sc_float invSqrt(sc_float x)
 {
 
-  const int instability_fix = 1;
+  const int instability_fix = 2;
 
   if (instability_fix == 0) {
     /* original code */
@@ -443,9 +473,37 @@ static sc_float invSqrt(sc_float x)
   }
   else {
     /* optimal but expensive method: */
-    return 1.0f / sqrtf(x);
+    if (sizeof(sc_float) == sizeof(float)) {
+      return 1.0f / sqrtf(x);
+    } else {
+      return 1.0f / sqrt(x);
+    }
   }
 }
+
+
+
+void sc_ahrs_set_beta(sc_float user_beta)
+{
+  beta = user_beta;
+}
+
+
+
+void reset_state(void)
+{
+  initialised = 0;
+  q[0] = 1;
+  q[1] = 0;
+  q[2] = 0;
+  q[3] = 0;
+  latest_ts = 0;
+  latest_roll = 0;
+  latest_pitch = 0;
+  latest_yaw = 0;
+}
+
+
 #endif // SC_ALLOW_GPL
 #endif // SC_USE_AHRS
 

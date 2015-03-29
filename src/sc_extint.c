@@ -152,14 +152,15 @@ void sc_extint_set_isr_cb(ioportid_t port,
   uint32_t ext_mode;
   EXTChannelConfig cfg;
 
-  chMtxLock(&cfg_mtx);
-
   chDbgAssert(pin < EXT_MAX_CHANNELS , "EXT pin number outside range");
-  chDbgAssert(extcfg.channels[pin].cb == NULL,
-              "EXT pin already registered");
   chDbgAssert(mode == EXT_CH_MODE_RISING_EDGE ||
               mode == EXT_CH_MODE_FALLING_EDGE ||
               mode == EXT_CH_MODE_BOTH_EDGES, "Invalid edge mode");
+
+  chMtxLock(&cfg_mtx);
+
+  chDbgAssert(extcfg.channels[pin].cb == NULL,
+              "EXT pin already registered");
 
   for (i = 0; i < EXT_MAX_CHANNELS; ++i) {
     if (extcfg.channels[pin].cb != NULL) {
