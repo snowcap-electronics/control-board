@@ -68,7 +68,7 @@ int main(void)
 static void init(void)
 {
   uint8_t use_usb = 1;
-  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
+  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
 
   // F1 Discovery doesn't support USB
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
@@ -94,12 +94,20 @@ static void init(void)
 }
 
 
-static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
+static void cb_handle_byte(SC_UART uart, uint8_t byte)
 {
-
-  // Push received byte to generic command parsing
-  // FIXME: per uart
+  // F1 Discovery doesn't support USB
+#if defined(BOARD_ST_STM32VL_DISCOVERY)
   sc_cmd_push_byte(byte);
+#else
+  if (uart != SC_UART_USB) {
+    // Log bytes coming from real UARTs to USB
+    SC_LOG_PRINTF("%c", byte);
+  } else {
+    // Push bytes received from USB to command parsing
+    sc_cmd_push_byte(byte);
+  }
+#endif
 }
 
 
