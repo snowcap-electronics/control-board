@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006-2014 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -13,6 +13,9 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 */
+
+#ifndef _MCUCONF_H_
+#define _MCUCONF_H_
 
 /*
  * STM32F4xx drivers configuration.
@@ -303,3 +306,5 @@
 #define STM32_USB_OTG_THREAD_PRIO           LOWPRIO
 #define STM32_USB_OTG_THREAD_STACK_SIZE     128
 #define STM32_USB_OTGFIFO_FILL_BASEPRI      0
+
+#endif /* _MCUCONF_H_ */
