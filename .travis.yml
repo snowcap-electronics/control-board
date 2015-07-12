@@ -12,6 +12,11 @@ branches:
   only:
     - master
 
+env:
+  global:
+   # COVERITY_SCAN_TOKEN
+   - secure: "LV/xnOSrnzRNhYMcEUNC0Z+yaOw64iEpyNJ1Y5Ga7RxH458APFznhs/BKhZCuLpmGJapvTwkjYdWEG5iKIu7woTy5CQuziIu3C3G7bstlUQkA+PEkERVJFbBV3FpDNWow7YumdE1USIw+8MzpA0ofOKtL2ihGQju1rPCYlg5BlA="
+
 addons:
   coverity_scan:
     project:
