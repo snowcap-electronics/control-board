@@ -533,19 +533,17 @@ int main(void)
     standby_mode = true;
 #endif
 
-    // Sleep at least one second even if interval based time already passed
-    if (interval_ms < TRACKER_INTERVAL_SEC * 1000) {
-      sleep_time_sec = TRACKER_INTERVAL_SEC - (uint32_t)(interval_ms / 1000);
-    } else {
-      sleep_time_sec = 1;
-    }
-
     // Sleep always one minute in case of an error
     if (generic_error) {
       sleep_time_sec = 60;
+    } else {
+      // Sleep at least one second even if interval based time already passed
+      if (interval_ms < TRACKER_INTERVAL_SEC * 1000) {
+        sleep_time_sec = TRACKER_INTERVAL_SEC - (uint32_t)(interval_ms / 1000);
+      } else {
+        sleep_time_sec = 1;
+      }
     }
-
-    sleep_time_sec = 10;
 
 #if USE_USB
     SC_LOG_PRINTF("%d: Going to sleep %d seconds (debug bits: 0x%x, error: %d)\r\n",

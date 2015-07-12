@@ -223,6 +223,10 @@ void sc_pwm_deinit(void)
 // FIXME: Need to be able to control this per PWMDX
 void sc_pwm_set_freq(uint16_t freq)
 {
+  if (freq == 0) {
+	// freq 0 is invalid, do nothing
+	return;
+  }
   pwmChangePeriod(&PWMDX1, SC_PWM_CLOCK / freq);
 
 #ifdef PWMDX2
