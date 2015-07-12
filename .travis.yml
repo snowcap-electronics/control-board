@@ -12,17 +12,6 @@ branches:
   only:
     - master
 
-env:
-  global:
-   - "ARTIFACTS_AWS_REGION=eu-west-1"
-   - "ARTIFACTS_S3_BUCKET=sc-ruuvitracker"
-   # ARTIFACTS_AWS_ACCESS_KEY_ID
-   - secure: "B9KgHAXarIZ0FfdQrd3cX8wWYtDLNPMpXKLNddAn262g9g9hfkz6ykf1gPiLrnFW5liJ+A6L0yYdj9MrliRuQ1cp+8EDuQyisBdCArVzv7d+aPGYU/lNFCQxBMt7/2bPtcobCbwvbXqFguMUJzjo7w9V8BLeuHz0f6wGq7F70yU="
-   # ARTIFACTS_AWS_SECRET_ACCESS_KEY
-   - secure: "OwgY7fR1h3MxgX34Vq1gop4VsYtj7wKA/8NeHqghjgoGg8bv1V4MsBp9pVa2rijVTDIzSR/SdPjVwPTSE6+w/e8Ol0+tyWCPrwnBXI0nkAzV3TX/Yg8qVbhyBw+yulL3aKta/EEBXTYRkNMSvCl2oMXFHIUsO7tbnyLIfZ5s/Zk="
-   # COVERITY_SCAN_TOKEN
-   - secure: "LV/xnOSrnzRNhYMcEUNC0Z+yaOw64iEpyNJ1Y5Ga7RxH458APFznhs/BKhZCuLpmGJapvTwkjYdWEG5iKIu7woTy5CQuziIu3C3G7bstlUQkA+PEkERVJFbBV3FpDNWow7YumdE1USIw+8MzpA0ofOKtL2ihGQju1rPCYlg5BlA="
-
 addons:
   coverity_scan:
     project:
@@ -31,7 +20,7 @@ addons:
     notification_email: tuomas@kulve.fi
     build_command_prepend: cov-configure --comptype gcc --compiler arm-none-eabi-gcc --template
     build_command: ./compile-all-test.sh store
-    branch_pattern: coverity_scan
+    branch_pattern: master
 
 before_script:
   - sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded > /dev/null 2>&1
@@ -40,6 +29,3 @@ before_script:
   - gem install travis-artifacts
 
 script: ./compile-all-test.sh store
-
-after_success:
-  - travis-artifacts upload --target-path $TRAVIS_BRANCH/latest --path out/rtc2_tracker
