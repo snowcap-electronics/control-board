@@ -120,7 +120,6 @@ struct api {
 static struct api api;
 
 static thread_t *gsm_thread = NULL;
-static msg_t scGsmThread(void *UNUSED(arg));
 
 /* URC message */
 typedef struct Message Message;
@@ -1071,7 +1070,7 @@ THD_FUNCTION(scGsmThread, arg)
         sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
     }
 
-    return 0;
+    return;
 }
 
 

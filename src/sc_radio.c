@@ -94,7 +94,7 @@ THD_FUNCTION(scRadioFlashThread, arg)
   // Do a dry run to validate SREC blob
   if (radio_comm_send_program(1) == 0) {
     SC_LOG("radio flash: failed: invalid srec\r\n");
-    return 0;
+    return;
   }
 
   do {
@@ -154,7 +154,7 @@ THD_FUNCTION(scRadioFlashThread, arg)
     SC_LOG("radio flash: ok\r\n");
   }
 
-  return 0;
+  return;
 }
 
 

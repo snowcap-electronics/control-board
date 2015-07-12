@@ -32,7 +32,6 @@
 #include "sc_log.h"
 
 static thread_t *tp_thread = NULL;
-static msg_t scTpThread(void *arg);
 static void block_tp_sync(uint8_t pulses);
 static void tp_sleep_ms(uint8_t ms);
 
@@ -79,8 +78,6 @@ THD_FUNCTION(scTpThread, arg)
 
   // Make sure the pad is cleared
   palClearPad(TP_PB_PORT, TP_PB_PIN);
-
-  return MSG_OK;
 }
 
 

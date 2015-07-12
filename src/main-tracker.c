@@ -453,7 +453,7 @@ THD_FUNCTION(mainWorkerThread, arg)
   gps_power_off();
   nmea_stop();
 
-  return MSG_OK;
+  return;
 }
 
 int main(void)
