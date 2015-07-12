@@ -67,17 +67,12 @@ int main(void)
 
 static void init(void)
 {
-  uint8_t use_usb = 1;
   uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
 
   // F1 Discovery doesn't support USB
-#if defined(BOARD_ST_STM32VL_DISCOVERY)
-  use_usb = 0;
+#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+  subsystems |= SC_MODULE_SDU;
 #endif
-
-  if (use_usb) {
-    subsystems |= SC_MODULE_SDU;
-  }
 
   // Init ChibiOS
   halInit();
@@ -85,12 +80,12 @@ static void init(void)
 
   sc_init(subsystems);
 
-  if (use_usb) {
-    sc_uart_default_usb(TRUE);
-    sc_log_output_uart(SC_UART_USB);
-  } else {
-    sc_log_output_uart(SC_UART_1);
-  }
+#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+  sc_uart_default_usb(TRUE);
+  sc_log_output_uart(SC_UART_USB);
+#else
+  sc_log_output_uart(SC_UART_1);
+#endif
 }
 
 
@@ -99,6 +94,7 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
   // F1 Discovery doesn't support USB
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
   sc_cmd_push_byte(byte);
+  (void)uart;
 #else
   if (uart != SC_UART_USB) {
     // Log bytes coming from real UARTs to USB
