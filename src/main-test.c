@@ -67,10 +67,15 @@ int main(void)
 
 static void init(void)
 {
-  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
+  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED;
 
-  // F1 Discovery doesn't support USB
-#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+  // UART1, PWM nor ADC pins are defined for L152 Nucleo board
+#if !defined(BOARD_ST_NUCLEO_L152RE)
+  subsystems |= SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC;
+#endif
+
+  // F1 Discovery and L152 Nucleo boards dont't support USB
+#if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
   subsystems |= SC_MODULE_SDU;
 #endif
 
@@ -80,19 +85,23 @@ static void init(void)
 
   sc_init(subsystems);
 
-#if !defined(BOARD_ST_STM32VL_DISCOVERY)
+#if defined(BOARD_ST_NUCLEO_L152RE)
+  sc_log_output_uart(SC_UART_2);
+#else
+# if !defined(BOARD_ST_STM32VL_DISCOVERY)
   sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
 #else
   sc_log_output_uart(SC_UART_1);
+#endif
 #endif
 }
 
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte)
 {
-  // F1 Discovery doesn't support USB
-#if defined(BOARD_ST_STM32VL_DISCOVERY)
+  // F1 Discovery doesn't support USB (Nucleo has UART1 routed through ST Link's USB)
+#if defined(BOARD_ST_STM32VL_DISCOVERY) || defined(BOARD_ST_NUCLEO_L152RE)
   sc_cmd_push_byte(byte);
   (void)uart;
 #else

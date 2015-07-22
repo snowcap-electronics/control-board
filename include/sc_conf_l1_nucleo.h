@@ -1,7 +1,7 @@
 /***
- * Snowcap configurations
+ * ST STM32L152 Nucleo configuration
  *
- * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2015 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,29 +26,51 @@
  *
  */
 
-#ifndef SC_CONF_H
-#define SC_CONF_H
+#ifndef SC_CONF_L1_NUCLEO_H
+#define SC_CONF_L1_NUCLEO_H
 
-#include "sc_utils.h"
-
-#ifndef sc_float
-#define sc_float float
+#ifndef USER_LED
+#define USER_LED           GPIOA_LED_GREEN
 #endif
 
-#if defined(BOARD_SNOWCAP_V1)
-#include "sc_conf_snowcap_v1.h"
-#elif defined(BOARD_SNOWCAP_STM32F4_V1)
-#include "sc_conf_snowcap_stm32f4_v1.h"
-#elif defined(BOARD_ST_STM32F4_DISCOVERY)
-#include "sc_conf_f4_discovery.h"
-#elif defined(BOARD_ST_STM32VL_DISCOVERY)
-#include "sc_conf_f1_discovery.h"
-#elif defined(BOARD_ST_NUCLEO_L152RE)
-#include "sc_conf_l1_nucleo.h"
-#elif defined(BOARD_RUUVITRACKERC2)
-#include "sc_conf_rt_c2.h"
-#else
-#error "Unknown board or board not defined."
+#ifndef USER_LED_PORT
+#define USER_LED_PORT      GPIOA
 #endif
+
+// GPIO1 is PB3
+#ifndef GPIO1_PIN
+#define GPIO1_PIN          3
+#define GPIO1_PORT         GPIOB
+#endif
+
+// GPIO2 is PB4
+#ifndef GPIO2_PIN
+#define GPIO2_PIN          4
+#define GPIO2_PORT         GPIOB
+#endif
+
+
+// GPIO3 is PB5
+#ifndef GPIO3_PIN
+#define GPIO3_PIN          5
+#define GPIO3_PORT         GPIOB
+#endif
+
+// GPIO4 is PB6
+#ifndef GPIO4_PIN
+#define GPIO4_PIN          6
+#define GPIO4_PORT         GPIOB
+#endif
+
+#ifndef SC_UART2_TX_PORT
+#define SC_UART2_TX_PORT   GPIOA
+#define SC_UART2_TX_PIN    GPIOA_USART_TX
+#define SC_UART2_TX_AF     7
+#define SC_UART2_RX_PORT   GPIOA
+#define SC_UART2_RX_PIN    GPIOA_USART_RX
+#define SC_UART2_RX_AF     7
+#endif
+
+// FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif
