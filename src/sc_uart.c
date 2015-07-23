@@ -153,23 +153,23 @@ void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
-	cfg = &uart_cfg_1;
-	break;
+    cfg = &uart_cfg_1;
+    break;
 #endif
 #if STM32_UART_USE_USART2
   case SC_UART_2:
-	cfg = &uart_cfg_2;
-	break;
+    cfg = &uart_cfg_2;
+    break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
-	cfg = &uart_cfg_3;
-	break;
+    cfg = &uart_cfg_3;
+    break;
 #endif
   default:
-	// Invalid uart
+    // Invalid uart
     chDbgAssert(0, "Invalid UART specified");
-	return;
+    return;
   }
 
   cfg->speed = speed;
@@ -192,7 +192,7 @@ void sc_uart_init(void)
   circular_sending = -1;
   circular_free = 0;
   for (i = 0; i < UART_MAX_CIRCULAR_BUFS; ++i) {
-	circular_len[i] = 0;
+    circular_len[i] = 0;
   }
   chMtxObjectInit(&circular_mtx);
 }
@@ -227,42 +227,42 @@ void sc_uart_start(SC_UART uart)
 #if STM32_UART_USE_USART1
   case SC_UART_1:
 #ifdef SC_UART1_TX_PORT
-	palSetPadMode(SC_UART1_TX_PORT, SC_UART1_TX_PIN, PAL_MODE_ALTERNATE(SC_UART1_TX_AF));
-	palSetPadMode(SC_UART1_RX_PORT, SC_UART1_RX_PIN, PAL_MODE_ALTERNATE(SC_UART1_RX_AF));
+    palSetPadMode(SC_UART1_TX_PORT, SC_UART1_TX_PIN, PAL_MODE_ALTERNATE(SC_UART1_TX_AF));
+    palSetPadMode(SC_UART1_RX_PORT, SC_UART1_RX_PIN, PAL_MODE_ALTERNATE(SC_UART1_RX_AF));
 #endif
-	uartStart(&UARTD1, &uart_cfg_1);
-	if (last_uart == NULL) {
-	  last_uart = &UARTD1;
-	}
-	uart_set_enable(SC_UART_1, 1);
-	break;
+    uartStart(&UARTD1, &uart_cfg_1);
+    if (last_uart == NULL) {
+      last_uart = &UARTD1;
+    }
+    uart_set_enable(SC_UART_1, 1);
+    break;
 #endif
 #if STM32_UART_USE_USART2
   case SC_UART_2:
 #ifdef SC_UART2_TX_PORT
-	palSetPadMode(SC_UART2_TX_PORT, SC_UART2_TX_PIN, PAL_MODE_ALTERNATE(SC_UART2_TX_AF));
-	palSetPadMode(SC_UART2_RX_PORT, SC_UART2_RX_PIN, PAL_MODE_ALTERNATE(SC_UART2_RX_AF));
+    palSetPadMode(SC_UART2_TX_PORT, SC_UART2_TX_PIN, PAL_MODE_ALTERNATE(SC_UART2_TX_AF));
+    palSetPadMode(SC_UART2_RX_PORT, SC_UART2_RX_PIN, PAL_MODE_ALTERNATE(SC_UART2_RX_AF));
 #endif
-	uartStart(&UARTD2, &uart_cfg_2);
-	if (last_uart == NULL) {
-	  last_uart = &UARTD2;
-	}
-	uart_set_enable(SC_UART_2, 1);
-	break;
+    uartStart(&UARTD2, &uart_cfg_2);
+    if (last_uart == NULL) {
+      last_uart = &UARTD2;
+    }
+    uart_set_enable(SC_UART_2, 1);
+    break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
-	uartStart(&UARTD3, &uart_cfg_3);
-	if (last_uart == NULL) {
-	  last_uart = &UARTD3;
-	}
-	uart_set_enable(SC_UART_3, 1);
-	break;
+    uartStart(&UARTD3, &uart_cfg_3);
+    if (last_uart == NULL) {
+      last_uart = &UARTD3;
+    }
+    uart_set_enable(SC_UART_3, 1);
+    break;
 #endif
   default:
-	// Invalid uart, do nothing
+    // Invalid uart, do nothing
     chDbgAssert(0, "Invalid UART specified");
-	return;
+    return;
   }
 }
 
@@ -271,26 +271,26 @@ void sc_uart_stop(SC_UART uart)
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
-	uartStop(&UARTD1);
-	uart_set_enable(SC_UART_1, 0);
-	break;
+    uartStop(&UARTD1);
+    uart_set_enable(SC_UART_1, 0);
+    break;
 #endif
 #if STM32_UART_USE_USART2
   case SC_UART_2:
-	uartStop(&UARTD2);
-	uart_set_enable(SC_UART_2, 0);
-	break;
+    uartStop(&UARTD2);
+    uart_set_enable(SC_UART_2, 0);
+    break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
-	uartStop(&UARTD3);
-	uart_set_enable(SC_UART_3, 0);
-	break;
+    uartStop(&UARTD3);
+    uart_set_enable(SC_UART_3, 0);
+    break;
 #endif
   default:
-	// Invalid uart
+    // Invalid uart
     chDbgAssert(0, "Invalid UART specified");
-	return;
+    return;
   }
 
   // FIXME: should empty the queue messages for stopped UART
@@ -319,51 +319,51 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 #if HAL_USE_SERIAL_USB
   // If last byte received from Serial USB, send message using Serial USB
   if (uart == SC_UART_USB || (uart == SC_UART_LAST && uart_use_usb)) {
-	sc_sdu_send_msg(msg, len);
-	return;
+    sc_sdu_send_msg(msg, len);
+    return;
   }
 #endif
 
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
-	uartdrv = &UARTD1;
-	break;
+    uartdrv = &UARTD1;
+    break;
 #endif
 #if STM32_UART_USE_USART2
   case SC_UART_2:
-	uartdrv = &UARTD2;
-	break;
+    uartdrv = &UARTD2;
+    break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
-	uartdrv = &UARTD3;
-	break;
+    uartdrv = &UARTD3;
+    break;
 #endif
   case SC_UART_LAST:
-	uartdrv = last_uart;
-	break;
+    uartdrv = last_uart;
+    break;
   default:
-	// Invalid uart, do nothing
+    // Invalid uart, do nothing
     chDbgAssert(0, "Invalid UART specified");
-	return;
+    return;
   }
 
   while (bytes_left) {
-	int tmplen = bytes_left;
-	if (bytes_left > UART_MAX_SEND_BUF_LEN) {
-	  tmplen = UART_MAX_SEND_BUF_LEN;
-	}
+    int tmplen = bytes_left;
+    if (bytes_left > UART_MAX_SEND_BUF_LEN) {
+      tmplen = UART_MAX_SEND_BUF_LEN;
+    }
 
-	// Check for free buffers
-	if (circular_free == -1) {
-	  chDbgAssert(0, "Circular buffer full");
-	  return;
-	}
+    // Check for free buffers
+    if (circular_free == -1) {
+      chDbgAssert(0, "Circular buffer full");
+      return;
+    }
 
-	circular_add_buffer(uartdrv, &msg[bytes_done], tmplen);
-	bytes_done += tmplen;
-	bytes_left -= tmplen;
+    circular_add_buffer(uartdrv, &msg[bytes_done], tmplen);
+    bytes_done += tmplen;
+    bytes_left -= tmplen;
   }
 }
 
@@ -404,11 +404,11 @@ void sc_uart_send_str(SC_UART uart, const char *msg)
   int len = 0;
 
   if (msg == NULL) {
-	return;
+    return;
   }
 
   while (msg[len] != '\0') {
-	++len;
+    ++len;
   }
 
   sc_uart_send_msg(uart, (uint8_t *)msg, len);
@@ -425,34 +425,34 @@ void sc_uart_send_finished(void)
   chMtxLock(&circular_mtx);
 
   while (1) {
-	// Mark buffer as empty
-	circular_len[circular_sending] = 0;
+    // Mark buffer as empty
+    circular_len[circular_sending] = 0;
 
-	// If no free buffers, mark this one as free
-	if (circular_free == -1) {
-	  circular_free = circular_sending;
-	}
+    // If no free buffers, mark this one as free
+    if (circular_free == -1) {
+      circular_free = circular_sending;
+    }
 
-	// Advance the currently sending index
-	if (++circular_sending == UART_MAX_CIRCULAR_BUFS) {
-	  circular_sending = 0;
-	}
+    // Advance the currently sending index
+    if (++circular_sending == UART_MAX_CIRCULAR_BUFS) {
+      circular_sending = 0;
+    }
 
-	// Check for buffer to send
-	if (circular_len[circular_sending] > 0) {
-	  if (!uart_is_enabled(circular_uart[circular_sending])) {
-		// UART not enabled, skip to next message in queue
-		continue;
-	  }
-	  uartStartSend(circular_uart[circular_sending],
-					circular_len[circular_sending],
-					circular_buf[circular_sending]);
-	  break;
-	} else {
-	  // Nothing to send
-	  circular_sending = -1;
-	  break;
-	}
+    // Check for buffer to send
+    if (circular_len[circular_sending] > 0) {
+      if (!uart_is_enabled(circular_uart[circular_sending])) {
+        // UART not enabled, skip to next message in queue
+        continue;
+      }
+      uartStartSend(circular_uart[circular_sending],
+                    circular_len[circular_sending],
+                    circular_buf[circular_sending]);
+      break;
+    } else {
+      // Nothing to send
+      circular_sending = -1;
+      break;
+    }
   }
 
   chMtxUnlock(&circular_mtx);
@@ -569,13 +569,13 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
 
   // Lose message, if no space
   if (circular_free == -1) {
-	chMtxUnlock(&circular_mtx);
-	return;
+    chMtxUnlock(&circular_mtx);
+    return;
   }
 
   // Copy the message to static circular buffer
   for (i = 0; i < len; ++i) {
-	circular_buf[circular_free][i] = msg[i];
+    circular_buf[circular_free][i] = msg[i];
   }
   circular_len[circular_free] = len;
   circular_uart[circular_free] = uartdrv;
@@ -585,20 +585,20 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
 
   // Check for buffer wrapping
   if (++circular_free == UART_MAX_CIRCULAR_BUFS) {
-	circular_free = 0;
+    circular_free = 0;
   }
 
   // Check for full buffer
   if (circular_sending != -1 && circular_free == circular_sending) {
-	circular_free = -1;
+    circular_free = -1;
   }
 
   // Check for idle UART
   if (circular_sending == -1) {
-	circular_sending = circular_current;
-	uartStartSend(circular_uart[circular_current],
-				  circular_len[circular_current],
-				  circular_buf[circular_current]);
+    circular_sending = circular_current;
+    uartStartSend(circular_uart[circular_current],
+                  circular_len[circular_current],
+                  circular_buf[circular_current]);
   }
 
   chMtxUnlock(&circular_mtx);
@@ -615,9 +615,9 @@ static void uart_set_enable(SC_UART uart, uint8_t enable)
   chMtxLock(&circular_mtx);
 
   if (enable) {
-	uarts_enabled |= (1 << uart);
+    uarts_enabled |= (1 << uart);
   } else {
-	uarts_enabled &= ~(1 << uart);
+    uarts_enabled &= ~(1 << uart);
   }
 
   chMtxUnlock(&circular_mtx);
@@ -633,25 +633,35 @@ static uint8_t uart_is_enabled(UARTDriver *drv)
   SC_UART uart = SC_UART_LAST;
 #if STM32_UART_USE_USART1
   if (drv == &UARTD1) {
-	uart = SC_UART_1;
+    uart = SC_UART_1;
   }
 #endif
 #if STM32_UART_USE_USART2
   if (drv == &UARTD2) {
-	uart = SC_UART_2;
+    uart = SC_UART_2;
   }
 #endif
 #if STM32_UART_USE_USART3
   if (drv == &UARTD3) {
-	uart = SC_UART_3;
+    uart = SC_UART_3;
   }
 #endif
 
   if (uart == SC_UART_LAST) {
-	chDbgAssert(0, "Invalid UART driver");
-	return 0;
+    chDbgAssert(0, "Invalid UART driver");
+    return 0;
   }
 
   return uarts_enabled & (1 << uart);
 }
 #endif // HAL_USE_UART
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

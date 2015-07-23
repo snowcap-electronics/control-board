@@ -77,3 +77,13 @@ void sc_uart_revc_usb_byte(uint8_t byte);
 
 #endif
 #endif // HAL_USE_UART
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/
