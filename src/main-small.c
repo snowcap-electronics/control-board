@@ -39,7 +39,7 @@ int main(void)
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
 
-#if CH_NO_IDLE_THREAD
+#if defined CH_NO_IDLE_THREAD && CH_NO_IDLE_THREAD
   chThdSetPriority(IDLEPRIO);
 #endif
 
@@ -47,7 +47,7 @@ int main(void)
   while(1) {
     sc_led_toggle();
 
-#if CH_NO_IDLE_THREAD
+#if defined CH_NO_IDLE_THREAD && CH_NO_IDLE_THREAD
     chDbgAssert(0, "Can't call chThdSleepMilliseconds() without idle thread");
 #endif
     chThdSleepMilliseconds(1000);

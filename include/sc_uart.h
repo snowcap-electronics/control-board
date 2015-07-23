@@ -42,19 +42,19 @@
  * @brief   UART definitions.
  */
 typedef enum SC_UART {
-#if STM32_UART_USE_USART1
+#if defined STM32_UART_USE_USART1 && STM32_UART_USE_USART1
   SC_UART_1    = 1,
 #endif
-#if STM32_UART_USE_USART2
+#if defined STM32_UART_USE_USART2 && STM32_UART_USE_USART2
   SC_UART_2    = 2,
 #endif
-#if STM32_UART_USE_USART3
+#if defined STM32_UART_USE_USART3 && STM32_UART_USE_USART3
   SC_UART_3    = 3,
 #endif
-#if STM32_UART_USE_USART4
+#if defined STM32_UART_USE_USART4 && STM32_UART_USE_USART4
   SC_UART_4    = 4,
 #endif
-#if HAL_USE_SERIAL_USB
+#if defined HAL_USE_SERIAL_USB && HAL_USE_SERIAL_USB
   SC_UART_USB  = 5,
 #endif
   /**

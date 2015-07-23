@@ -43,6 +43,13 @@ ifeq ($(USE_VERBOSE_COMPILE),)
   USE_VERBOSE_COMPILE = no
 endif
 
+# If enabled, this option makes the build process faster by not compiling
+# modules not used in the current configuration.
+ifeq ($(USE_SMART_BUILD),)
+# FIXME: Enabling this breaks the builds.
+  USE_SMART_BUILD = no
+endif
+
 #
 # Build global options
 ##############################################################################
@@ -270,10 +277,10 @@ AOPT =
 TOPT = -mthumb -DTHUMB
 
 # Define C warning options here
-CWARN = -Wall -Wextra -Wstrict-prototypes
+CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
 
 # Define C++ warning options here
-CPPWARN = -Wall -Wextra
+CPPWARN = -Wall -Wextra -Wundef
 
 #
 # Compiler settings

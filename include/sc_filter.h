@@ -31,7 +31,7 @@
 
 #include <sc_utils.h>
 
-#if SC_USE_FILTER_ZERO_CALIBRATE
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
 typedef struct {
   sc_float offset;
   double sum;
@@ -43,7 +43,7 @@ typedef struct {
 
 
 
-#if SC_USE_FILTER_BROWN_LINEAR_EXPO
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
 typedef struct {
   sc_float s1;
   sc_float s2;
@@ -54,7 +54,7 @@ typedef struct {
 
 
 
-#if SC_USE_FILTER_PDM_FIR
+#ifdef SC_USE_FILTER_PDM_FIR
 #define PDM_FTL_TAPS 16
 typedef struct sc_filter_pdm_fir {
   uint16_t buffer[PDM_FTL_TAPS];
@@ -64,7 +64,7 @@ typedef struct sc_filter_pdm_fir {
 
 
 
-#if SC_USE_FILTER_ZERO_CALIBRATE
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
 /*
  * Count average offset during first samples and then remove if from subsequent data
  */
@@ -74,7 +74,7 @@ sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_floa
 
 
 
-#if SC_USE_FILTER_BROWN_LINEAR_EXPO
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
 /*
  * Brown's linear exponential smoothing
  *
@@ -87,7 +87,7 @@ sc_float sc_filter_brown_linear_expo(sc_filter_brown_linear_expo_state *state, s
 
 
 
-#if SC_USE_FILTER_PDM_FIR
+#ifdef SC_USE_FILTER_PDM_FIR
 /* PDM FIR low pass filter.
  * The source frequency is expected to be 1024kHz so we are receiving 16 bit words at 64kHz rate MSB first.
  * The filter cutoff frequency is 3.6kHz. Filter parameters may be easily customized by modifying

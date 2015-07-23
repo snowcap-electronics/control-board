@@ -113,10 +113,10 @@ uint32_t _get_ext_from_port(ioportid_t port)
   GPIO2EXT(GPIOE);
   GPIO2EXT(GPIOF);
   GPIO2EXT(GPIOG);
-#ifdef GPIOH
+#if defined GPIOH && defined GPIOH_BASE
   GPIO2EXT(GPIOH);
 #endif
-#ifdef GPIOI
+#if defined GPIOI && defined GPIOI_BASE
   GPIO2EXT(GPIOI);
 #endif
 #undef GPIO2EXT

@@ -28,13 +28,13 @@
 
 #include "sc_utils.h"
 #include "sc_filter.h"
-#if SC_USE_FILTER_PDM_FIR
+#ifdef SC_USE_FILTER_PDM_FIR
 #include "sc_filter_pdm_fir_coeff.h"
 #endif
 
 
 
-#if SC_USE_FILTER_ZERO_CALIBRATE
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
 void sc_filter_zero_calibrate_init(sc_filter_zero_calibrate_state *state, uint16_t samples)
 {
   if (!state) {
@@ -74,7 +74,7 @@ sc_float sc_filter_zero_calibrate(sc_filter_zero_calibrate_state *state, sc_floa
 
 
 
-#if SC_USE_FILTER_BROWN_LINEAR_EXPO
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
 void sc_filter_brown_linear_expo_init(sc_filter_brown_linear_expo_state *state, sc_float factor)
 {
   if (!state) {
@@ -123,7 +123,7 @@ sc_float sc_filter_brown_linear_expo(sc_filter_brown_linear_expo_state *state, s
 
 
 
-#if SC_USE_FILTER_PDM_FIR
+#ifdef SC_USE_FILTER_PDM_FIR
 void sc_filter_pdm_fir_init(sc_filter_pdm_fir_state *state)
 {
 	uint8_t t;

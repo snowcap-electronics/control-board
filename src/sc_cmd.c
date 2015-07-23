@@ -29,7 +29,7 @@
 
 #include "sc.h"
 
-#if SC_USE_AHRS
+#ifdef SC_USE_AHRS
 static void parse_command_ahrs(uint8_t *cmd, uint8_t cmd_len);
 static void parse_command_ahrs_beta(uint8_t *cmd, uint8_t cmd_len);
 #endif
@@ -91,7 +91,7 @@ void sc_cmd_init(void)
 {
   chMtxObjectInit(&blob_mtx);
 
-#if SC_USE_AHRS
+#ifdef SC_USE_AHRS
   sc_cmd_register('A', parse_command_ahrs);
   sc_cmd_register('B', parse_command_ahrs_beta);
 #endif
@@ -354,7 +354,7 @@ static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
 
 
 
-#if SC_USE_AHRS
+#ifdef SC_USE_AHRS
 /*
  * Parse AHRS start/stop command
  */
