@@ -346,7 +346,7 @@ ifeq ($(SC_BUILD_TYPE),release)
   USE_OPT += -O3
   DDEFS += -DRELEASE_BUILD
 else
-  USE_OPT += -O0 -ggdb -fno-omit-frame-pointer
+  USE_OPT += -O0 -ggdb -gdwarf-2 -fno-omit-frame-pointer
 endif
 
 ifeq ($(SC_PEDANTIC_COMPILER),1)
