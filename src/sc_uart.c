@@ -67,7 +67,7 @@ static void rx3char_cb(UARTDriver *uartp, uint16_t c);
 #endif
 static void rxerr_cb(UARTDriver *uartp, uartflags_t e);
 static void rxchar(uint16_t c, SC_UART uart);
-static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len);
+static bool circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len);
 static void uart_set_enable(SC_UART uart, uint8_t enable);
 static uint8_t uart_is_enabled(UARTDriver *drv);
 
@@ -355,13 +355,10 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
       tmplen = UART_MAX_SEND_BUF_LEN;
     }
 
-    // Check for free buffers
-    if (circular_free == -1) {
-      chDbgAssert(0, "Circular buffer full");
+    if (!circular_add_buffer(uartdrv, &msg[bytes_done], tmplen)) {
+      // FIXME: overflow: add to some statistics?
       return;
     }
-
-    circular_add_buffer(uartdrv, &msg[bytes_done], tmplen);
     bytes_done += tmplen;
     bytes_left -= tmplen;
   }
@@ -560,7 +557,7 @@ static void rxerr_cb(UNUSED(UARTDriver *uartp), UNUSED(uartflags_t e))
 /*
  * Queue message for sending (and start send, if currently idle)
  */
-static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len)
+static bool circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len)
 {
   int circular_current;
   int i;
@@ -570,7 +567,7 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
   // Lose message, if no space
   if (circular_free == -1) {
     chMtxUnlock(&circular_mtx);
-    return;
+    return false;
   }
 
   // Copy the message to static circular buffer
@@ -602,6 +599,8 @@ static void circular_add_buffer(UARTDriver *uartdrv, const uint8_t *msg, int len
   }
 
   chMtxUnlock(&circular_mtx);
+
+  return true;
 }
 
 
