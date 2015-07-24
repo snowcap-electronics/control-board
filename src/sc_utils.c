@@ -190,6 +190,28 @@ int sc_ftoa(double value, uint8_t decimals, uint8_t *str, int len)
 }
 
 
+
+bool sc_str_equal(const char *a, const char *b, uint8_t n)
+{
+  uint8_t i = 0;
+
+  while (*a == *b && (*a != '\0' && *b != '\0')) {
+    if (n > 0 && ++i == n) {
+      break;
+    }
+    ++a;
+    ++b;
+  }
+
+  if (*a == *b) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil

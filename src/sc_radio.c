@@ -78,6 +78,12 @@ static uint8_t radio_comm_get_version(void);
 static uint8_t radio_comm_send_program(uint8_t dry_run);
 static uint8_t ascii2bin(uint8_t h, uint8_t l);
 
+static void parse_command_radio(const uint8_t *param, uint8_t param_len);
+
+static const struct sc_cmd cmds[] = {
+  {"radio",         SC_CMD_HELP("Radio (b)ootloader/(n)ormal/(f)lash"), parse_command_radio},
+};
+
 static THD_WORKING_AREA(sc_radio_flash_thread, 512);
 THD_FUNCTION(scRadioFlashThread, arg)
 {
@@ -654,6 +660,12 @@ static void crc_ccitt_update(uint8_t x)
  */
 void sc_radio_init(void)
 {
+  uint8_t i;
+
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
+  }
+
   radio_state = SC_RADIO_STATE_NORMAL;
 
   palSetPadMode(SC_RADIO_NRST_PORT,
@@ -896,6 +908,47 @@ void sc_radio_flash(void)
   chThdCreateStatic(sc_radio_flash_thread, sizeof(sc_radio_flash_thread), NORMALPRIO, scRadioFlashThread, NULL);
 
   SC_DBG("R: F\r\n");
+}
+
+/*
+ * Parse radio related commands
+ */
+static void parse_command_radio(const uint8_t *param, uint8_t param_len)
+{
+  switch (param[0]) {
+  case 'b':
+    sc_radio_reset_bsl();
+    break;
+  case 'f':
+    sc_radio_flash();
+    break;
+  case 'r':
+    if (param_len < 3) {
+      return;
+    }
+    if (param[2] == '1') {
+      sc_radio_set_reset(1);
+    } else {
+      sc_radio_set_reset(0);
+    }
+    break;
+  case 't':
+    if (param_len < 3) {
+      return;
+    }
+    if (param[2] == '1') {
+      sc_radio_set_test(1);
+    } else {
+      sc_radio_set_test(0);
+    }
+    break;
+  case 'n':
+    sc_radio_reset_normal();
+    break;
+  default:
+    // Invalid value, ignoring command
+    break;
+  }
 }
 
 #endif // SC_HAS_RBV2

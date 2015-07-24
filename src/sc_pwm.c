@@ -28,11 +28,25 @@
 
 #include "sc_utils.h"
 #include "sc_pwm.h"
+#include "sc_cmd.h"
+
+#include <stdio.h>        // sscanf
 
 #if HAL_USE_PWM
 
 // Use 1MHz clock
 #define SC_PWM_CLOCK    1000000
+
+static void parse_command_pwm_frequency(const uint8_t *param, uint8_t param_len);
+static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len);
+static void parse_command_pwm_stop(const uint8_t *param, uint8_t param_len);
+
+static const struct sc_cmd cmds[] = {
+  {"pwm_frequency", SC_CMD_HELP("Set PWM frequency (Hz) for all PWMs"), parse_command_pwm_frequency},
+  {"pwm_duty",      SC_CMD_HELP("Set PWM (0-16) duty cycle (0-10000)"), parse_command_pwm_duty},
+  {"pwm_stop",      SC_CMD_HELP("Stop PWM (0-16)"), parse_command_pwm_stop},
+};
+
 
 static PWMConfig pwmcfg1 = {
   SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
@@ -136,6 +150,11 @@ static PWMConfig pwmcfg3 = {
  */
 void sc_pwm_init(void)
 {
+  uint8_t i;
+
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
+  }
 
 #ifdef SC_PWM1_1_PIN
   palSetPadMode(SC_PWM1_1_PORT, SC_PWM1_1_PIN, PAL_MODE_ALTERNATE(SC_PWM1_1_AF));
@@ -297,4 +316,84 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
   }
 }
 
+
+
+/*
+ * Parse PWM frequency command
+ */
+static void parse_command_pwm_frequency(const uint8_t *param, uint8_t param_len)
+{
+  uint16_t freq;
+
+  (void)param_len;
+
+  if (!param) {
+    // Invalid message
+    return;
+  }
+
+  // Parse the frequency value
+  if (sscanf((char*)param, "%hu", &freq) < 1) {
+    return;
+  }
+
+  sc_pwm_set_freq(freq);
+}
+
+
+
+/*
+ * Parse PWM duty cycle command
+ */
+static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len)
+{
+  uint8_t pwm;
+  uint16_t value;
+
+  (void)param_len;
+
+  if (!param) {
+    // Invalid message
+    return;
+  }
+
+  if (sscanf((char*)param, "%hhu %hu", &pwm, &value) < 2) {
+    return;
+  }
+
+  sc_pwm_set_duty(pwm, value);
+}
+
+
+
+/*
+ * Parse PWM stop command
+ */
+static void parse_command_pwm_stop(const uint8_t *param, uint8_t param_len)
+{
+  uint8_t pwm;
+
+  (void)param_len;
+
+  if (!param) {
+    // Invalid message
+    return;
+  }
+
+  if (sscanf((char*)param, "%hhu", &pwm) < 1) {
+    return;
+  }
+
+  sc_pwm_stop(pwm);
+}
 #endif // HAL_USE_PWM == TRUE
+
+
+
+/* Emacs indentatation information
+   Local Variables:
+   indent-tabs-mode:nil
+   tab-width:2
+   c-basic-offset:2
+   End:
+*/

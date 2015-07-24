@@ -28,11 +28,22 @@
 
 #include "sc_utils.h"
 #include "sc_led.h"
+#include "sc_cmd.h"
 
 #if HAL_USE_PAL
 
+static void parse_command_led(const uint8_t *param, uint8_t param_len);
+
+static const struct sc_cmd cmds[] = {
+  {"led",           SC_CMD_HELP("Set LED off/on/toggle (0/1/t)"), parse_command_led},
+};
+
 void sc_led_init(void)
 {
+  uint8_t i;
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
+  }
   palSetPadMode(USER_LED_PORT,
                 USER_LED,
                 PAL_MODE_OUTPUT_PUSHPULL);
@@ -73,6 +84,31 @@ void sc_led_off(void)
 void sc_led_toggle(void)
 {
   palTogglePad(USER_LED_PORT, USER_LED);
+}
+
+
+
+/*
+ * Parse led command
+ */
+static void parse_command_led(const uint8_t *param, uint8_t param_len)
+{
+  (void)param_len;
+
+  switch (param[0]) {
+  case '0':
+    sc_led_off();
+    break;
+  case '1':
+    sc_led_on();
+    break;
+  case 't':
+    sc_led_toggle();
+    break;
+  default:
+    // Invalid value, ignoring command
+	return;
+  }
 }
 
 #endif // HAL_USE_PAL

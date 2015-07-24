@@ -41,10 +41,13 @@
 # define UNUSED(x) x __attribute__ ((unused))
 #endif
 
+#define SC_ARRAY_SIZE(a) (sizeof a / sizeof a[0])
+
 #define SC_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
 int sc_atoi(uint8_t *str, int len);
 int sc_itoa(int value, uint8_t *str, int len);
 int sc_ftoa(double value, uint8_t decimals, uint8_t *str, int len);
+bool sc_str_equal(const char *a, const char *b, uint8_t n);
 
 #endif

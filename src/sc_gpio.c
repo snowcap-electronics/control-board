@@ -27,7 +27,11 @@
  */
 
 #include "sc_utils.h"
+#include "sc_cmd.h"
 #include "sc_gpio.h"
+#include "sc_led.h"
+
+#include <stdio.h>        // sscanf
 
 #if HAL_USE_PAL
 
@@ -57,6 +61,14 @@ struct gpio_list gpio_list[SC_GPIO_MAX_PINS + 1] = {
 #endif
 };
 
+static void parse_command_gpio(const uint8_t *param, uint8_t param_len);
+static void parse_command_gpio_all(const uint8_t *param, uint8_t param_len);
+
+static const struct sc_cmd cmds[] = {
+  {"gpio",          SC_CMD_HELP("Set GPIO (0-7) to low/high/toggle (0/1/t)"), parse_command_gpio},
+  {"gpio_all",      SC_CMD_HELP("Set all GPIOs (XXXXXXXX, where X = 0/1)"), parse_command_gpio_all},
+};
+
 
 /*
  * Set pinmux
@@ -70,6 +82,9 @@ void sc_gpio_init(void)
         uint8_t pin = gpio_list[i + 1].pin;
         palSetPadMode(port, pin, PAL_MODE_OUTPUT_PUSHPULL);
     }
+  }
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
   }
 }
 
@@ -195,6 +210,68 @@ uint8_t sc_gpio_get_state_all(void)
   return gpios;
 }
 
+
+
+/*
+ * Parse gpio command
+ */
+static void parse_command_gpio(const uint8_t *param, uint8_t param_len)
+{
+  uint8_t gpio;
+  uint8_t value;
+
+  (void)param_len;
+
+  if (!param) {
+    // Invalid message
+    return;
+  }
+
+  if (sscanf((char*)param, "%hhu %c", &gpio, &value) < 2) {
+    return;
+  }
+
+  switch (value) {
+  case '0':
+    sc_gpio_off(gpio);
+    break;
+  case '1':
+    sc_gpio_on(gpio);
+    break;
+  case 't':
+    sc_led_toggle();
+    break;
+  default:
+    // Invalid value, ignoring command
+    break;
+  }
+}
+
+
+
+/*
+ * Parse gpio_all command (GXXXX)
+ */
+static void parse_command_gpio_all(const uint8_t *param, uint8_t param_len)
+{
+  (void)param_len;
+
+  uint8_t gpio, gpios = 0;
+
+  for (gpio = 0; gpio < SC_GPIO_MAX_PINS; ++gpio) {
+    if (param[gpio] == '1') {
+      gpios |= (1 << gpio);
+    } else if (param[gpio] != '0') {
+      /* If it's neither 1 nor 0, the command has
+       * ended and we leave the rest bits as zero.
+       * NOTE: this might have side-effects
+       */
+      break;
+    }
+  }
+
+  sc_gpio_set_state_all(gpios);
+}
 
 #endif // HAL_USE_PAL
 

@@ -39,7 +39,7 @@ static void stop_engines(void);
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
 static void cb_ping(void);
-static void pleco_parse_glow(uint8_t *cmd, uint8_t cmd_len);
+static void pleco_parse_glow(const uint8_t *param, uint8_t param_len);
 
 static systime_t last_ping = 0;
 static uint8_t glow_enable = 0;
@@ -62,7 +62,7 @@ int main(void)
   sc_log_output_uart(SC_UART_USB);
 #endif
 
-  sc_cmd_register('w', pleco_parse_glow);
+  sc_cmd_register("glow", SC_CMD_HELP("Enable glow (0/1)"), pleco_parse_glow);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -234,11 +234,14 @@ static void cb_ping(void)
 /*
  * Parse glow command
  */
-static void pleco_parse_glow(uint8_t *cmd, uint8_t cmd_len)
+static void pleco_parse_glow(const uint8_t *param, uint8_t param_len)
 {
-  (void)cmd_len;
+  if (param_len < 1) {
+    // Invalid message
+    return;
+  }
 
-  switch (cmd[1]) {
+  switch (param[0]) {
   case '0':
     glow_enable = 0;
     break;

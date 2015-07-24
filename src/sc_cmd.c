@@ -29,25 +29,15 @@
 
 #include "sc.h"
 
-#ifdef SC_USE_AHRS
-static void parse_command_ahrs(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_ahrs_beta(uint8_t *cmd, uint8_t cmd_len);
-#endif
+#include <stdio.h>        // sscanf
+#include <string.h>       // memset
 
-#if HAL_USE_PWM
-static void parse_command_pwm(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len);
-#endif
-#if HAL_USE_PAL
-static void parse_command_led(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len);
-#endif
-static void parse_command_ping(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len);
-static void parse_command_power(uint8_t *cmd, uint8_t cmd_len);
+static void parse_command_help(const uint8_t *param, uint8_t param_len);
+static void parse_command_echo(const uint8_t *param, uint8_t param_len);
+
+static void parse_command_ping(const uint8_t *param, uint8_t param_len);
+static void parse_command_blob(const uint8_t *param, uint8_t param_len);
+static void parse_command_power(const uint8_t *param, uint8_t param_len);
 static void parse_command(void);
 
 /*
@@ -60,6 +50,7 @@ static void parse_command(void);
 #define MIN_CMD_LEN           3        // 8 bit command, >=8 bit value, \n
 static uint8_t receive_buffer[SC_CMD_MAX_RECV_BUF_LEN];
 static uint8_t recv_i = 0;
+static bool echo = false;
 
 /*
  * Blob transfers
@@ -78,36 +69,29 @@ static mutex_t blob_mtx;
 #ifndef SC_CMD_MAX_COMMANDS
 #define SC_CMD_MAX_COMMANDS   16
 #endif
-struct sc_cmd {
-    uint8_t cmd;
-    sc_cmd_cb cmd_cb;
+static struct sc_cmd commands[SC_CMD_MAX_COMMANDS];
+static const struct sc_cmd cmds[] = {
+  {"help",          SC_CMD_HELP("Show help"), parse_command_help},
+  {"echo",          SC_CMD_HELP("Enable (0/1) echo"), parse_command_echo},
+  {"blob",          SC_CMD_HELP("Transfer binary blob (n bytes)"), parse_command_blob},
+  {"power",         SC_CMD_HELP("Set power (standby/stop)"), parse_command_power},
+  {"ping",          SC_CMD_HELP("Ask for pong"), parse_command_ping},
 };
-static struct sc_cmd commands[SC_CMD_MAX_COMMANDS] = { {0, NULL}, };
+
 
 /*
  * Initialize command module
  */
 void sc_cmd_init(void)
 {
+  uint8_t i;
+
   chMtxObjectInit(&blob_mtx);
+  memset(commands, 0, sizeof(commands));
 
-#ifdef SC_USE_AHRS
-  sc_cmd_register('A', parse_command_ahrs);
-  sc_cmd_register('B', parse_command_ahrs_beta);
-#endif
-  sc_cmd_register('b', parse_command_blob);
-  sc_cmd_register('c', parse_command_power);
-#if HAL_USE_PAL
-  sc_cmd_register('g', parse_command_gpio);
-  sc_cmd_register('G', parse_command_gpio_all);
-  sc_cmd_register('l', parse_command_led);
-#endif
-  sc_cmd_register('P', parse_command_ping);
-#if HAL_USE_PWM
-  sc_cmd_register('p', parse_command_pwm);
-#endif
-  sc_cmd_register('r', parse_command_radio);
-
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
+  }
 }
 
 
@@ -118,7 +102,11 @@ void sc_cmd_init(void)
  */
 void sc_cmd_deinit(void)
 {
-  // Nothing to do here.
+  uint8_t i;
+  recv_i = 0;
+  for (i = 0; i < SC_CMD_MAX_COMMANDS; ++i) {
+    commands[i].cmd = NULL;
+  }
 }
 
 
@@ -172,41 +160,73 @@ void sc_cmd_push_byte(uint8_t byte)
     return;
   }
 
+  if (echo) {
+    if (byte == '\n') {
+      SC_LOG_PRINTF("\r\n");
+    } else {
+      SC_LOG_PRINTF("%c", byte);
+    }
+  }
+
   // Store the received character
-  receive_buffer[recv_i++] = byte;
+  receive_buffer[recv_i] = byte;
 
   // Check for full command in the buffer
   if (byte == '\n') {
 
+    // Null terminate
+    receive_buffer[recv_i] = '\0';
+
     // Parse the received command
     parse_command();
+
+    // Mark buffer empty
+    recv_i = 0;
     return;
   }
 
   // Discard all data in buffer if buffer is full.
-  // This also discards commands in buffer that has not been handled yet.
-  if (recv_i == SC_CMD_MAX_RECV_BUF_LEN) {
+  if (++recv_i == SC_CMD_MAX_RECV_BUF_LEN) {
+    // FIXME: increase some overflow stat?
     recv_i = 0;
   }
 }
 
+
+
 /*
  * Register a command and handler
  */
-void sc_cmd_register(uint8_t cmd, sc_cmd_cb cb)
+void sc_cmd_register(const char *cmd,
+                     const char *help,
+                     sc_cmd_cb cb)
 {
   int i = 0;
 
-  do {
-    chDbgAssert(i < SC_CMD_MAX_COMMANDS, "Too many commands registered!");
-    chDbgAssert(commands[i].cmd != cmd, "Command registered twice!");
-    i++;
-  } while (i < SC_CMD_MAX_COMMANDS && commands[i].cmd != 0);
-
-  if (i < SC_CMD_MAX_COMMANDS && commands[i].cmd == 0) {
-    commands[i].cmd = cmd;
-    commands[i].cmd_cb = cb;
+  if (cmd == NULL) {
+    chDbgAssert(0, "Command not specified");
+    return;
   }
+
+  while (i < SC_CMD_MAX_COMMANDS && commands[i].cmd != NULL) {
+    if (sc_str_equal(commands[i].cmd, cmd, 0)) {
+      chDbgAssert(0, "Command already registered");
+      return;
+    }
+    i++;
+  }
+
+  if (i == SC_CMD_MAX_COMMANDS) {
+    chDbgAssert(0, "Too many commands registered!");
+    return;
+  }
+
+  chDbgAssert(i < SC_CMD_MAX_COMMANDS, "Logic bug");
+  chDbgAssert(commands[i].cmd == NULL, "Logic bug");
+
+  commands[i].cmd = cmd;
+  commands[i].help = help;
+  commands[i].cmd_cb = cb;
 }
 
 /*
@@ -215,281 +235,63 @@ void sc_cmd_register(uint8_t cmd, sc_cmd_cb cb)
 static void parse_command(void)
 {
   int i;
-  int found = 0;
-  uint8_t command_buf[SC_CMD_MAX_RECV_BUF_LEN];
+  uint8_t cmd_len = 0;
+  bool found_param = false;
+  bool found_cmd = false;
 
-  // FIXME: there can be only one command in buffer, so this is useless
-  // Check for full command in the buffer
-  for(i = 0; i < recv_i; ++i) {
-    if (receive_buffer[i] == '\n') {
-      // Mark the position of the next possible command
-      found = i + 1;
+  // Find the start of the first parameter to allow using sc_str_equal later
+  for (i = 1; i < recv_i; ++i) {
+    if (receive_buffer[i] == ' ') {
+      cmd_len = i;
+      found_param = true;
       break;
     }
   }
 
-  if (!found ) {
-    // No full command in buffer, do nothing
-    return;
+  if (!found_param) {
+    cmd_len = recv_i;
   }
-
-  // Copy command to handling buffer
-  for (i = 0; i < found; ++i) {
-    command_buf[i] = receive_buffer[i];
-  }
-
-  // Clear the newline character as that command has been handled
-  receive_buffer[found - 1] = 0;
-
-  // Pop the command away from the recv buffer
-  for (i = 0; i < recv_i - found; ++i) {
-    receive_buffer[i] = receive_buffer[found];
-  }
-  recv_i -= found;
-
-  if (command_buf[0] == 0)
-    return;
 
   for (i = 0; i < SC_CMD_MAX_COMMANDS; i++) {
-    if (commands[i].cmd == command_buf[0] && commands[i].cmd_cb != NULL) {
-      commands[i].cmd_cb(command_buf, found);
-      return;
+    if (commands[i].cmd == NULL) {
+      break;
     }
-  }
-}
+    if (sc_str_equal(commands[i].cmd, (char*)receive_buffer, cmd_len)) {
+      uint8_t *cmd = NULL;
+      uint8_t len = 0;
 
+      found_cmd = true;
 
-
-#if HAL_USE_PWM
-/*
- * Parse PWM command
- */
-static void parse_command_pwm(uint8_t *cmd, uint8_t len)
-{
-
-  switch (cmd[1]) {
-  case 'f':
-    parse_command_pwm_frequency(cmd, len);
-	break;
-  case '1':
-  case '2':
-  case '3':
-  case '4':
-  case '5':
-  case '6':
-  case '7':
-  case '8':
-  case '9':
-  case 'a':
-  case 'b':
-  case 'c':
-    parse_command_pwm_duty(cmd, len);
-	break;
-  default:
-	// Invalid PWM command, ignoring
-	return;
-  }
-}
-
-
-
-/*
- * Parse PWM frequency command
- */
-static void parse_command_pwm_frequency(uint8_t *cmd, uint8_t cmd_len)
-{
-  uint16_t freq;
-
-  // Parse the frequency value
-  freq = (uint16_t)(sc_atoi(&cmd[2], cmd_len - 2));
-
-  // Set the frequency
-  sc_pwm_set_freq(freq);
-}
-
-
-/*
- * Parse PWM duty cycle command
- */
-static void parse_command_pwm_duty(uint8_t *cmd, uint8_t cmd_len)
-{
-  uint8_t pwm;
-  uint16_t value;
-  int str_len;
-  uint8_t str_duty[10];
-
-  // Parse the PWM number as hex
-  if (cmd[1] >= '0' && cmd[1] <= '9') {
-    pwm = cmd[1] - '0';
-  } else {
-    pwm = cmd[1] - 'a' + 10;
-  }
-
-  // Check for stop command
-  if (cmd[2] == 's') {
-    sc_pwm_stop(pwm);
-    return;
-  }
-
-  // Parse the PWM value
-  value = (uint16_t)(sc_atoi(&cmd[2], cmd_len - 2));
-
-  // Set the duty cycle
-  sc_pwm_set_duty(pwm, value);
-
-  str_len = sc_itoa(value, str_duty, 8);
-
-  // In error send 'e'
-  if (str_len == 0) {
-    str_duty[0] = 'e';
-    str_len = 1;
-  } else {
-    str_duty[str_len++] = '\r';
-    str_duty[str_len++] = '\n';
-  }
-
-  sc_uart_send_msg(SC_UART_LAST, str_duty, str_len);
-}
-#endif
-
-
-
-#ifdef SC_USE_AHRS
-/*
- * Parse AHRS start/stop command
- */
-static void parse_command_ahrs(uint8_t *cmd, uint8_t cmd_len)
-{
-
-  (void)cmd_len;
-
-  switch (cmd[1]) {
-  case '0':
-    sc_ahrs_shutdown();
-    break;
-  case '1':
-    sc_ahrs_init();
-    break;
-  default:
-    // Invalid value, ignoring command
-	return;
-  }
-}
-
-/*
- * Parse AHRS beta value command as 100x
- */
-static void parse_command_ahrs_beta(uint8_t *cmd, uint8_t cmd_len)
-{
-  sc_float beta;
-
-  (void)cmd_len;
-
-  beta = (sc_atoi(&cmd[1], cmd_len - 1))/100.0f;
-
-  sc_ahrs_set_beta(beta);
-}
-
-
-#endif
-
-
-#if HAL_USE_PAL
-/*
- * Parse led command
- */
-static void parse_command_led(uint8_t *cmd, uint8_t cmd_len)
-{
-
-  // Unused currently
-  (void)cmd_len;
-
-  switch (cmd[1]) {
-  case '0':
-    sc_led_off();
-    break;
-  case '1':
-    sc_led_on();
-    break;
-  case 't':
-    sc_led_toggle();
-    break;
-  default:
-    // Invalid value, ignoring command
-	return;
-  }
-}
-
-
-
-/*
- * Parse gpio command
- */
-static void parse_command_gpio(uint8_t *cmd, uint8_t cmd_len)
-{
-  uint8_t gpio;
-
-  // Unused currently
-  (void)cmd_len;
-
-  gpio = cmd[1] - '0';
-
-  switch (cmd[2]) {
-  case '0':
-    sc_gpio_off(gpio);
-    break;
-  case '1':
-    sc_gpio_on(gpio);
-    break;
-  case 't':
-    sc_gpio_toggle(gpio);
-    break;
-  default:
-    // Invalid value, ignoring command
-    break;
-  }
-}
-
-
-
-/*
- * Parse gpio_all command (GXXXX)
- */
-static void parse_command_gpio_all(uint8_t *cmd, uint8_t cmd_len)
-{
-  (void)cmd_len;
-  uint8_t gpio, gpios = 0;
-
-  for (gpio = 0; gpio < SC_GPIO_MAX_PINS; ++gpio) {
-    if (cmd[1 + gpio] == '1') {
-      gpios |= (1 << gpio);
-    } else if (cmd[1 + gpio] != '0') {
-      /* If it's neither 1 nor 0, the command has
-       * ended and we leave the rest bits as zero.
-       * NOTE: this might have side-effects
-       */
+      if (found_param) {
+        cmd = &receive_buffer[cmd_len + 1];
+        len = recv_i - (cmd_len + 1);
+      }
+      commands[i].cmd_cb(cmd, len);
       break;
     }
   }
 
-  sc_gpio_set_state_all(gpios);
+  if (!found_cmd) {
+    SC_LOG_PRINTF("Unknown command: %s\r\n", receive_buffer);
+  }
 }
-#endif
 
 
 
 /*
  * Parse ping command
  */
-static void parse_command_ping(uint8_t *cmd, uint8_t cmd_len)
+static void parse_command_ping(const uint8_t *param, uint8_t param_len)
 {
-  (void)cmd;
-  (void)cmd_len;
+  (void)param;
+  (void)param_len;
 
   msg_t pingmsg;
 
   pingmsg = sc_event_msg_create_type(SC_EVENT_TYPE_PING);
   sc_event_msg_post(pingmsg, SC_EVENT_MSG_POST_FROM_NORMAL);
+
+  // Application is expected to reply with pong
 }
 
 
@@ -497,18 +299,24 @@ static void parse_command_ping(uint8_t *cmd, uint8_t cmd_len)
 /*
  * Parse blob command (bXXXXX)
  */
-static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
+static void parse_command_blob(const uint8_t *param, uint8_t param_len)
 {
   uint16_t bytes;
 
-  bytes = sc_atoi(&cmd[1], cmd_len - 1);
+  (void)param_len;
+
+  if (sscanf((char*)param, "%hu", &bytes) < 1) {
+    return;
+  }
 
   if (bytes == 0) {
-    // Something went wrong, ignore
+    // FIXME: Should just print a warning (can't assert on user input)?
     chDbgAssert(0, "Failed to parse blob size");
+    return;
   }
 
   if (bytes >= SC_BLOB_MAX_SIZE) {
+    // FIXME: Should just print a warning (can't assert on user input)?
     chDbgAssert(0, "Requested blob size too large");
     return;
   }
@@ -519,48 +327,6 @@ static void parse_command_blob(uint8_t *cmd, uint8_t cmd_len)
   chMtxUnlock(&blob_mtx);
 }
 
-
-
-/*
- * Parse radio related commands
- */
-static void parse_command_radio(uint8_t *cmd, uint8_t cmd_len)
-{
-  // Unused currently
-  (void)cmd_len;
-#ifndef SC_HAS_RBV2
-  (void)cmd;
-#else
-  switch (cmd[1]) {
-  case 'b':
-    sc_radio_reset_bsl();
-    break;
-  case 'f':
-    sc_radio_flash();
-    break;
-  case 'r':
-    if (cmd[2] == '1') {
-      sc_radio_set_reset(1);
-    } else {
-      sc_radio_set_reset(0);
-    }
-    break;
-  case 't':
-    if (cmd[2] == '1') {
-      sc_radio_set_test(1);
-    } else {
-      sc_radio_set_test(0);
-    }
-    break;
-  case 'n':
-    sc_radio_reset_normal();
-    break;
-  default:
-    // Invalid value, ignoring command
-    break;
-  }
-#endif
-}
 
 
 /*
@@ -591,25 +357,87 @@ uint16_t sc_cmd_blob_get(uint8_t **blob)
 /*
  * Parse power command
  */
-static void parse_command_power(uint8_t *cmd, uint8_t cmd_len)
+static void parse_command_power(const uint8_t *param, uint8_t param_len)
+{
+  if (sc_str_equal((char*)param, "standby", param_len)) {
+    //sc_pwr_mode_standby(true, true);
+  } else if (sc_str_equal((char*)param, "stop", param_len)) {
+    //sc_pwr_mode_stop(true);
+  }
+}
+
+#ifndef SC_CMD_REMOVE_HELP
+static THD_WORKING_AREA(sc_cmd_help_thread, 1024);
+THD_FUNCTION(scCmdHelpThread, arg)
+{
+  uint8_t i;
+
+  (void)arg;
+
+  chRegSetThreadName(__func__);
+
+  for (i = 0; i < SC_CMD_MAX_COMMANDS; ++i) {
+    const char *help = "No help available";
+
+    if (commands[i].cmd == NULL) {
+      break;
+    }
+
+    if (commands[i].help) {
+      help = commands[i].help;
+    }
+
+    SC_LOG_PRINTF("%-16s %s\r\n", commands[i].cmd, help);
+
+    // Prevent overflowing the transmit buffers
+    chThdSleepMilliseconds(50);
+  }
+}
+#endif
+
+/*
+ * Parse help command
+ */
+static void parse_command_help(const uint8_t *param, uint8_t param_len)
 {
 
-  // Unused currently
-  (void)cmd_len;
+  (void)param_len;
+  (void)param;
 
-  switch (cmd[1]) {
-  case 'a':
-    //sc_pwr_mode_standby(true, true);
+#ifdef SC_CMD_REMOVE_HELP
+  SC_LOG_PRINTF("No help available\r\n");
+#else
+  // Launch a thread to print longer stuff
+  chThdCreateStatic(sc_cmd_help_thread,
+                    sizeof(sc_cmd_help_thread),
+                    NORMALPRIO,
+                    scCmdHelpThread,
+                    NULL);
+#endif
+}
+
+
+
+/*
+ * Parse echo command
+ */
+static void parse_command_echo(const uint8_t *param, uint8_t param_len)
+{
+  (void)param_len;
+
+  switch (param[0]) {
+  case '0':
+    echo = 0;
     break;
-  case 'o':
-    //sc_pwr_mode_stop(true);
+  case '1':
+    echo = 1;
     break;
   default:
     // Invalid value, ignoring command
     return;
   }
+  SC_LOG_PRINTF("echo %s\r\n", echo ? "on" : "off");
 }
-
 
 
 

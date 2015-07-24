@@ -33,6 +33,7 @@
 #include "sc_utils.h"
 #include "sc.h"
 
+#include <stdio.h>        // sscanf
 #include <string.h>       // memcpy
 #include <math.h>         // atan2 etc.
 
@@ -79,8 +80,15 @@ static bool MadgwickAHRSupdate(sc_float dt,
                                sc_float *acc,
                                sc_float *magn);
 static void reset_state(void);
-
 #endif
+
+static void parse_command_ahrs_enable(const uint8_t *param, uint8_t param_len);
+static void parse_command_ahrs_beta(const uint8_t *param, uint8_t param_len);
+
+static const struct sc_cmd cmds[] = {
+  {"ahrs_enable",   SC_CMD_HELP("Enable (0/1) AHRS"), parse_command_ahrs_enable},
+  {"ahrs_beta",     SC_CMD_HELP("Set AHRS beta (float)"), parse_command_ahrs_beta},
+};
 
 static thread_t * sc_ahrs_thread_ptr;
 
@@ -179,12 +187,18 @@ THD_FUNCTION(scAhrsThread, arg)
 
 void sc_ahrs_init(void)
 {
+  uint8_t i;
+
   if (running == 1) {
     chDbgAssert(0, "AHRS already running");
     return;
   }
 
   chMtxObjectInit(&ahrs_mtx);
+
+  for (i = 0; i < SC_ARRAY_SIZE(cmds); ++i) {
+    sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
+  }
 
   running = 1;
   beta = sqrt(3.0f / 4.0f) * GYRO_MEAS_ERROR;
@@ -259,6 +273,41 @@ void sc_ahrs_get_orientation(uint32_t *ts,
   chMtxUnlock(&ahrs_mtx);
 }
 
+/*
+ * Parse AHRS start/stop command
+ */
+static void parse_command_ahrs_enable(const uint8_t *param, uint8_t param_len)
+{
+  (void)param_len;
+
+  switch (param[0]) {
+  case '0':
+    sc_ahrs_shutdown();
+    break;
+  case '1':
+    sc_ahrs_init();
+    break;
+  default:
+    // Invalid value, ignoring command
+	return;
+  }
+}
+
+/*
+ * Parse AHRS beta value command as 100x
+ */
+static void parse_command_ahrs_beta(const uint8_t *param, uint8_t param_len)
+{
+  sc_float beta;
+
+  (void)param_len;
+
+  if (sscanf((char*)param, "%f", &beta) < 1) {
+    return;
+  }
+
+  sc_ahrs_set_beta(beta);
+}
 
 
 #ifdef SC_ALLOW_GPL
