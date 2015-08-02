@@ -5,6 +5,15 @@ set -e
 CONFIGS="projects/*.mk"
 CORECOUNT=$(nproc)
 
+# Spirit1 apps need encryption key and device address
+if [ ! -f spirit1_key.h ]
+then
+	cat <<EOF > spirit1_key.h
+#define TOP_SECRET_KEY          ((uint8_t*)"_TOP_SECRET_KEY_")
+#define MY_ADDRESS              0x01
+EOF
+fi
+
 for cfg in projects/*.mk
 do
 

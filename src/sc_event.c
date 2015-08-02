@@ -87,6 +87,7 @@ static sc_event_cb_9dof_available cb_9dof_available = NULL;
 static sc_event_cb_blob_available cb_blob_available = NULL;
 static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 static sc_event_cb_audio_available cb_audio_available = NULL;
+static sc_event_cb_spirit1_available cb_spirit1_available = NULL;
 
 static thread_t *event_thread = NULL;
 
@@ -190,6 +191,11 @@ static THD_FUNCTION(eventLoopThread, arg)
     case SC_EVENT_TYPE_AUDIO_AVAILABLE:
       if (cb_audio_available != NULL) {
         cb_audio_available();
+      }
+      break;
+    case SC_EVENT_TYPE_SPIRIT1_AVAILABLE:
+      if (cb_spirit1_available != NULL) {
+        cb_spirit1_available();
       }
       break;
 
@@ -461,6 +467,16 @@ void sc_event_register_ahrs_available(sc_event_cb_ahrs_available func)
 void sc_event_register_audio_available(sc_event_cb_audio_available func)
 {
   cb_audio_available = func;
+}
+
+
+
+/*
+ * Register callback for new spirit1 message available
+ */
+void sc_event_register_spirit1_available(sc_event_cb_spirit1_available func)
+{
+  cb_spirit1_available = func;
 }
 
 

@@ -29,8 +29,21 @@
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc.h"
+#ifdef SC_HAS_SPIRIT1
+#include "sc_spirit1.h"
+// This is a local file containing local secrets
+#include "spirit1_key.h"
+// Something like this:
+/*
+#define TOP_SECRET_KEY          ((uint8_t*)"_TOP_SECRET_KEY_")
+#define MY_ADDRESS              0x34
+*/
+#endif
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
+#ifdef SC_HAS_SPIRIT1
+static void cb_spirit1_msg(void);
+#endif
 static void init(void);
 
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
@@ -56,10 +69,25 @@ int main(void)
   sc_event_register_extint(GPIOA_BUTTON, cb_button_changed);
 #endif
 
+#ifdef SC_HAS_SPIRIT1
+  sc_event_register_spirit1_available(cb_spirit1_msg);
+  sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
+#endif
+
+  chThdSleepMilliseconds(1000);
   // Loop forever waiting for callbacks
   while(1) {
-    chThdSleepMilliseconds(1000);
+#ifndef SC_HAS_SPIRIT1
     SC_LOG_PRINTF("d: ping\r\n");
+    chThdSleepMilliseconds(1000);
+#else
+    {
+      uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
+      //SC_LOG_PRINTF("sending: test\r\n");
+      sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
+      chThdSleepMilliseconds(10000);
+    }
+#endif
   }
 
   return 0;
@@ -67,7 +95,7 @@ int main(void)
 
 static void init(void)
 {
-  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED;
+  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
 
   // UART1, PWM nor ADC pins are defined for L152 Nucleo board
 #if !defined(BOARD_ST_NUCLEO_L152RE)
@@ -114,6 +142,28 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte)
   }
 #endif
 }
+
+
+
+#ifdef SC_HAS_SPIRIT1
+static void cb_spirit1_msg(void)
+{
+  uint8_t msg[32];
+  uint8_t len;
+  uint8_t addr;
+  uint8_t lqi;
+  uint8_t rssi;
+
+  len = sc_spirit1_read(&addr, msg, sizeof(msg));
+  if (len) {
+    lqi = sc_spirit1_lqi();
+    rssi = sc_spirit1_rssi();
+    SC_LOG_PRINTF("GOT MSG (LQI: %u, RSSI: %u): %s", lqi, rssi, msg);
+  } else {
+    SC_LOG_PRINTF("SPIRIT1 READ FAILED");
+  }
+}
+#endif
 
 
 

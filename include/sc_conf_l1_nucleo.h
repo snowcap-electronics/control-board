@@ -71,6 +71,27 @@
 #define SC_UART2_RX_AF     7
 #endif
 
+#ifdef SC_HAS_SPIRIT1
+#define SC_SPIRIT1_SPIN           SPID1
+#define SC_SPIRIT1_SPI_SCK_PORT   GPIOB
+#define SC_SPIRIT1_SPI_SCK_PIN    3
+#define SC_SPIRIT1_SPI_PORT       GPIOA
+#define SC_SPIRIT1_SPI_MISO_PIN   GPIOA_PIN6
+#define SC_SPIRIT1_SPI_MOSI_PIN   GPIOA_PIN7
+#define SC_SPIRIT1_SPI_CS_PORT    GPIOB
+#define SC_SPIRIT1_SPI_CS_PIN     GPIOB_PIN6
+#define SC_SPIRIT1_SPI_AF         5
+#define SC_SPIRIT1_SDN_PORT       GPIOA
+#define SC_SPIRIT1_SDN_PIN        GPIOA_PIN10
+#define SC_SPIRIT1_INT_PORT       GPIOC
+#define SC_SPIRIT1_INT_PIN        GPIOC_PIN7
+#ifndef HAL_USE_SPI
+#error "SPIRIT1 needs SPI"
+#endif
+#endif
+
+
+
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
 #endif

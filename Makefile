@@ -213,6 +213,7 @@ CSRC = $(STARTUPSRC) \
        src/sc_9dof.c \
        src/sc_extint.c \
        src/sc_radio.c \
+       src/sc_spirit1.c \
        src/sc_ahrs.c \
        src/sc_filter.c \
        src/sc_i2s.c \
@@ -221,6 +222,11 @@ CSRC = $(STARTUPSRC) \
        src/slre.c \
        src/testplatform.c \
        src/main-$(SC_PROJECT).c
+
+# Include any extra source code defined by the project's makefile
+ifneq ($(SC_EXTRA_CSRC),)
+  CSRC += $(SC_EXTRA_CSRC)
+endif
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -254,6 +260,8 @@ INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC)\
          $(CHIBIOS)/os/various \
          $(CHIBIOS)/os/hal/include \
          $(CHIBIOS)/os/hal/lib/streams \
+         drivers \
+         drivers/SPIRIT1_Library drivers/SPIRIT1_Library/Inc \
          config include
 
 #
