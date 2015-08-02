@@ -33,10 +33,18 @@
 
 #if HAL_USE_SPI
 
-int8_t sc_spi_init(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin);
-void sc_spi_stop(uint8_t spin);
+void sc_spi_init(void);
+void sc_spi_deinit(void);
+int8_t sc_spi_register(SPIDriver *spip,
+                       ioportid_t cs_port,
+                       uint8_t cs_pin,
+                       uint32_t cr1);
+void sc_spi_unregister(uint8_t spin);
+void sc_spi_select(uint8_t spin);
+void sc_spi_deselect(uint8_t spin);
 void sc_spi_exchange(uint8_t spin, uint8_t *tx, uint8_t *rx, size_t bytes);
 void sc_spi_send(uint8_t spin, uint8_t *data, size_t bytes);
+void sc_spi_receive(uint8_t spin, uint8_t *data, size_t bytes);
 
 #endif /* HAL_USE_SPI */
 

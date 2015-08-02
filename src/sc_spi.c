@@ -33,95 +33,128 @@
 #if HAL_USE_SPI
 
 #define SC_SPI_MAX_CLIENTS       8
-// Speed 5.25MHz, CPHA=1, CPOL=1, 8bits frames, MSb transmitted first.
-#define SC_SPI_DEFAULT_CR1       SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA;
+
+static mutex_t data_mtx;
 
 typedef struct sc_spi_conf {
   SPIDriver *spip;
-  ioportid_t cs_port;
-  uint16_t cs_pin;
-  uint16_t cr1;
+  SPIConfig cfg;
+  bool selected;
 } sc_spi_conf;
 
 static sc_spi_conf spi_conf[SC_SPI_MAX_CLIENTS];
 
+void sc_spi_init(void)
+{
+  chMtxObjectInit(&data_mtx);
 
-int8_t sc_spi_init(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin)
+}
+
+void sc_spi_deinit(void)
+{
+  chMtxLock(&data_mtx);
+  for (uint8_t i = 0; i < SC_SPI_MAX_CLIENTS; ++i) {
+    spi_conf[i].spip = NULL;
+    spi_conf[i].selected = false;
+  }
+  chMtxUnlock(&data_mtx);
+}
+
+
+int8_t sc_spi_register(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin, uint32_t cr1)
 {
   int8_t i;
   chDbgAssert(spip != NULL, "SPI driver null");
+
+  chMtxLock(&data_mtx);
 
   /* Find empty slot for new SPI client */
   for (i = 0; i < SC_SPI_MAX_CLIENTS; ++i) {
     if (spi_conf[i].spip == NULL) {
       spi_conf[i].spip = spip;
-      spi_conf[i].cs_port = cs_port;
-      spi_conf[i].cs_pin = cs_pin;
-      spi_conf[i].cr1 = SC_SPI_DEFAULT_CR1;
+      spi_conf[i].cfg.end_cb = NULL;
+      spi_conf[i].cfg.ssport = cs_port;
+      spi_conf[i].cfg.sspad = cs_pin;
+      spi_conf[i].cfg.cr1 = cr1;
+      spi_conf[i].selected = false;
+      chMtxUnlock(&data_mtx);
       return i;
     }
   }
+
+  chMtxUnlock(&data_mtx);
 
   chDbgAssert(0, "Too many SPI clients");
 
   return -1;
 }
 
-void sc_spi_stop(uint8_t spin)
+void sc_spi_unregister(uint8_t spin)
+{
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
+  chDbgAssert(spi_conf[spin].selected, "SPI n still selected");
+
+  chMtxLock(&data_mtx);
+  spi_conf[spin].spip = NULL;
+  chMtxUnlock(&data_mtx);
+
+}
+
+void sc_spi_select(uint8_t spin)
 {
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
+  spiAcquireBus(spi_conf[spin].spip);
+
+  chDbgAssert(!spi_conf[spin].selected, "SPI n already selected");
+
+  spiStart(spi_conf[spin].spip, &spi_conf[spin].cfg);
+  spiSelect(spi_conf[spin].spip);
+
+  spi_conf[spin].selected = true;
+}
+
+void sc_spi_deselect(uint8_t spin)
+{
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
+
+  chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
+  spi_conf[spin].selected = false;
+
+  spiUnselect(spi_conf[spin].spip);
   spiStop(spi_conf[spin].spip);
-  spi_conf[spin].spip = NULL;
+
+  spiReleaseBus(spi_conf[spin].spip);
 }
 
 void sc_spi_exchange(uint8_t spin, uint8_t *tx, uint8_t *rx, size_t bytes)
 {
-  SPIConfig spi_cfg;
-
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
-
-  /* spiStart always to set CS for every call according to SPI client. */
-  spi_cfg.end_cb = NULL;
-  spi_cfg.ssport = spi_conf[spin].cs_port;
-  spi_cfg.sspad = spi_conf[spin].cs_pin;
-  spi_cfg.cr1 = spi_conf[spin].cr1;
-
-  spiStart(spi_conf[spin].spip, &spi_cfg);
-  spiAcquireBus(spi_conf[spin].spip);
-  spiSelect(spi_conf[spin].spip);
+  chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
 
   spiExchange(spi_conf[spin].spip, bytes, tx, rx);
-
-  spiUnselect(spi_conf[spin].spip);
-  spiReleaseBus(spi_conf[spin].spip);
-  spiStop(spi_conf[spin].spip);
 }
 
 void sc_spi_send(uint8_t spin, uint8_t *data, size_t bytes)
 {
-  SPIConfig spi_cfg;
-
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
-
-  /* spiStart always to set CS per SPI client. */
-  spi_cfg.end_cb = NULL;
-  spi_cfg.ssport = spi_conf[spin].cs_port;
-  spi_cfg.sspad = spi_conf[spin].cs_pin;
-  spi_cfg.cr1 = spi_conf[spin].cr1;
-
-  spiStart(spi_conf[spin].spip, &spi_cfg);
-  spiAcquireBus(spi_conf[spin].spip);
-  spiSelect(spi_conf[spin].spip);
+  chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
 
   spiSend(spi_conf[spin].spip, bytes, data);
+}
 
-  spiUnselect(spi_conf[spin].spip);
-  spiReleaseBus(spi_conf[spin].spip);
-  spiStop(spi_conf[spin].spip);
+void sc_spi_receive(uint8_t spin, uint8_t *data, size_t bytes)
+{
+  chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
+  chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
+  chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
+
+  spiReceive(spi_conf[spin].spip, bytes, data);
 }
 
 #endif /* HAL_USE_SPI */

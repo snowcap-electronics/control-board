@@ -99,7 +99,7 @@ int main(void)
 static void init(void)
 {
   uint8_t use_usb = 1;
-  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
+  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
   uint8_t i;
 
   // F1 Discovery doesn't support USB

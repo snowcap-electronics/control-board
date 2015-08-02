@@ -68,6 +68,7 @@
 #define SC_MODULE_RADIO       (0x1 << 12)
 #define SC_MODULE_HID         (0x1 << 13)
 #define SC_MODULE_I2S         (0x1 << 14)
+#define SC_MODULE_SPI         (0x1 << 15)
 
 #define SC_SENSOR_ACC         (0x1 <<  0)
 #define SC_SENSOR_MAGN        (0x1 <<  1)

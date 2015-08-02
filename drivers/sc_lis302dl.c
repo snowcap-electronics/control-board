@@ -36,6 +36,9 @@
 
 #ifdef SC_HAS_LIS302DL
 
+// Speed 5.25MHz, CPHA=1, CPOL=1, 8bits frames, MSb transmitted first.
+#define LIS302DL_SPI_CR1       (SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA)
+
 /* LIS302DL registers used in this file */
 #define LIS302DL_CTRL_REG1   0x20
 #define LIS302DL_CTRL_REG2   0x21
@@ -77,11 +80,14 @@ void sc_lis302dl_init(void)
                        SC_EXTINT_EDGE_RISING,
                        lis302dl_drdy_cb);
 
-  spi_n = sc_spi_init(&SC_LIS302DL_SPIN,
-                      SC_LIS302DL_CS_PORT,
-                      SC_LIS302DL_CS_PIN);
+  spi_n = sc_spi_register(&SC_LIS302DL_SPIN,
+                          SC_LIS302DL_CS_PORT,
+                          SC_LIS302DL_CS_PIN,
+                          LIS302DL_SPI_CR1);
 
   spin = (uint8_t)spi_n;
+
+  sc_spi_select(spin);
 
   // Enable data ready interrupt
   txbuf[0] = LIS302DL_CTRL_REG3;
@@ -92,6 +98,8 @@ void sc_lis302dl_init(void)
   txbuf[0] = LIS302DL_CTRL_REG1;
   txbuf[1] = 0x47; // XEN + YEN + ZEN + PD (1 == enable active mode)
   sc_spi_send(spin, txbuf, sizeof(txbuf));
+
+  sc_spi_deselect(spin);
 }
 
 
@@ -103,11 +111,8 @@ uint8_t sc_lis302dl_read(sc_float *acc)
 
   // Wait for data ready signal
   chBSemWait(&lis302dl_drdy_sem);
-  //chThdSleepMilliseconds(1000);
 
-  // FIXME: why 16 bits instead of just 8?
-
-
+  sc_spi_select(spin);
 
   txbuf[0] = LIS302DL_READ_BIT | LIS302DL_OUTX;
   txbuf[1] = 0xff;
@@ -124,6 +129,8 @@ uint8_t sc_lis302dl_read(sc_float *acc)
   sc_spi_exchange(spin, txbuf, rxbuf, sizeof(rxbuf));
   acc[2] = rxbuf[1] * LIS302DL_SENSIVITY;
 
+  sc_spi_deselect(spin);
+
   return SC_SENSOR_ACC;
 }
 
@@ -132,6 +139,8 @@ uint8_t sc_lis302dl_read(sc_float *acc)
 void sc_lis302dl_shutdown(void)
 {
   uint8_t txbuf[2];
+
+  sc_spi_select(spin);
 
   // Disable interrupts
   txbuf[0] = LIS302DL_CTRL_REG3;
@@ -142,7 +151,9 @@ void sc_lis302dl_shutdown(void)
   txbuf[1] = 0x0; // PD (0 == power down mode)
   sc_spi_send(spin, txbuf, sizeof(txbuf));
 
-  sc_spi_stop(spin);
+  sc_spi_deselect(spin);
+
+  sc_spi_unregister(spin);
 }
 
 #endif

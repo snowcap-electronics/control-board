@@ -141,11 +141,27 @@ void sc_init(uint32_t subsystems)
     chDbgAssert(0, "HAL_USE_I2S undefined");
 #endif
   }
+
+  if (subsystems & SC_MODULE_SPI) {
+#if HAL_USE_SPI
+    sc_spi_init();
+#else
+    chDbgAssert(0, "HAL_USE_SPI undefined");
+#endif
+  }
 }
 
 
 void sc_deinit(uint32_t subsystems)
 {
+
+  if (subsystems & SC_MODULE_SPI) {
+#if HAL_USE_SPI
+    sc_spi_deinit();
+#else
+    chDbgAssert(0, "HAL_USE_SPI undefined");
+#endif
+  }
 
   if (subsystems & SC_MODULE_I2S) {
 #if HAL_USE_I2S
