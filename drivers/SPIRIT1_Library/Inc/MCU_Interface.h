@@ -49,7 +49,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_Types.h"
-
+#include "sc_spirit1.h"
 
 #ifdef __cplusplus
 extern "C" {

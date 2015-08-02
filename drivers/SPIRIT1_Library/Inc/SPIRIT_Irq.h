@@ -208,7 +208,7 @@ typedef struct
   SpiritFlagStatus  IRQ_AES_END:1;                  /*!< IRQ: AES End of operation */
   SpiritFlagStatus  :1;                             /*!< Reserved bit */
 
-} SpiritIrqs;
+} __attribute__((__packed__)) SpiritIrqs;
 
 
 /**
