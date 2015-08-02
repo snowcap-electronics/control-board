@@ -150,7 +150,7 @@ typedef struct
    	   	   	   	     antenna */
   uint8_t : 4;			/*!< This 4 bits field are reserved and equal to 5 */
 
-}SpiritStatus;
+}__attribute__((__packed__)) SpiritStatus;
 
 
 
@@ -195,7 +195,7 @@ extern volatile SpiritStatus g_xStatus;
    */
   #define s_assert_param(expr) ((expr) ? (void)0 : s_assert_failed((uint8_t *)__FILE__, __LINE__))
   void s_assert_failed(uint8_t* file, uint32_t line);
-#elif  SPIRIT_USE_VCOM_ASSERT
+#elif defined SPIRIT_USE_VCOM_ASSERT && SPIRIT_USE_VCOM_ASSERT
   /**
    * @brief  The s_assert_param macro is used for function's parameters check.
    * @param  expr  If expr is false, it calls assert_failed function which reports
@@ -206,7 +206,7 @@ extern volatile SpiritStatus g_xStatus;
   #define s_assert_param(expr) ((expr) ? (void)0 : s_assert_failed((uint8_t *)__FILE__, __LINE__,#expr))
   void s_assert_failed(uint8_t* file, uint32_t line, char* expression);
 
-#elif SPIRIT_USE_FRAME_ASSERT
+#elif defined SPIRIT_USE_FRAME_ASSERT && SPIRIT_USE_FRAME_ASSERT
    /**
    * @brief  The s_assert_param macro is used for function's parameters check.
    * @param  expr  If expr is false, it calls assert_failed function which reports

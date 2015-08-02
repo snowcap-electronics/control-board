@@ -51,7 +51,6 @@
 #include "MCU_Interface.h"
 #include "SPIRIT_Types.h"
 #include "SPIRIT_Management.h"
-#include "SPIRIT1_Util.h"
 
 
 #ifdef __cplusplus

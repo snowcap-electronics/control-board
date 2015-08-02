@@ -46,7 +46,7 @@ static const uint8_t s_vectcBandRegValue[4]={SYNT0_BS_6, SYNT0_BS_12, SYNT0_BS_1
 
 static uint32_t s_nDesiredFrequency;
 
-volatile static uint8_t s_cCommunicationState = COMMUNICATION_STATE_NONE;
+static volatile uint8_t s_cCommunicationState = COMMUNICATION_STATE_NONE;
 
 
 /**

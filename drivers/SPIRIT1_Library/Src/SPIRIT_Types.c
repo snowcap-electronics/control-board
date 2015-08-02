@@ -121,7 +121,7 @@ void s_assert_failed(uint8_t* file, uint32_t line)
   {
   }
 }
-#elif SPIRIT_USE_VCOM_ASSERT
+#elif defined SPIRIT_USE_VCOM_ASSERT && SPIRIT_USE_VCOM_ASSERT
 
 #include "SDK_EVAL_VC_General.h"
 
@@ -146,7 +146,7 @@ void s_assert_failed(uint8_t* file, uint32_t line, char* expression)
   }
 }
 
-#elif SPIRIT_USE_FRAME_ASSERT
+#elif defined SPIRIT_USE_FRAME_ASSERT && SPIRIT_USE_FRAME_ASSERT
 
 #include "SdkUsbProtocol.h"
 

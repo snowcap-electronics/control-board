@@ -49,8 +49,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_Config.h"   
-#include "radio_spi.h"
-
+#include "sc_spirit1.h"
 
 #ifdef __cplusplus
 extern "C" {
