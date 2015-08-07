@@ -51,8 +51,6 @@
 #define UART_MAX_CIRCULAR_BUFS     8
 #endif
 
-static UARTDriver *last_uart = NULL;
-
 static void txend1_cb(UARTDriver *uartp);
 static void txend2_cb(UARTDriver *uartp);
 static void rxend_cb(UARTDriver *uartp);
@@ -83,10 +81,6 @@ static UARTDriver *circular_uart[UART_MAX_CIRCULAR_BUFS];
 static int8_t circular_sending;
 static int8_t circular_free;
 static mutex_t circular_mtx;
-
-/* Boolean to tell if the last character was received from USB */
-/* FIXME: Quite a hack */
-static uint8_t uart_use_usb;
 
 static uint8_t uarts_enabled;
 
@@ -231,9 +225,6 @@ void sc_uart_start(SC_UART uart)
     palSetPadMode(SC_UART1_RX_PORT, SC_UART1_RX_PIN, PAL_MODE_ALTERNATE(SC_UART1_RX_AF));
 #endif
     uartStart(&UARTD1, &uart_cfg_1);
-    if (last_uart == NULL) {
-      last_uart = &UARTD1;
-    }
     uart_set_enable(SC_UART_1, 1);
     break;
 #endif
@@ -244,18 +235,12 @@ void sc_uart_start(SC_UART uart)
     palSetPadMode(SC_UART2_RX_PORT, SC_UART2_RX_PIN, PAL_MODE_ALTERNATE(SC_UART2_RX_AF));
 #endif
     uartStart(&UARTD2, &uart_cfg_2);
-    if (last_uart == NULL) {
-      last_uart = &UARTD2;
-    }
     uart_set_enable(SC_UART_2, 1);
     break;
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
     uartStart(&UARTD3, &uart_cfg_3);
-    if (last_uart == NULL) {
-      last_uart = &UARTD3;
-    }
     uart_set_enable(SC_UART_3, 1);
     break;
 #endif
@@ -296,13 +281,6 @@ void sc_uart_stop(SC_UART uart)
   // FIXME: should empty the queue messages for stopped UART
 }
 
-
-
-void sc_uart_default_usb(uint8_t enable)
-{
-  uart_use_usb = enable;
-}
-
 /**
  * @brief   Send a message over UART.
  *
@@ -315,14 +293,6 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
   UARTDriver *uartdrv;
   int bytes_done = 0;
   int bytes_left = len;
-
-#if HAL_USE_SERIAL_USB
-  // If last byte received from Serial USB, send message using Serial USB
-  if (uart == SC_UART_USB || (uart == SC_UART_LAST && uart_use_usb)) {
-    sc_sdu_send_msg(msg, len);
-    return;
-  }
-#endif
 
   switch (uart) {
 #if STM32_UART_USE_USART1
@@ -340,9 +310,6 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
     uartdrv = &UARTD3;
     break;
 #endif
-  case SC_UART_LAST:
-    uartdrv = last_uart;
-    break;
   default:
     // Invalid uart, do nothing
     chDbgAssert(0, "Invalid UART specified");
@@ -365,30 +332,6 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
 }
 
 
-
-/**
- * @brief   Receive a character from Serial USB (sc_sdu)
- *
- * @param[in] c         Received character
- */
-#if !HAL_USE_SERIAL_USB
-void sc_uart_revc_usb_byte(UNUSED(uint8_t c))
-{
-  chDbgAssert(0, "HAL_USE_SERIAL_USB not defined, cannot call sc_uart_revc_usb_byte()");
-}
-#else
-void sc_uart_revc_usb_byte(uint8_t c)
-{
-  msg_t msg;
-
-  // Mark that the last character is received from Serial USB
-  uart_use_usb = TRUE;
-
-  // Pass data to to command parsing through the main thread
-  msg = sc_event_msg_create_recv_byte(c, SC_UART_USB);
-  sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
-}
-#endif
 
 /**
  * @brief   Send a string over UART.
@@ -460,9 +403,11 @@ void sc_uart_send_finished(void)
 /*
  * End of transmission buffer callback.
  */
-static void txend1_cb(UNUSED(UARTDriver *uartp))
+static void txend1_cb(UARTDriver *uartp)
 {
   msg_t msg;
+
+  (void)uartp;
 
   msg = sc_event_msg_create_type(SC_EVENT_TYPE_UART_SEND_FINISHED);
   sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
@@ -473,9 +418,9 @@ static void txend1_cb(UNUSED(UARTDriver *uartp))
 /*
  * Physical end of transmission callback.
  */
-static void txend2_cb(UNUSED(UARTDriver *uartp))
+static void txend2_cb(UARTDriver *uartp)
 {
-  
+  (void)uartp;
 }
 
 
@@ -483,9 +428,9 @@ static void txend2_cb(UNUSED(UARTDriver *uartp))
 /*
  * Receive buffer filled callback.
  */
-static void rxend_cb(UNUSED(UARTDriver *uartp))
+static void rxend_cb(UARTDriver *uartp)
 {
-  
+  (void)uartp;
 }
 
 
@@ -496,7 +441,7 @@ static void rxend_cb(UNUSED(UARTDriver *uartp))
 #if STM32_UART_USE_USART1
 static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 {
-  last_uart = uartp;
+  (void)uartp;
   rxchar(c, SC_UART_1);
 }
 #endif
@@ -507,7 +452,7 @@ static void rx1char_cb(UARTDriver *uartp, uint16_t c)
 #if STM32_UART_USE_USART2
 static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 {
-  last_uart = uartp;
+  (void)uartp;
   rxchar(c, SC_UART_2);
 }
 #endif
@@ -520,7 +465,7 @@ static void rx2char_cb(UARTDriver *uartp, uint16_t c)
 #if STM32_UART_USE_USART3
 static void rx3char_cb(UARTDriver *uartp, uint16_t c)
 {
-  last_uart = uartp;
+  (void)uartp;
   rxchar(c, SC_UART_3);
 }
 #endif
@@ -534,10 +479,7 @@ static void rxchar(uint16_t c, SC_UART uart)
 {
   msg_t msg;
 
-  // Mark that the last character was received over UART
-  uart_use_usb = FALSE;
-
-  // Pass data to to command parsing through the main thread
+  // Pass byte to main app
   msg = sc_event_msg_create_recv_byte((uint8_t)c, uart);
   sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_ISR);
 }
@@ -547,9 +489,10 @@ static void rxchar(uint16_t c, SC_UART uart)
 /*
  * Receive error callback.
  */
-static void rxerr_cb(UNUSED(UARTDriver *uartp), UNUSED(uartflags_t e))
+static void rxerr_cb(UARTDriver *uartp, uartflags_t e)
 {
-  
+  (void)uartp;
+  (void)e;
 }
 
 
@@ -629,24 +572,28 @@ static void uart_set_enable(SC_UART uart, uint8_t enable)
  */
 static uint8_t uart_is_enabled(UARTDriver *drv)
 {
-  SC_UART uart = SC_UART_LAST;
+  SC_UART uart;
+  bool match = false;
 #if STM32_UART_USE_USART1
   if (drv == &UARTD1) {
     uart = SC_UART_1;
+    match = true;
   }
 #endif
 #if STM32_UART_USE_USART2
   if (drv == &UARTD2) {
     uart = SC_UART_2;
+    match = true;
   }
 #endif
 #if STM32_UART_USE_USART3
   if (drv == &UARTD3) {
     uart = SC_UART_3;
+    match = true;
   }
 #endif
 
-  if (uart == SC_UART_LAST) {
+  if (!match) {
     chDbgAssert(0, "Invalid UART driver");
     return 0;
   }

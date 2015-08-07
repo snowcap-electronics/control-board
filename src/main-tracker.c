@@ -494,7 +494,6 @@ int main(void)
     sc_init(subsystems);
 
 #if USE_USB
-    sc_uart_default_usb(TRUE);
     sc_log_output_uart(SC_UART_USB);
 #endif
 

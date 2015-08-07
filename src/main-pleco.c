@@ -58,7 +58,6 @@ int main(void)
   sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);
 #else
   sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_SDU | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);
-  sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
 #endif
 
@@ -182,7 +181,8 @@ static void cb_adc_available(void)
   msg[len++] = '\r';
   msg[len++] = '\n';
 
-  sc_uart_send_msg(SC_UART_LAST, msg, len);
+  // FIXME: use SC_LOG_PRINTF
+  sc_uart_send_msg(SC_UART_USB, msg, len);
 
   // Get ADC reading for the battery voltage
   // Max 51.8V, 1bit == 0.012646484375 volts
@@ -201,7 +201,8 @@ static void cb_adc_available(void)
   msg[len++] = '\r';
   msg[len++] = '\n';
 
-  sc_uart_send_msg(SC_UART_LAST, msg, len);
+  // FIXME: use SC_LOG_PRINTF
+  sc_uart_send_msg(SC_UART_USB, msg, len);
 
   // Get ADC reading for the current consumption in milliamps
   // Max 89.4A, 1bit == 0.021826171875 amps
@@ -220,7 +221,8 @@ static void cb_adc_available(void)
   msg[len++] = '\r';
   msg[len++] = '\n';
 
-  sc_uart_send_msg(SC_UART_LAST, msg, len);
+  // FIXME: use SC_LOG_PRINTF
+  sc_uart_send_msg(SC_UART_USB, msg, len);
 
 }
 

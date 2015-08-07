@@ -117,7 +117,6 @@ static void init(void)
   sc_log_output_uart(SC_UART_2);
 #else
 # if !defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
 #else
   sc_log_output_uart(SC_UART_1);

@@ -88,7 +88,6 @@ int main(void)
   sc_init(subsystems);
 
 #if !defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_uart_default_usb(TRUE);
   sc_log_output_uart(SC_UART_USB);
 #endif
 

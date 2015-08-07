@@ -41,7 +41,6 @@ int main(void)
   chSysInit();
 
   sc_init(SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SDU | SC_MODULE_RADIO);
-  sc_uart_default_usb(TRUE);
 
   sc_log_output_uart(SC_UART_USB);
 

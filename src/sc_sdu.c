@@ -35,7 +35,7 @@
 #include "sc_uart.h"
 #include "sc_cmd.h"
 #include "sc_led.h"
-#include "sc_log.h"
+#include "sc_event.h"
 
 #if HAL_USE_SERIAL_USB
 
@@ -414,7 +414,11 @@ THD_FUNCTION(scSduReadThread, arg)
 
     retval = chnGetTimeout((BaseChannel *)&SDUX, 100/*TIME_IMMEDIATE*/);
     if (retval >= 0) {
-      sc_uart_revc_usb_byte((uint8_t)retval);
+      msg_t msg;
+
+      // Pass the byte to main app
+      msg = sc_event_msg_create_recv_byte((uint8_t)retval, SC_UART_USB);
+      sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
     }
   }
 }

@@ -57,10 +57,6 @@ typedef enum SC_UART {
 #if defined HAL_USE_SERIAL_USB && HAL_USE_SERIAL_USB
   SC_UART_USB  = 5,
 #endif
-  /**
-   * @brief Use the UART that has latest activity.
-   */
-  SC_UART_LAST = 64,
 } SC_UART;
 
 void sc_uart_set_config(SC_UART uart, uint32_t speed, uint32_t cr1, uint32_t cr2, uint32_t cr3);
@@ -68,12 +64,9 @@ void sc_uart_init(void);
 void sc_uart_start(SC_UART uart);
 void sc_uart_stop(SC_UART uart);
 void sc_uart_deinit(void);
-void sc_uart_default_usb(uint8_t enable);
 void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len);
 void sc_uart_send_str(SC_UART uart, const char *msg);
 void sc_uart_send_finished(void);
-/* Hackish way to receive characters from Serial USB */
-void sc_uart_revc_usb_byte(uint8_t byte);
 
 #endif
 #endif // HAL_USE_UART

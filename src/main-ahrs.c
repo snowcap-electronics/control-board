@@ -90,7 +90,8 @@ int main(void)
   while(1) {
     uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    sc_uart_send_msg(SC_UART_LAST, msg, 9);
+    // FIXME: use SC_LOG_PRINTF
+    sc_uart_send_msg(SC_UART_USB, msg, 9);
   }
 
   return 0;
@@ -124,7 +125,6 @@ static void init(void)
 
 #if AHRS_USB_SDU
   if (use_usb) {
-    sc_uart_default_usb(TRUE);
     sc_log_output_uart(SC_UART_USB);
   }
 #endif
@@ -361,7 +361,8 @@ static void cb_button_changed(void)
 #if AHRS_USB_SDU
   msg[17] = button_state + '0';
 
-  sc_uart_send_msg(SC_UART_LAST, msg, sizeof(msg));
+  // FIXME: use SC_LOG_PRINTF
+  sc_uart_send_msg(SC_UART_USB, msg, sizeof(msg));
 #endif
 }
 #endif
