@@ -1047,7 +1047,7 @@ void SpiritRadioSearchChannelBwME(uint32_t lBandwidth, uint8_t* pcM, uint8_t* pc
     int16_t chfltCalculation[3];
     for(uint8_t j=0;j<3;j++) 
     {
-      if(((i_tmp+j-1)>=0) || ((i_tmp+j-1)<=89))
+      if(((i_tmp+j-1)>=0) && ((i_tmp+j-1)<=89))
       {
         chfltCalculation[j] = lBandwidth - (uint32_t)((s_vectnBandwidth26M[i_tmp+j-1]*lChfltFactor)/2600);
       }
