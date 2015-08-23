@@ -102,11 +102,11 @@ extern "C" {
 /** @defgroup SPI_Exported_Functions    SPI Exported Functions
  * @{
  */
-
+#if 0
 #define SpiritEnterShutdown                                  RadioEnterShutdown
 #define SpiritExitShutdown                                   RadioExitShutdown
 #define SpiritCheckShutdown                                  (SpiritFlagStatus)RadioCheckShutdown
-
+#endif
 
 #define SpiritSpiInit                                                  RadioSpiInit
 #define SpiritSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)       RadioSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)
