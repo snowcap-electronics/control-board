@@ -87,7 +87,9 @@ static sc_event_cb_9dof_available cb_9dof_available = NULL;
 static sc_event_cb_blob_available cb_blob_available = NULL;
 static sc_event_cb_ahrs_available cb_ahrs_available = NULL;
 static sc_event_cb_audio_available cb_audio_available = NULL;
-static sc_event_cb_spirit1_available cb_spirit1_available = NULL;
+static sc_event_cb_spirit1_msg_available cb_spirit1_msg_available = NULL;
+static sc_event_cb_spirit1_data_sent cb_spirit1_data_sent = NULL;
+static sc_event_cb_spirit1_data_lost cb_spirit1_data_lost = NULL;
 
 static thread_t *event_thread = NULL;
 
@@ -193,9 +195,19 @@ static THD_FUNCTION(eventLoopThread, arg)
         cb_audio_available();
       }
       break;
-    case SC_EVENT_TYPE_SPIRIT1_AVAILABLE:
-      if (cb_spirit1_available != NULL) {
-        cb_spirit1_available();
+    case SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE:
+      if (cb_spirit1_msg_available != NULL) {
+        cb_spirit1_msg_available();
+      }
+      break;
+    case SC_EVENT_TYPE_SPIRIT1_DATA_SENT:
+      if (cb_spirit1_data_sent != NULL) {
+        cb_spirit1_data_sent();
+      }
+      break;
+    case SC_EVENT_TYPE_SPIRIT1_DATA_LOST:
+      if (cb_spirit1_data_lost != NULL) {
+        cb_spirit1_data_lost();
       }
       break;
 
@@ -474,9 +486,29 @@ void sc_event_register_audio_available(sc_event_cb_audio_available func)
 /*
  * Register callback for new spirit1 message available
  */
-void sc_event_register_spirit1_available(sc_event_cb_spirit1_available func)
+void sc_event_register_spirit1_msg_available(sc_event_cb_spirit1_msg_available func)
 {
-  cb_spirit1_available = func;
+  cb_spirit1_msg_available = func;
+}
+
+
+
+/*
+ * Register callback for spirit1 data sent notification
+ */
+void sc_event_register_spirit1_data_sent(sc_event_cb_spirit1_data_sent func)
+{
+  cb_spirit1_data_sent = func;
+}
+
+
+
+/*
+ * Register callback for spirit1 data lost notification
+ */
+void sc_event_register_spirit1_data_lost(sc_event_cb_spirit1_data_lost func)
+{
+  cb_spirit1_data_lost = func;
 }
 
 

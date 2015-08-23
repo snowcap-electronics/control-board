@@ -43,6 +43,8 @@
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 #ifdef SC_HAS_SPIRIT1
 static void cb_spirit1_msg(void);
+static void cb_spirit1_sent(void);
+static void cb_spirit1_lost(void);
 #endif
 static void init(void);
 
@@ -70,7 +72,9 @@ int main(void)
 #endif
 
 #ifdef SC_HAS_SPIRIT1
-  sc_event_register_spirit1_available(cb_spirit1_msg);
+  sc_event_register_spirit1_msg_available(cb_spirit1_msg);
+  sc_event_register_spirit1_data_sent(cb_spirit1_sent);
+  sc_event_register_spirit1_data_lost(cb_spirit1_lost);
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
 #endif
 
@@ -161,6 +165,20 @@ static void cb_spirit1_msg(void)
   } else {
     SC_LOG_PRINTF("SPIRIT1 READ FAILED");
   }
+}
+
+
+
+static void cb_spirit1_sent(void)
+{
+  SC_LOG_PRINTF("d: spirit1 msg sent\r\n");
+}
+
+
+
+static void cb_spirit1_lost(void)
+{
+  SC_LOG_PRINTF("d: spirit1 msg lost\r\n");
 }
 #endif
 

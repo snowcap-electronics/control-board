@@ -334,9 +334,7 @@ THD_FUNCTION(scSpirit1ActThread, arg)
       spirit1_goto_ready();
       spirit1_rx_get_packet();
       if (rx_buf.busy && rx_buf.state == 0) {
-        //debug_print_packet("rx before aes", &rx_buf);
         spirit1_aes(false, &rx_buf);
-        //debug_print_packet("rx after  aes", &rx_buf);
         spirit1_rx_parse();
       }
       chMtxUnlock(&rx_buf.mtx);
@@ -351,11 +349,7 @@ THD_FUNCTION(scSpirit1ActThread, arg)
     // Check if the TX buf is ready for encryption and sending
     chMtxLock(&tx_buf.mtx);
     if (tx_buf.busy && tx_buf.state == 0) {
-      //debug_print_packet("tx before aes", &tx_buf);
       spirit1_aes(true, &tx_buf);
-      //debug_print_packet("tx after  aes", &tx_buf);
-      //spirit1_aes(false, &tx_buf);
-      //debug_print_packet("tx after aes2", &tx_buf);
       spirit1_start_tx();
     }
     chMtxUnlock(&tx_buf.mtx);
@@ -447,11 +441,18 @@ static void spirit1_retransmit(void)
   }
 
   if (tx_buf.retx == 0) {
+    msg_t lost;
+
     // No more retransmissions, discard the TX buffer
     tx_buf.state = 0;
     tx_buf.busy = false;
     chMtxUnlock(&tx_buf.mtx);
     spirit1_start_rx(0);
+
+    // Notify main app about data being lost
+    lost = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_DATA_LOST);
+    sc_event_msg_post(lost, SC_EVENT_MSG_POST_FROM_NORMAL);
+
     return;
   }
 
@@ -644,10 +645,17 @@ static void spirit1_rx_parse(void)
     }
 
     if (tx_buf.seq == rx_buf.buf[SPIRIT1_MSG_IDX_PAYLOAD]) {
+      msg_t sent;
+
       // TX buffer ack'ed, so let's free it
       tx_buf.retx = 0;
       tx_buf.state = 0;
       tx_buf.busy = false;
+
+      // Notify main app about data being sent succesfully
+      sent = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_DATA_SENT);
+      sc_event_msg_post(sent, SC_EVENT_MSG_POST_FROM_NORMAL);
+
     } else {
       // Still waiting for ACK
       timeout = SPIRIT1_RETX_TIMEOUT_MS;
@@ -664,7 +672,7 @@ static void spirit1_rx_parse(void)
       msg_t drdy;
 
       // Notify main app about new data
-      drdy = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_AVAILABLE);
+      drdy = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE);
       sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
 
       // Send ack back to the receiver

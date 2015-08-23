@@ -47,7 +47,9 @@ typedef enum SC_EVENT_TYPE {
   SC_EVENT_TYPE_BLOB_AVAILABLE,
   SC_EVENT_TYPE_AHRS_AVAILABLE,
   SC_EVENT_TYPE_AUDIO_AVAILABLE,
-  SC_EVENT_TYPE_SPIRIT1_AVAILABLE,
+  SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE,
+  SC_EVENT_TYPE_SPIRIT1_DATA_SENT,
+  SC_EVENT_TYPE_SPIRIT1_DATA_LOST,
   // SC internal types
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
@@ -73,7 +75,9 @@ typedef void (*sc_event_cb_9dof_available)(void);
 typedef void (*sc_event_cb_blob_available)(void);
 typedef void (*sc_event_cb_ahrs_available)(void);
 typedef void (*sc_event_cb_audio_available)(void);
-typedef void (*sc_event_cb_spirit1_available)(void);
+typedef void (*sc_event_cb_spirit1_msg_available)(void);
+typedef void (*sc_event_cb_spirit1_data_sent)(void);
+typedef void (*sc_event_cb_spirit1_data_lost)(void);
 
 void sc_event_loop_start(void);
 void sc_event_loop_stop(void);
@@ -100,7 +104,9 @@ void sc_event_register_9dof_available(sc_event_cb_9dof_available func);
 void sc_event_register_blob_available(sc_event_cb_blob_available func);
 void sc_event_register_ahrs_available(sc_event_cb_9dof_available func);
 void sc_event_register_audio_available(sc_event_cb_9dof_available func);
-void sc_event_register_spirit1_available(sc_event_cb_9dof_available func);
+void sc_event_register_spirit1_msg_available(sc_event_cb_spirit1_msg_available func);
+void sc_event_register_spirit1_data_sent(sc_event_cb_spirit1_data_sent func);
+void sc_event_register_spirit1_data_lost(sc_event_cb_spirit1_data_lost func);
 
 #endif
 
