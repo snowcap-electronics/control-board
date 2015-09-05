@@ -294,6 +294,13 @@ void sc_uart_send_msg(SC_UART uart, const uint8_t *msg, int len)
   int bytes_done = 0;
   int bytes_left = len;
 
+#if HAL_USE_SERIAL_USB
+  if (uart == SC_UART_USB) {
+    sc_sdu_send_msg(msg, len);
+    return;
+  }
+#endif
+
   switch (uart) {
 #if STM32_UART_USE_USART1
   case SC_UART_1:
