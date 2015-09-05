@@ -33,7 +33,13 @@ void sc_pwr_set_wfi_dbg(void);
 uint32_t sc_pwr_get_wfi_dbg(void);
 
 #if HAL_USE_RTC
-void sc_pwr_rtc_sleep(int timeout_sec);
+void sc_pwr_rtc_standby(int timeout_sec);
+bool sc_pwr_get_wake_up_flag(void);
+bool sc_pwr_get_standby_flag(void);
+void sc_pwr_enable_backup_sram(void);
+uint32_t *sc_pwr_get_backup_sram(void);
+
+
 #endif
 
 #endif

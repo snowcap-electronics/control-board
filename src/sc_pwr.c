@@ -29,15 +29,8 @@
 #include "sc_utils.h"
 #include "sc_pwr.h"
 #include "sc_extint.h"
-#include "testplatform.h"
 
 #include <strings.h> // bzero
-
-#ifdef TP_PB_PORT
-#define DEBUG_TOGGLE(a,b) tp_sync(a,b)
-#else
-#define DEBUG_TOGGLE(a,b)
-#endif
 
 #ifndef EXTI_EMR_MR22
 #define EXTI_EMR_MR22                       ((uint32_t)0x00400000)
@@ -76,20 +69,37 @@ uint32_t sc_pwr_get_wfi_dbg(void)
 
 #if HAL_USE_RTC
 
-#define SC_PWR_USE_WFI
-#ifdef SC_PWR_USE_WFI
 static void _empty_cb(EXTDriver *extp, expchannel_t channel)
 {
     (void)extp;
     (void)channel;
 }
 
-void sc_pwr_rtc_sleep(int timeout_sec)
+
+/*
+ * Enable backup SRAM and allow access
+ */
+void sc_pwr_enable_backup_sram(void)
+{
+    rccEnableBKPSRAM(true);
+    RCC->AHB1ENR |= RCC_AHB1ENR_BKPSRAMEN;
+}
+
+/*
+ * Get pointer to backup SRAM
+ */
+uint32_t *sc_pwr_get_backup_sram(void)
+{
+    return (uint32_t *)BKPSRAM_BASE;
+}
+
+/*
+ * Enter standby mode
+ */
+void sc_pwr_rtc_standby(int timeout_sec)
 {
     EXTChannelConfig cfg;
     EXTConfig extcfg;
-
-    DEBUG_TOGGLE(1, true);
 
     // Allow RTC write
     RTC->WPR = 0xCA;
@@ -99,20 +109,15 @@ void sc_pwr_rtc_sleep(int timeout_sec)
         RTC->CR &= ~RTC_CR_WUTE;
     }
 
-    DEBUG_TOGGLE(2, true);
-
     RTC->CR &= (~7); // Clear WUCKSEL
     RTC->CR |= 4;    // Wakeup clock = ck_spre (1Hz)
     RTC->WUTR = timeout_sec;
 
-    DEBUG_TOGGLE(3, true);
-    
     // Start the wakeup timer
     PWR->CR |= PWR_CR_CWUF;
-    RTC->ISR &= ~RTC_ISR_WUTF;
+    RTC->ISR &= ~(RTC_ISR_ALRBF | RTC_ISR_ALRAF | RTC_ISR_WUTF |
+                  RTC_ISR_TAMP1F |RTC_ISR_TSOVF | RTC_ISR_TSF);
     RTC->CR |= RTC_CR_WUTE | RTC_CR_WUTIE;
-
-    DEBUG_TOGGLE(4, true);
 
     bzero(&cfg, sizeof(cfg));
     bzero(&extcfg, sizeof(extcfg));
@@ -123,98 +128,39 @@ void sc_pwr_rtc_sleep(int timeout_sec)
     extStart(&EXTD1, &extcfg);
     extSetChannelMode(&EXTD1, 22, &cfg);
 
-    DEBUG_TOGGLE(5, true);
-
-    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-    PWR->CR |= (PWR_CR_LPDS/* | PWR_CR_FPDS*/ | PWR_CR_CSBF | PWR_CR_CWUF);
-    PWR->CR &= ~PWR_CR_PDDS;
-
-    __WFI();
-
-    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
-
-    stm32_clock_init();
-
-    DEBUG_TOGGLE(6, true);
-
-    extChannelDisable(&EXTD1, 22);
-    extStop(&EXTD1);
-
-    RTC->CR &= ~RTC_CR_WUTE;
-    RTC->ISR &= ~RTC_ISR_WUTF;
-    RTC->WPR = 0; // Relock registers
-}
-#else
-void sc_pwr_rtc_sleep(int timeout_sec)
-{
     chSysLock();
 
-    // Allow RTC write
-    RTC->WPR = 0xCA;
-    RTC->WPR = 0x53;
+    // FIXME: deep sleep is not entered if interrupts pending
 
-    DEBUG_TOGGLE(1, true);
-
-    while (!(RTC->ISR & RTC_ISR_WUTWF))
-        RTC->CR &= ~RTC_CR_WUTE;
-
-    DEBUG_TOGGLE(2, true);
-
-    RTC->CR &= (~7); // Clear WUCKSEL
-    RTC->CR |= 4;    // Wakeup clock = ck_spre (1Hz)
-    RTC->WUTR = timeout_sec;
-
-    // Start the wakeup timer
-    PWR->CR |= PWR_CR_CWUF;
-    RTC->ISR &= ~RTC_ISR_WUTF;
-    RTC->CR |= RTC_CR_WUTE | RTC_CR_WUTIE;
-
-    DEBUG_TOGGLE(3, true);
-
-    // Enable EXTI0 and EXTI22 rising edge events
-    EXTI->EMR = EXTI->IMR = EXTI->RTSR = 0;
-    EXTI->PR = 0x7FFFFF;
-
-    DEBUG_TOGGLE(4, true);
-
-    // Event mask register
-    EXTI->EMR |= EXTI_EMR_MR22;
-    // Rising trigger selection register
-    EXTI->RTSR |= EXTI_RTSR_TR22;
-    // Pending register
-    EXTI->PR |= EXTI_PR_PR22;
-
-    DEBUG_TOGGLE(5, true);
-
-    // Go to sleep
-    PWR->CR |= PWR_CR_LPDS;
-    PWR->CR &= ~PWR_CR_PDDS;
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    PWR->CR |= (PWR_CR_PDDS | PWR_CR_FPDS | PWR_CR_CSBF | PWR_CR_CWUF);
 
     asm("dsb");
-    asm("wfe");
-
-    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
-
-    DEBUG_TOGGLE(6, true);
-
-    // Switch back to HSI oscillator
-    stm32_clock_init();
-
-    DEBUG_TOGGLE(7, true);
-
-    // Re-enable access to backup domain
-    PWR->CR |= PWR_CR_DBP;
-    
-    RTC->CR &= ~RTC_CR_WUTE;
-    RTC->ISR &= ~RTC_ISR_WUTF;
-    RTC->WPR = 0; // Relock registers
+    __WFI();
 
     chSysUnlock();
-
-    DEBUG_TOGGLE(8, true);
+    chDbgAssert(0, "Should not be here");
 }
-#endif // !SC_PWR_USE_WFI
+
+
+
+/*
+ * Return true if the device woke up by WKUP pin or RTC
+ */
+bool sc_pwr_get_wake_up_flag(void)
+{
+    return !!(PWR->CSR & PWR_CSR_WUF);
+}
+
+
+
+/*
+ * Return true if the device was in standby mode
+ */
+bool sc_pwr_get_standby_flag(void)
+{
+    return !!(PWR->CSR & PWR_CSR_SBF);
+}
 
 #endif // HAL_USE_RTC
 

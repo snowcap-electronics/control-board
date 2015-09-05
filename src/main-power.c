@@ -39,41 +39,55 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte);
 int main(void)
 {
   uint32_t subsystems = SC_MODULE_GPIO | SC_MODULE_LED;
+  bool standby = sc_pwr_get_standby_flag();
+  bool wkup = sc_pwr_get_wake_up_flag();
+  uint32_t *bsram;
+  // Enable debugging even with WFI
+  sc_pwr_set_wfi_dbg();
+
+  // F1 Discovery and L152 Nucleo boards dont't support USB
+#if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
+  subsystems |= SC_MODULE_SDU;
+#endif
 
   halInit();
   chSysInit();
 
-  while (1) {
-    int i;
+  sc_init(subsystems);
+#if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
+  sc_log_output_uart(SC_UART_USB);
+#else
+  sc_log_output_uart(SC_UART_1);
+#endif
 
-    sc_init(subsystems);
+  // Start event loop. This will start a new thread and return
+  sc_event_loop_start();
 
-    // Start event loop. This will start a new thread and return
-    sc_event_loop_start();
+  // Register callbacks.
+  // These will be called from Event Loop thread. It's OK to do some
+  // calculations etc. time consuming there, but not to sleep or block
+  // for longer periods of time.
+  sc_event_register_handle_byte(cb_handle_byte);
 
-    // Register callbacks.
-    // These will be called from Event Loop thread. It's OK to do some
-    // calculations etc. time consuming there, but not to sleep or block
-    // for longer periods of time.
-    sc_event_register_handle_byte(cb_handle_byte);
-
-    for (i = 0; i < 20; ++i) {
-      chThdSleepMilliseconds(100);
-      sc_led_toggle();
-    }
-
-    sc_deinit(subsystems);
-    sc_event_loop_stop();
-
-    // Make sure pin mux is set
-    tp_init();
-    // Stop the thread we know we won't use
-    tp_deinit();
-
-    sc_led_on();
-    sc_pwr_rtc_sleep(10);
-    sc_led_off();
+  for (uint8_t i = 0; i < 20; ++i) {
+    chThdSleepMilliseconds(100);
+    sc_led_toggle();
   }
+  sc_led_on();
+
+  sc_pwr_enable_backup_sram();
+  bsram = sc_pwr_get_backup_sram();
+  if (!standby) {
+    *bsram = 0;
+  } else {
+    *bsram += 1;
+  }
+  SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
+
+  chThdSleepMilliseconds(5000);
+
+  // This function will not return
+  sc_pwr_rtc_standby(10);
 }
 
 
