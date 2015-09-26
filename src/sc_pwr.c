@@ -75,16 +75,6 @@ static void _empty_cb(EXTDriver *extp, expchannel_t channel)
     (void)channel;
 }
 
-
-/*
- * Enable backup SRAM and allow access
- */
-void sc_pwr_enable_backup_sram(void)
-{
-    rccEnableBKPSRAM(true);
-    RCC->AHB1ENR |= RCC_AHB1ENR_BKPSRAMEN;
-}
-
 /*
  * Get pointer to backup SRAM
  */
