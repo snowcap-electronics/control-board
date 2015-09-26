@@ -40,6 +40,13 @@
 #define SPIRIT1_BROADCAST_ADDRESS           0xFF
 #define SPIRIT1_MULTICAST_ADDRESS           0xEE
 
+typedef enum {
+  SPIRIT1_POWER_SHUTDOWN       = 0,
+  SPIRIT1_POWER_STANDBY,
+  SPIRIT1_POWER_SLEEP,
+  SPIRIT1_POWER_READY,
+} SPIRIT1_POWER;
+
 /*
  * Public Snowcap API
  */
@@ -48,9 +55,7 @@ uint8_t sc_spirit1_read(uint8_t *addr, uint8_t *buf, uint8_t len);
 uint8_t sc_spirit1_lqi(void);
 uint8_t sc_spirit1_rssi(void);
 void sc_spirit1_send(uint8_t addr, uint8_t *buf, uint8_t len);
-void sc_spirit1_shutdown(void);
-void sc_spirit1_poweroff(void);
-void sc_spirit1_poweron(void);
+void sc_spirit1_shutdown(SPIRIT1_POWER mode);
 
 /* Snowcap specific SPI implementations for ST's driver */
 SpiritStatus sc_spirit1_reg_read(uint8_t reg, uint8_t len, uint8_t* buf);

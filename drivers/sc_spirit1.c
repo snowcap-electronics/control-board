@@ -186,6 +186,8 @@ static void spirit1_send_flag(uint8_t addr,
                               uint8_t *buf,
                               uint8_t len,
                               SPIRIT1_MSG_FLAG flags);
+static void sc_spirit1_poweroff(void);
+static void sc_spirit1_poweron(void);
 
 
 
@@ -383,6 +385,7 @@ static void spirit1_goto_ready(void)
   case MC_STATE_RX:
   case MC_STATE_TX:
     SpiritCmdStrobeSabort();
+    chThdSleepMilliseconds(1);
     break;
   case MC_STATE_READY:
     // Already in the right state
@@ -395,8 +398,9 @@ static void spirit1_goto_ready(void)
 
   SpiritRefreshStatus();
 
-  chDbgAssert(g_xStatus.MC_STATE == MC_STATE_READY,
-              "Failed to set ready state");
+  if (g_xStatus.MC_STATE != MC_STATE_READY) {
+    chDbgAssert(0, "Failed to set ready state");
+  }
 }
 
 
@@ -423,6 +427,7 @@ static void spirit1_start_tx(void)
   SpiritSpiWriteLinearFifo(tx_buf.len, tx_buf.buf);
 
   SpiritCmdStrobeTx();
+  chThdSleepMilliseconds(1);
 }
 
 
@@ -497,6 +502,7 @@ static void spirit1_start_rx(uint16_t timeout_ms)
   }
 
   SpiritCmdStrobeRx();
+  chThdSleepMilliseconds(1);
 }
 
 
@@ -770,12 +776,16 @@ void sc_spirit1_init(uint8_t *enc_key, uint8_t my_addr)
 
   palSetPad(SC_SPIRIT1_SPI_CS_PORT, SC_SPIRIT1_SPI_CS_PIN);
 
-  // Speed 5.25MHz, CPHA=0, CPOL=0, 8bits frames, MSb transmitted first.
-  // FIXME: is it really 5.25Mhz with all STM32s?
+  // CPHA=0, CPOL=0, 8bits frames, MSb transmitted first.
   spi_n = sc_spi_register(&SC_SPIRIT1_SPIN,
                           SC_SPIRIT1_SPI_CS_PORT,
                           SC_SPIRIT1_SPI_CS_PIN,
-                          (SPI_CR1_BR_0 | SPI_CR1_BR_1));
+                          // FIXME: Driver shouldn't need to know about the clocks
+#if defined(SC_MCU_LOW_SPEED) && SC_MCU_LOW_SPEED
+                          SPI_CR1_BR_0); // div4, good for 25 Mhz AHB1
+#else
+                          SPI_CR1_BR_0 | SPI_CR1_BR_1);
+#endif
 
   spin = (uint8_t)spi_n;
 
@@ -912,9 +922,23 @@ void sc_spirit1_send(uint8_t addr, uint8_t *buf, uint8_t len)
 /*
  * Disable the driver and power off the radio
  */
-void sc_spirit1_shutdown(void)
+void sc_spirit1_shutdown(SPIRIT1_POWER mode)
 {
   uint8_t i = 20;
+
+  switch (mode) {
+  case SPIRIT1_POWER_SHUTDOWN:
+    // Handled at the end of the function
+    break;
+  case SPIRIT1_POWER_STANDBY:
+    SpiritCmdStrobeStandby();
+    break;
+  case SPIRIT1_POWER_SLEEP:
+  case SPIRIT1_POWER_READY:
+  default:
+    chDbgAssert(0, "Unsupported shutdown mode");
+    break;
+  }
 
   chThdTerminate(sc_spirit1_act_thread_ptr);
   chThdTerminate(sc_spirit1_irq_thread_ptr);
@@ -936,7 +960,9 @@ void sc_spirit1_shutdown(void)
   sc_spirit1_act_thread_ptr = NULL;
   sc_spirit1_irq_thread_ptr = NULL;
 
-  sc_spirit1_poweroff();
+  if (mode == SPIRIT1_POWER_SHUTDOWN) {
+    sc_spirit1_poweroff();
+  }
 
   sc_spi_unregister(spin);
 }
@@ -946,7 +972,7 @@ void sc_spirit1_shutdown(void)
 /*
  * Power off the radio
  */
-void sc_spirit1_poweroff(void)
+static void sc_spirit1_poweroff(void)
 {
   palSetPad(SC_SPIRIT1_SDN_PORT, SC_SPIRIT1_SDN_PIN);
 }
@@ -956,7 +982,7 @@ void sc_spirit1_poweroff(void)
 /*
  * Power on the radio
  */
-void sc_spirit1_poweron(void)
+static void sc_spirit1_poweron(void)
 {
   palClearPad(SC_SPIRIT1_SDN_PORT, SC_SPIRIT1_SDN_PIN);
 }
