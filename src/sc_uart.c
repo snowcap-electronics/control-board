@@ -240,6 +240,10 @@ void sc_uart_start(SC_UART uart)
 #endif
 #if STM32_UART_USE_USART3
   case SC_UART_3:
+#ifdef SC_UART3_TX_PORT
+    palSetPadMode(SC_UART3_TX_PORT, SC_UART3_TX_PIN, PAL_MODE_ALTERNATE(SC_UART3_TX_AF));
+    palSetPadMode(SC_UART3_RX_PORT, SC_UART3_RX_PIN, PAL_MODE_ALTERNATE(SC_UART3_RX_AF));
+#endif
     uartStart(&UARTD3, &uart_cfg_3);
     uart_set_enable(SC_UART_3, 1);
     break;
