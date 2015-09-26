@@ -35,6 +35,7 @@
 #define SC_SPI_MAX_CLIENTS       8
 
 static mutex_t data_mtx;
+static bool enabled = false;
 
 typedef struct sc_spi_conf {
   SPIDriver *spip;
@@ -46,12 +47,16 @@ static sc_spi_conf spi_conf[SC_SPI_MAX_CLIENTS];
 
 void sc_spi_init(void)
 {
+  chDbgAssert(!enabled, "SPI already enabled");
   chMtxObjectInit(&data_mtx);
-
+  enabled = true;
 }
 
 void sc_spi_deinit(void)
 {
+  chDbgAssert(enabled, "SPI not enabled");
+  enabled = false;
+
   chMtxLock(&data_mtx);
   for (uint8_t i = 0; i < SC_SPI_MAX_CLIENTS; ++i) {
     spi_conf[i].spip = NULL;
@@ -64,6 +69,7 @@ void sc_spi_deinit(void)
 int8_t sc_spi_register(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin, uint32_t cr1)
 {
   int8_t i;
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spip != NULL, "SPI driver null");
 
   chMtxLock(&data_mtx);
@@ -91,6 +97,7 @@ int8_t sc_spi_register(SPIDriver *spip, ioportid_t cs_port, uint8_t cs_pin, uint
 
 void sc_spi_unregister(uint8_t spin)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
   chDbgAssert(spi_conf[spin].selected, "SPI n still selected");
@@ -103,6 +110,7 @@ void sc_spi_unregister(uint8_t spin)
 
 void sc_spi_select(uint8_t spin)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
@@ -118,6 +126,7 @@ void sc_spi_select(uint8_t spin)
 
 void sc_spi_deselect(uint8_t spin)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
 
@@ -132,6 +141,7 @@ void sc_spi_deselect(uint8_t spin)
 
 void sc_spi_exchange(uint8_t spin, uint8_t *tx, uint8_t *rx, size_t bytes)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
   chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
@@ -141,6 +151,7 @@ void sc_spi_exchange(uint8_t spin, uint8_t *tx, uint8_t *rx, size_t bytes)
 
 void sc_spi_send(uint8_t spin, uint8_t *data, size_t bytes)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
   chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
@@ -150,6 +161,7 @@ void sc_spi_send(uint8_t spin, uint8_t *data, size_t bytes)
 
 void sc_spi_receive(uint8_t spin, uint8_t *data, size_t bytes)
 {
+  chDbgAssert(enabled, "SPI not enabled");
   chDbgAssert(spin < SC_SPI_MAX_CLIENTS, "SPI n outside range");
   chDbgAssert(spi_conf[spin].spip != NULL, "SPI n not initialized");
   chDbgAssert(spi_conf[spin].selected, "SPI n not selected");
