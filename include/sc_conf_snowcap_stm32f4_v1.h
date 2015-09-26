@@ -129,6 +129,13 @@
 #define SC_UART2_RX_PIN    3
 #define SC_UART2_RX_AF     7
 
+#define SC_UART3_TX_PORT   GPIOC
+#define SC_UART3_TX_PIN    GPIOC_PIN10
+#define SC_UART3_TX_AF     7
+#define SC_UART3_RX_PORT   GPIOC
+#define SC_UART3_RX_PIN    GPIOC_PIN11
+#define SC_UART3_RX_AF     7
+
 /* LSM9DS0 minicap with Snowcap STM32F4 MCU Board v1
 I2C2
 INT2_XM = PC1
@@ -158,6 +165,25 @@ SCL     = PB10
 #define SC_LSM9DS0_DRDY_G_PIN      GPIOC_PIN5
 #ifndef HAL_USE_I2C
 #error "lsm9ds0 needs I2C"
+#endif
+#endif
+
+#ifdef SC_HAS_SPIRIT1
+#define SC_SPIRIT1_SPIN           SPID2
+#define SC_SPIRIT1_SPI_SCK_PORT   GPIOB
+#define SC_SPIRIT1_SPI_SCK_PIN    GPIOB_PIN13
+#define SC_SPIRIT1_SPI_PORT       GPIOB
+#define SC_SPIRIT1_SPI_MISO_PIN   GPIOB_PIN14
+#define SC_SPIRIT1_SPI_MOSI_PIN   GPIOB_PIN15
+#define SC_SPIRIT1_SPI_CS_PORT    GPIOB
+#define SC_SPIRIT1_SPI_CS_PIN     GPIOB_PIN12
+#define SC_SPIRIT1_SPI_AF         5
+#define SC_SPIRIT1_SDN_PORT       GPIOC
+#define SC_SPIRIT1_SDN_PIN        GPIOC_PIN2
+#define SC_SPIRIT1_INT_PORT       GPIOC
+#define SC_SPIRIT1_INT_PIN        GPIOC_PIN3  // Same pin as the user led
+#ifndef HAL_USE_SPI
+#error "SPIRIT1 needs SPI"
 #endif
 #endif
 
