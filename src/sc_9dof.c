@@ -31,6 +31,7 @@
 #include "sc.h"
 #include "drivers/sc_lis302dl.h"
 #include "drivers/sc_lsm9ds0.h"
+#include "drivers/sc_lsm9ds1.h"
 
 #ifdef SC_USE_9DOF
 
@@ -53,7 +54,7 @@ THD_FUNCTION(sc9dofThread, arg)
   sc_float tmp_magn[3] = {0, 0, 0};
   sc_float tmp_gyro[3] = {0, 0, 0};
   msg_t drdy;
-  uint8_t sensors_read;
+  uint8_t sensors_read = 0;
   (void)arg;
 
   chRegSetThreadName(__func__);
@@ -65,6 +66,8 @@ THD_FUNCTION(sc9dofThread, arg)
   sc_lis302dl_init();
 #elif defined(SC_HAS_LSM9DS0)
   sc_lsm9ds0_init();
+#elif defined(SC_HAS_LSM9DS1)
+  sc_lsm9ds1_init();
 #else
   chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
@@ -78,6 +81,8 @@ THD_FUNCTION(sc9dofThread, arg)
     (void)tmp_magn;
 #elif defined(SC_HAS_LSM9DS0)
     sensors_read = sc_lsm9ds0_read(tmp_acc, tmp_magn, tmp_gyro);
+#elif defined(SC_HAS_LSM9DS1)
+    sensors_read = sc_lsm9ds1_read(tmp_acc, tmp_magn, tmp_gyro);
 #else
     chDbgAssert(0, "No 9dof drivers included in the build");
 #endif
@@ -108,6 +113,8 @@ THD_FUNCTION(sc9dofThread, arg)
   sc_lis302dl_shutdown();
 #elif defined(SC_HAS_LSM9DS0)
   sc_lsm9ds0_shutdown();
+#elif defined(SC_HAS_LSM9DS1)
+  sc_lsm9ds1_shutdown(false);
 #else
   chDbgAssert(0, "No 9dof drivers included in the build");
 #endif

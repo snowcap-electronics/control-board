@@ -87,9 +87,9 @@ int main(void)
 #else
     {
       uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
-      //SC_LOG_PRINTF("sending: test\r\n");
+      SC_LOG_PRINTF("sending: test\r\n");
       sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
-      chThdSleepMilliseconds(10000);
+      chThdSleepMilliseconds(1000);
     }
 #endif
   }
@@ -108,7 +108,7 @@ static void init(void)
 
   // F1 Discovery and L152 Nucleo boards dont't support USB
 #if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
-  subsystems |= SC_MODULE_SDU;
+  //subsystems |= SC_MODULE_SDU;
 #endif
 
   // Init ChibiOS
@@ -126,6 +126,7 @@ static void init(void)
   sc_log_output_uart(SC_UART_1);
 #endif
 #endif
+  sc_log_output_uart(SC_UART_2);
 }
 
 

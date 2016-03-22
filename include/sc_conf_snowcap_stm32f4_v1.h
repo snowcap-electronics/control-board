@@ -168,6 +168,33 @@ SCL     = PB10
 #endif
 #endif
 
+#ifdef SC_HAS_LSM9DS1
+// PB11 == I2C2_SDA, AF 4
+// PB10 == I2C2_SCL, AF 4
+// PC0 == base board GPIO2 == DRM = DRDYM
+// PC4 == GPIO6 == base board GPIO9 == NT1 == INT1AG
+// PC5 == GPIO7 == base board GPIO10 == NT2 == INT2AG
+#define SC_LSM9DS1_I2CN            I2CD2
+#define SC_LSM9DS1_I2CN_SDA_PORT   GPIOB
+#define SC_LSM9DS1_I2CN_SDA_PIN    GPIOB_PIN11
+#define SC_LSM9DS1_I2CN_SDA_AF     4
+#define SC_LSM9DS1_I2CN_SCL_PORT   GPIOB
+#define SC_LSM9DS1_I2CN_SCL_PIN    GPIOB_PIN10
+#define SC_LSM9DS1_I2CN_SCL_AF     4
+// Teensy LSM9DS1 shield has AD0 pulled up
+#define SC_LSM9DS1_ADDR_AG         0x6B
+#define SC_LSM9DS1_ADDR_M          0x1E
+#define SC_LSM9DS1_INT1_AG_PORT    GPIOC
+#define SC_LSM9DS1_INT1_AG_PIN     GPIOC_PIN4
+#define SC_LSM9DS1_INT2_AG_PORT    GPIOC
+#define SC_LSM9DS1_INT2_AG_PIN     GPIOC_PIN5
+#define SC_LSM9DS1_DRDY_M_PORT     GPIOC
+#define SC_LSM9DS1_DRDY_M_PIN      GPIOC_PIN0
+#ifndef HAL_USE_I2C
+#error "lsm9ds1 needs I2C"
+#endif
+#endif
+
 #ifdef SC_HAS_SPIRIT1
 #define SC_SPIRIT1_SPIN           SPID2
 #define SC_SPIRIT1_SPI_SCK_PORT   GPIOB
