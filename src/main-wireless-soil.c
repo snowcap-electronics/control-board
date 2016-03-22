@@ -77,17 +77,11 @@ int main(void)
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
 
-  {
+  while(1) {
     uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
     chThdSleepMilliseconds(1000);
     SC_LOG_PRINTF("sending: test\r\n");
     sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
-  }
-
-  // Loop forever waiting for finished spirit1 transger
-  while(1) {
-    SC_LOG_PRINTF("waiting for reply\r\n");
-    chThdSleepMilliseconds(1000);
   }
 }
 
@@ -130,9 +124,12 @@ static void cb_spirit1_msg(void)
 static void cb_spirit1_sent(void)
 {
   SC_LOG_PRINTF("d: spirit1 msg sent\r\n");
+
+#if 0
   chThdSleepMilliseconds(1000);
 
   enable_shutdown();
+#endif
 }
 
 
@@ -142,10 +139,13 @@ static void cb_spirit1_sent(void)
  */
 static void cb_spirit1_lost(void)
 {
-  //  SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
-  //chThdSleepMilliseconds(1000);
+  SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
+  
+#if 0
+  chThdSleepMilliseconds(1000);
 
   enable_shutdown();
+#endif
 }
 
 
@@ -162,7 +162,7 @@ static void enable_shutdown(void)
 
   SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
 
-  chThdSleepMilliseconds(1000);
+  //chThdSleepMilliseconds(5000);
 
   // This function will not return
   sc_pwr_rtc_standby(10);

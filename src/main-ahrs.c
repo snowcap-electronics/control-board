@@ -88,10 +88,8 @@ int main(void)
 
   // Loop forever waiting for callbacks
   while(1) {
-    uint8_t msg[] = {'d', ':', ' ', 'p','i','n','g','\r','\n'};
     chThdSleepMilliseconds(1000);
-    // FIXME: use SC_LOG_PRINTF
-    sc_uart_send_msg(SC_UART_USB, msg, 9);
+    SC_LOG_PRINTF("t: %d\r\n", ST2MS(chVTGetSystemTime()));
   }
 
   return 0;
@@ -100,7 +98,7 @@ int main(void)
 static void init(void)
 {
   uint8_t use_usb = 1;
-  uint32_t subsystems = SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
+  uint32_t subsystems = SC_MODULE_UART3 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
   uint8_t i;
 
   // F1 Discovery doesn't support USB
@@ -127,6 +125,8 @@ static void init(void)
   if (use_usb) {
     sc_log_output_uart(SC_UART_USB);
   }
+#else
+    sc_log_output_uart(SC_UART_3);
 #endif
 
   // Init smoothing filter
@@ -179,7 +179,7 @@ static void cb_9dof_available(void)
     return;
   }
 
-#if 1
+#if 0
   // Apply smoothing filter for gyro
   if (sensors_read & SC_SENSOR_GYRO) {
     uint8_t a;
@@ -209,9 +209,16 @@ static void cb_9dof_available(void)
   }
 #endif
 
-#if 0
+#if 1
   if (sensors_read & SC_SENSOR_MAGN) {
     // Apply manually measured magn calibration
+#if 1 // Teensy lsm9ds1 shield
+    magn[0] -= -0.13601;
+    magn[1] -=  0.26026;
+    magn[2] -= -0.23002;
+#endif
+
+#if 0 // lsm9ds0 shield
     magn[0] -= -0.090;
     magn[1] -= -0.036;
     magn[2] -= -0.018;
@@ -219,6 +226,7 @@ static void cb_9dof_available(void)
     magn[0] *= 1;
     magn[1] *= 1.053;
     magn[2] *= 1.048;
+#endif
   }
 #endif
 
@@ -275,7 +283,7 @@ static void cb_9dof_available(void)
 static void cb_ahrs_available(void)
 {
   uint32_t ts;
-#if AHRS_USB_SDU
+#if 1/*AHRS_USB_SDU*/
   static uint32_t old_ts = 0;
 #endif
   sc_float roll, pitch, yaw;
@@ -326,7 +334,7 @@ static void cb_ahrs_available(void)
   }
 #endif
 
-#if AHRS_USB_SDU
+#if 1 /*AHRS_USB_SDU*/
 #if 1
   {
     static uint8_t data_counter = 0;
