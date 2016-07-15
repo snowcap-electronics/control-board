@@ -556,7 +556,8 @@ int main(void)
 
     palSetPad(USER_LED2_PORT, USER_LED2);
     (void)standby_mode;
-    sc_pwr_rtc_sleep(sleep_time_sec);
+    //FIXME: sleep not supported
+    //sc_pwr_rtc_sleep(sleep_time_sec);
     palClearPad(USER_LED2_PORT, USER_LED2);
   }
 
