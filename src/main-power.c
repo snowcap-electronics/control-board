@@ -75,7 +75,6 @@ int main(void)
   }
   sc_led_on();
 
-  sc_pwr_enable_backup_sram();
   bsram = sc_pwr_get_backup_sram();
   if (!standby) {
     *bsram = 0;
