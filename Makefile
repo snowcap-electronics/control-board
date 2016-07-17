@@ -153,6 +153,17 @@ include $(CHIBIOS)/os/hal/boards/ST_NUCLEO_L152RE/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
 include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
+else ifeq ($(SC_BOARD),SC_F401_NUCLEO)
+LDSCRIPT = $(STARTUPLD)/STM32F401xE.ld
+MCU = cortex-m4
+USE_FPU = hard
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
+include $(CHIBIOS)/os/hal/hal.mk
+include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/boards/ST_NUCLEO_F401RE/board.mk
+include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+include $(CHIBIOS)/os/rt/rt.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 else ifeq ($(SC_BOARD),SC_F1_DISCOVERY)
 LDSCRIPT = $(STARTUPLD)/STM32F100xB.ld
 MCU = cortex-m3

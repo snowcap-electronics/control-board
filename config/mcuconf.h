@@ -1,7 +1,6 @@
 /***
- * Snowcap Controller Board v1 configuration
  *
- * Copyright 2013 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2013-2016 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +35,8 @@
 #include "mcuconf_f1_discovery.h"
 #elif defined(BOARD_ST_NUCLEO_L152RE)
 #include "mcuconf_l1_nucleo.h"
+#elif defined(BOARD_ST_NUCLEO_F401RE)
+#include "mcuconf_f401_nucleo.h"
 #elif defined(BOARD_RUUVITRACKERC2)
 #include "mcuconf_rt_c2.h"
 #else

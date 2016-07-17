@@ -45,6 +45,8 @@
 #include "sc_conf_f1_discovery.h"
 #elif defined(BOARD_ST_NUCLEO_L152RE)
 #include "sc_conf_l1_nucleo.h"
+#elif defined(BOARD_ST_NUCLEO_F401RE)
+#include "sc_conf_f401_nucleo.h"
 #elif defined(BOARD_RUUVITRACKERC2)
 #include "sc_conf_rt_c2.h"
 #else
