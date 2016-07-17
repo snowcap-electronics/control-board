@@ -43,23 +43,28 @@ static void pleco_parse_glow(const uint8_t *param, uint8_t param_len);
 
 static systime_t last_ping = 0;
 static uint8_t glow_enable = 0;
+static SC_UART host_uart = SC_UART_2;
 
 int main(void)
 {
   uint8_t loop_counter = 0;
   uint16_t glow[20] = {0,287,1114,2388,3960,5653,7270,8627,9568,9985,9830,9121,7939,6420,4738,3087,1654,606,62,0};
 
+  // UART 2 for nucleo's ST-LINK's "uart to USB"
+  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
+
   halInit();
   /* Initialize ChibiOS core */
   chSysInit();
 
-  // Init SC framework, with USB if not F1 Discovery
-#if defined(BOARD_ST_STM32VL_DISCOVERY)
-  sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);
-#else
-  sc_init(SC_MODULE_UART1 | SC_MODULE_PWM | SC_MODULE_SDU | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED);
-  sc_log_output_uart(SC_UART_USB);
+  // Init SC framework, optionally with USB
+#if defined(SC_UART_USB)
+  subsystems |=  SC_MODULE_SDU;
+  host_uart = SC_UART_USB;
 #endif
+
+  sc_init(subsystems);
+  sc_log_output_uart(host_uart);
 
   sc_cmd_register("glow", SC_CMD_HELP("Enable glow (0/1)"), pleco_parse_glow);
 
@@ -182,7 +187,7 @@ static void cb_adc_available(void)
   msg[len++] = '\n';
 
   // FIXME: use SC_LOG_PRINTF
-  sc_uart_send_msg(SC_UART_USB, msg, len);
+  sc_uart_send_msg(host_uart, msg, len);
 
   // Get ADC reading for the battery voltage
   // Max 51.8V, 1bit == 0.012646484375 volts
@@ -202,7 +207,7 @@ static void cb_adc_available(void)
   msg[len++] = '\n';
 
   // FIXME: use SC_LOG_PRINTF
-  sc_uart_send_msg(SC_UART_USB, msg, len);
+  sc_uart_send_msg(host_uart, msg, len);
 
   // Get ADC reading for the current consumption in milliamps
   // Max 89.4A, 1bit == 0.021826171875 amps
@@ -222,7 +227,7 @@ static void cb_adc_available(void)
   msg[len++] = '\n';
 
   // FIXME: use SC_LOG_PRINTF
-  sc_uart_send_msg(SC_UART_USB, msg, len);
+  sc_uart_send_msg(host_uart, msg, len);
 
 }
 
