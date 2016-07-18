@@ -99,7 +99,11 @@ int main(void)
 
 static void init(void)
 {
-  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
+  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_GPIO | SC_MODULE_LED;
+
+#ifdef SC_HAS_SPIRIT1
+  subsystems |= SC_MODULE_SPI;
+#endif
 
   // UART1, PWM nor ADC pins are defined for L152 Nucleo board
 #if !defined(BOARD_ST_NUCLEO_L152RE)
