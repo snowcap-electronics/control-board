@@ -222,7 +222,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
   }
-#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
+#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY) || defined (BOARD_ST_NUCLEO_F401RE)
   //
   // FIXME: the following hardcoded pins should be somehow in sc_conf.h
   // SC STM32F4 MCU Board v1 maps PA0, PA1, PA2, and PA3 to AN1-4
