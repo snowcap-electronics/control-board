@@ -37,29 +37,48 @@
 #define USER_LED_PORT      GPIOA
 #endif
 
-// GPIO1 is PB3
+// GPIO1 is PB4
 #ifndef GPIO1_PIN
-#define GPIO1_PIN          3
+#define GPIO1_PIN          4
 #define GPIO1_PORT         GPIOB
 #endif
 
-// GPIO2 is PB4
+// GPIO2 is PC0
 #ifndef GPIO2_PIN
-#define GPIO2_PIN          4
-#define GPIO2_PORT         GPIOB
+#define GPIO2_PIN          0
+#define GPIO2_PORT         GPIOC
 #endif
 
 
-// GPIO3 is PB5
+// GPIO3 is PC1
 #ifndef GPIO3_PIN
-#define GPIO3_PIN          5
-#define GPIO3_PORT         GPIOB
+#define GPIO3_PIN          1
+#define GPIO3_PORT         GPIOC
 #endif
 
-// GPIO4 is PB6
+// GPIO4 is PD2
 #ifndef GPIO4_PIN
-#define GPIO4_PIN          6
-#define GPIO4_PORT         GPIOB
+#define GPIO4_PIN          2
+#define GPIO4_PORT         GPIOD
+#endif
+
+// GPIO5 is PB5
+#ifndef GPIO5_PIN
+#define GPIO5_PIN          5
+#define GPIO5_PORT         GPIOB
+#endif
+
+// GPIO6 is PC4
+#ifndef GPIO6_PIN
+#define GPIO6_PIN          4
+#define GPIO6_PORT         GPIOC
+#endif
+
+
+// GPIO7 is PC5
+#ifndef GPIO7_PIN
+#define GPIO7_PIN          5
+#define GPIO7_PORT         GPIOC
 #endif
 
 // Timer 4, ch 1-4, PB6-9, AF2

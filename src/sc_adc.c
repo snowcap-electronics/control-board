@@ -185,6 +185,12 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   }
   // FIXME: the pins should be in sc_conf.h
   palSetGroupMode(GPIOA, mask, 0, PAL_MODE_INPUT_ANALOG);
+#elif defined(BOARD_ST_NUCLEO_F401R)
+  // FIXME: the pins should be in sc_conf.h
+  palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);
+  palSetPadMode(GPIOA, 1, PAL_MODE_INPUT_ANALOG);
+  palSetPadMode(GPIOA, 6, PAL_MODE_INPUT_ANALOG);
+  palSetPadMode(GPIOA, 7, PAL_MODE_INPUT_ANALOG);
 #endif
 
   // Set global interval time in milliseconds
@@ -222,7 +228,7 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
     convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
     break;
   }
-#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY) || defined (BOARD_ST_NUCLEO_F401RE)
+#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
   //
   // FIXME: the following hardcoded pins should be somehow in sc_conf.h
   // SC STM32F4 MCU Board v1 maps PA0, PA1, PA2, and PA3 to AN1-4
@@ -240,6 +246,32 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   case 3: // Sampling time and channel for 3rd pin
     convCfg.smpr1 |= ADC_SMPR2_SMP_AN2(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN2);
+  case 2: // Sampling time and channel for 2nd pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN1(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN1);
+  case 1: // Sampling time and channel for 1st pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN0(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN0);
+    break;
+  }
+#elif defined (BOARD_ST_NUCLEO_F401RE)
+  //
+  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
+  // Pleco project on Nucleo F401 maps PA0, PA1, PA6, and PA7 to AN1-4
+  //
+  // PA0: ADC123_IN0
+  // PA1: ADC123_IN1
+  // PA6: ADC123_IN6
+  // PA7: ADC123_IN7
+  //
+
+  switch(channels) {
+  case 4: // Sampling time and channel for 4th pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN7(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN7);
+  case 3: // Sampling time and channel for 3rd pin
+    convCfg.smpr1 |= ADC_SMPR2_SMP_AN6(sample_time);
+    convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN6);
   case 2: // Sampling time and channel for 2nd pin
     convCfg.smpr1 |= ADC_SMPR2_SMP_AN1(sample_time);
     convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN1);
