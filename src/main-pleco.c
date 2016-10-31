@@ -29,6 +29,10 @@
 
 #include "sc.h"
 
+#ifdef SC_HAS_APA102
+#include "sc_apa102.h"
+#endif
+
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #define PLECO_GPIO_HEAD_LIGHTS     5
@@ -84,6 +88,11 @@ int main(void)
   sc_adc_start_conversion(3, 1000, ADC_SAMPLE_55P5);
 #else
   sc_adc_start_conversion(3, 1000, ADC_SAMPLE_56);
+#endif
+
+#ifdef SC_HAS_APA102
+  sc_apa102_init();
+  sc_apa102_effect(SC_APA102_EFFECT_CIRCLE);
 #endif
 
   // Loop forever waiting for callbacks
