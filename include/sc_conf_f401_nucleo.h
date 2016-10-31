@@ -128,6 +128,21 @@
 #define SC_UART2_RX_AF     7
 #endif
 
+#ifdef SC_HAS_APA102
+#define SC_APA102_SPIN           SPID1
+#define SC_APA102_SPI_SCK_PORT   GPIOB
+#define SC_APA102_SPI_SCK_PIN    3
+#define SC_APA102_SPI_PORT       GPIOA
+#define SC_APA102_SPI_MISO_PIN   6
+#define SC_APA102_SPI_MOSI_PIN   7
+#define SC_APA102_SPI_CS_PORT    GPIOB
+#define SC_APA102_SPI_CS_PIN     6
+#define SC_APA102_SPI_AF         5
+#ifndef HAL_USE_SPI
+#error "APA102 needs SPI"
+#endif
+#endif
+
 
 // FIXME: ADC pin macros from sc_adc_start_conversion should be here
 
