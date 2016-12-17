@@ -75,11 +75,16 @@ static sc_float q[4] = {1, 0, 0, 0}; // quaternion of sensor frame relative to a
 static sc_float invSqrt(sc_float x);
 static void q_init(sc_float *acc, sc_float *magn);
 
+#define USE_MADGWICK_QUATERNION 1
+
+#if USE_MADGWICK_QUATERNION
+void MadgwickQuaternionUpdate(float deltat, float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz);
+#else
 static bool MadgwickAHRSupdate(sc_float dt,
                                sc_float *gyro,
                                sc_float *acc,
                                sc_float *magn);
-void MadgwickQuaternionUpdate(float deltat, float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz);
+#endif
 
 static void reset_state(void);
 #endif
@@ -151,7 +156,7 @@ THD_FUNCTION(scAhrsThread, arg)
 
       dt = ST2US(chVTTimeElapsedSinceX(last_ts)) / 1000000.0f;
       last_ts = ts;
-#if 1
+#if USE_MADGWICK_QUATERNION
       MadgwickQuaternionUpdate(dt,
                                acc[0], acc[1], acc[2],
                                gyro[0], gyro[1], gyro[2],
@@ -404,7 +409,7 @@ static void q_init(sc_float acc[3], sc_float magn[3])
   }
 }
 
-
+#if USE_MADGWICK_QUATERNION
 void MadgwickQuaternionUpdate(float deltat, float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
 {
   float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
@@ -496,7 +501,8 @@ void MadgwickQuaternionUpdate(float deltat, float ax, float ay, float az, float 
   q[3] = q4 * norm;
 }
 
-  
+#else
+
 // http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/
 // https://raw.githubusercontent.com/kriswiner/LSM9DS0/master/Teensy3.1/LSM9DS0-MS5637/quaternionFilters.ino
 static bool MadgwickAHRSupdate(sc_float dt,
@@ -600,6 +606,7 @@ static bool MadgwickAHRSupdate(sc_float dt,
 
   return true;
 }
+#endif
 
 // From https://github.com/TobiasSimon/MadgwickTests/blob/4f76ef1475219bedbdba7afab297e3468d9e7c44/MadgwickAHRS.c
 static sc_float invSqrt(sc_float x)
