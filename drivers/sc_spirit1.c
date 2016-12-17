@@ -255,8 +255,10 @@ THD_FUNCTION(scSpirit1IrqThread, arg)
     SpiritIrqs irqs;
     SPIRIT1_FLAG local_flags = 0;
 
-    if (chBSemWait(&spirit1_irq_sem) != MSG_OK) {
-      continue;
+    chBSemWait(&spirit1_irq_sem);
+
+    if (chThdShouldTerminateX()) {
+        break;
     }
 
     SpiritIrqGetStatus(&irqs);
@@ -279,7 +281,7 @@ THD_FUNCTION(scSpirit1IrqThread, arg)
 
     if (local_flags) {
       chSysLock();
-      flags = local_flags;
+      flags |= local_flags;
       chSysUnlock();
       chBSemSignal(&spirit1_act_sem);
     }
@@ -332,7 +334,7 @@ THD_FUNCTION(scSpirit1ActThread, arg)
     // New incoming packet ready in radio
     if (local_flags & SPIRIT1_FLAG_RX_DATA_READY) {
       chMtxLock(&rx_buf.mtx);
-      // Must SABORT to be ablet get RSSI in get_packet
+      // Must SABORT to be able to get RSSI in get_packet
       spirit1_goto_ready();
       spirit1_rx_get_packet();
       if (rx_buf.busy && rx_buf.state == 0) {
