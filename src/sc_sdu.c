@@ -34,7 +34,6 @@
 #include "sc_utils.h"
 #include "sc_uart.h"
 #include "sc_cmd.h"
-#include "sc_led.h"
 #include "sc_event.h"
 
 #if HAL_USE_SERIAL_USB
