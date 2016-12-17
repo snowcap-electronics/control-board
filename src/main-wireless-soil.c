@@ -42,7 +42,12 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_spirit1_msg(void);
 static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
+
+#define ENABLE_SHUTDOWN 0
+
+#if ENABLE_SHUTDOWN
 static void enable_shutdown(void);
+#endif
 
 static bool standby = false, wkup = false;
 
@@ -123,12 +128,12 @@ static void cb_spirit1_msg(void)
  */
 static void cb_spirit1_sent(void)
 {
+#if ENABLE_SHUTDOWN
+  enable_shutdown();
+#else
   SC_LOG_PRINTF("d: spirit1 msg sent\r\n");
 
-#if 0
   chThdSleepMilliseconds(1000);
-
-  enable_shutdown();
 #endif
 }
 
@@ -139,16 +144,16 @@ static void cb_spirit1_sent(void)
  */
 static void cb_spirit1_lost(void)
 {
-  SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
-  
-#if 0
-  chThdSleepMilliseconds(1000);
-
+#if ENABLE_SHUTDOWN
   enable_shutdown();
+#else
+  SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
+
+  chThdSleepMilliseconds(1000);
 #endif
 }
 
-
+#if ENABLE_SHUTDOWN
 static void enable_shutdown(void)
 {
   uint32_t *bsram;
@@ -160,13 +165,13 @@ static void enable_shutdown(void)
     *bsram += 1;
   }
 
-  SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
-
+  //SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
   //chThdSleepMilliseconds(5000);
 
   // This function will not return
   sc_pwr_rtc_standby(10);
 }
+#endif
 
 /* Emacs indentatation information
    Local Variables:
