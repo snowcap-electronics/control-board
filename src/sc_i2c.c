@@ -49,8 +49,15 @@ int8_t sc_i2c_init(I2CDriver *i2cp, i2caddr_t addr)
   int8_t i;
   I2CConfig i2c_cfg = {
     OPMODE_I2C,
+    // FIXME: For some reason the code doesn't compile on L152 with
+    // the default 400kHz settings
+#if defined(BOARD_ST_NUCLEO_L152RE)
+    100000,
+    STD_DUTY_CYCLE
+#else
     400000,
     FAST_DUTY_CYCLE_2
+#endif
   };
 
   chDbgAssert(i2cp != NULL, "I2C driver null");
@@ -127,6 +134,8 @@ void sc_i2c_read(uint8_t i2cn, uint8_t *data, size_t bytes)
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
   ret = i2cMasterReceive(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, data, bytes);
+
+  // FIXME: Should return an error instead of asserting here
   chDbgAssert(ret == MSG_OK, "i2cMasterReceive error");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
@@ -144,6 +153,8 @@ void sc_i2c_transmit(uint8_t i2cn,
   i2cAcquireBus(i2c_conf[i2cn].i2cp);
 
   ret = i2cMasterTransmit(i2c_conf[i2cn].i2cp, i2c_conf[i2cn].addr, tx, tx_bytes, rx, rx_bytes);
+
+  // FIXME: Should return an error instead of asserting here
   chDbgAssert(ret == MSG_OK, "i2cMasterTransmit error");
 
   i2cReleaseBus(i2c_conf[i2cn].i2cp);
