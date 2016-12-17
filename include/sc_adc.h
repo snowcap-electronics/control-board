@@ -32,6 +32,7 @@
 
 void sc_adc_init(void);
 void sc_adc_deinit(void);
+/* Specify 0 interval_ms for one shot conversion */
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_ms, uint8_t sample_time);
 void sc_adc_stop_conversion(void);
 void sc_adc_channel_get(uint16_t *channels, systime_t *ts);

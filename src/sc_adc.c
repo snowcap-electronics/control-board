@@ -112,15 +112,19 @@ THD_FUNCTION(adcThread, arg)
     systime_t time_now;
 
     // Do ADC conversion(s) once per interval
-    last_conversion_time += MS2ST(interval_ms);
-    time_now = ST2MS(chVTGetSystemTime());
+    if (!interval_ms) {
+      thread_run = 0;
+    } else {
+      last_conversion_time += MS2ST(interval_ms);
+      time_now = ST2MS(chVTGetSystemTime());
 
-    if (last_conversion_time < time_now) {
-      chDbgAssert(0, "Too slow ADC for specified interval");
-      last_conversion_time = time_now + MS2ST(1);
+      if (last_conversion_time < time_now) {
+        chDbgAssert(0, "Too slow ADC for specified interval");
+        last_conversion_time = time_now + MS2ST(1);
+      }
+
+      chThdSleepUntil(last_conversion_time);
     }
-
-    chThdSleepUntil(last_conversion_time);
 
     retval = adcConvert(&ADCDX, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
     if (retval != MSG_OK) {
