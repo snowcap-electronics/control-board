@@ -90,6 +90,7 @@ static sc_event_cb_audio_available cb_audio_available = NULL;
 static sc_event_cb_spirit1_msg_available cb_spirit1_msg_available = NULL;
 static sc_event_cb_spirit1_data_sent cb_spirit1_data_sent = NULL;
 static sc_event_cb_spirit1_data_lost cb_spirit1_data_lost = NULL;
+static sc_event_cb_ms5611_available cb_ms5611_available = NULL;
 
 static thread_t *event_thread = NULL;
 
@@ -208,6 +209,11 @@ static THD_FUNCTION(eventLoopThread, arg)
     case SC_EVENT_TYPE_SPIRIT1_DATA_LOST:
       if (cb_spirit1_data_lost != NULL) {
         cb_spirit1_data_lost();
+      }
+      break;
+    case SC_EVENT_TYPE_MS5611_AVAILABLE:
+      if (cb_ms5611_available != NULL) {
+        cb_ms5611_available();
       }
       break;
 
@@ -510,6 +516,17 @@ void sc_event_register_spirit1_data_lost(sc_event_cb_spirit1_data_lost func)
 {
   cb_spirit1_data_lost = func;
 }
+
+
+
+/*
+ * Register callback for new MS5611 data available
+ */
+void sc_event_register_ms5611_available(sc_event_cb_ms5611_available func)
+{
+  cb_ms5611_available = func;
+}
+
 
 
 

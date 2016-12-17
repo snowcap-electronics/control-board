@@ -40,11 +40,18 @@
 */
 #endif
 
+#ifdef SC_HAS_MS5611
+#include "sc_ms5611.h"
+#endif
+
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 #ifdef SC_HAS_SPIRIT1
 static void cb_spirit1_msg(void);
 static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
+#endif
+#ifdef SC_HAS_MS5611
+static void cb_ms5611_available(void);
 #endif
 static void init(void);
 
@@ -78,19 +85,21 @@ int main(void)
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
 #endif
 
+#ifdef SC_HAS_MS5611
+  sc_event_register_ms5611_available(cb_ms5611_available);
+  sc_ms5611_init(1000);
+#endif
+
   chThdSleepMilliseconds(1000);
   // Loop forever waiting for callbacks
   while(1) {
-#ifndef SC_HAS_SPIRIT1
-    SC_LOG_PRINTF("d: ping\r\n");
+#ifdef SC_HAS_SPIRIT1
+    uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
+    SC_LOG_PRINTF("sending: test\r\n");
+    sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
     chThdSleepMilliseconds(1000);
 #else
-    {
-      uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
-      SC_LOG_PRINTF("sending: test\r\n");
-      sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
-      chThdSleepMilliseconds(1000);
-    }
+    SC_LOG_PRINTF("d: ping (%d)\r\n", ST2MS(chVTGetSystemTime()));
 #endif
   }
 
@@ -112,7 +121,7 @@ static void init(void)
 
   // F1 Discovery and L152 Nucleo boards dont't support USB
 #if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
-  //subsystems |= SC_MODULE_SDU;
+  subsystems |= SC_MODULE_SDU;
 #endif
 
   // Init ChibiOS
@@ -130,7 +139,6 @@ static void init(void)
   sc_log_output_uart(SC_UART_1);
 #endif
 #endif
-  sc_log_output_uart(SC_UART_2);
 }
 
 
@@ -184,6 +192,21 @@ static void cb_spirit1_sent(void)
 static void cb_spirit1_lost(void)
 {
   SC_LOG_PRINTF("d: spirit1 msg lost\r\n");
+}
+#endif
+
+
+
+#ifdef SC_HAS_MS5611
+static void cb_ms5611_available(void)
+{
+  uint32_t temp, pres;
+  systime_t time_st;
+
+  sc_ms5611_read(&temp, &pres, &time_st);
+
+  SC_LOG_PRINTF("temp: %d,%d\r\n", ST2MS(time_st), temp);
+  SC_LOG_PRINTF("pres: %d,%d\r\n", ST2MS(time_st), pres);
 }
 #endif
 

@@ -50,6 +50,7 @@ typedef enum SC_EVENT_TYPE {
   SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE,
   SC_EVENT_TYPE_SPIRIT1_DATA_SENT,
   SC_EVENT_TYPE_SPIRIT1_DATA_LOST,
+  SC_EVENT_TYPE_MS5611_AVAILABLE,
   // SC internal types
   SC_EVENT_TYPE_UART_SEND_FINISHED,
   SC_EVENT_TYPE_MAX
@@ -78,6 +79,7 @@ typedef void (*sc_event_cb_audio_available)(void);
 typedef void (*sc_event_cb_spirit1_msg_available)(void);
 typedef void (*sc_event_cb_spirit1_data_sent)(void);
 typedef void (*sc_event_cb_spirit1_data_lost)(void);
+typedef void (*sc_event_cb_ms5611_available)(void);
 
 void sc_event_loop_start(void);
 void sc_event_loop_stop(void);
@@ -107,6 +109,7 @@ void sc_event_register_audio_available(sc_event_cb_9dof_available func);
 void sc_event_register_spirit1_msg_available(sc_event_cb_spirit1_msg_available func);
 void sc_event_register_spirit1_data_sent(sc_event_cb_spirit1_data_sent func);
 void sc_event_register_spirit1_data_lost(sc_event_cb_spirit1_data_lost func);
+void sc_event_register_ms5611_available(sc_event_cb_ms5611_available func);
 
 #endif
 

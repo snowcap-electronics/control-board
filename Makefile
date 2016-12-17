@@ -206,6 +206,7 @@ CSRC = $(STARTUPSRC) \
        drivers/sc_lsm9ds0.c \
        drivers/sc_apa102.c \
        drivers/sc_lsm9ds1.c \
+       drivers/sc_ms5611.c \
        drivers/gsm.c \
        src/sc.c \
        src/sc_led.c \
