@@ -29,7 +29,6 @@
 #include "sc_utils.h"
 #include "sc_cmd.h"
 #include "sc_gpio.h"
-#include "sc_led.h"
 
 #include <stdio.h>        // sscanf
 
@@ -101,7 +100,7 @@ void sc_gpio_deinit(void)
 
 
 /*
- * Turn the led on
+ * Turn the gpio on
  */
 void sc_gpio_on(uint8_t gpio)
 {
@@ -239,7 +238,7 @@ static void parse_command_gpio(const uint8_t *param, uint8_t param_len)
     sc_gpio_on(gpio);
     break;
   case 't':
-    sc_led_toggle();
+    sc_gpio_toggle(gpio);
     break;
   default:
     // Invalid value, ignoring command
