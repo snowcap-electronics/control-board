@@ -35,7 +35,6 @@
 #include "sc_utils.h"
 #include "sc_uart.h"
 #include "sc_pwm.h"
-#include "sc_led.h"
 #include "sc_icu.h"
 #include "sc_cmd.h"
 #include "sc_sdu.h"
