@@ -1,49 +1,64 @@
 /**
- * @file    SPIRIT_Qi.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT QI.
- * @details
- *
- * This module can be used to configure and read some quality indicators
- * used by Spirit.
- * API to set thresholds and to read values in raw mode or in dBm are
- * provided.
- *
- * <b>Example:</b>
- * @code
- *
- *   float rssiValuedBm;
- *   uint8_t pqiValue, sqiValue;
- *
- *   SpiritQiPqiCheck(S_ENABLE);
- *   SpiritQiSqiCheck(S_ENABLE);
- *
- *   ...
- *
- *   rssiValueDbm = SpiritQiGetRssiDbm();
- *   pqiValue = SpiritQiGetPqi();
- *   sqiValue = SpiritQiGetSqi();
- *
- *   ...
- *
- * @endcode
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
-
+  ******************************************************************************
+  * @file    SPIRIT_Qi.h
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Configuration and management of SPIRIT QI.
+  * @details
+  *
+  * This module can be used to configure and read some quality indicators
+  * used by Spirit.
+  * API to set thresholds and to read values in raw mode or in dBm are
+  * provided.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  *   float rssiValuedBm;
+  *   uint8_t pqiValue, sqiValue;
+  *
+  *   SpiritQiPqiCheck(S_ENABLE);
+  *   SpiritQiSqiCheck(S_ENABLE);
+  *
+  *   ...
+  *
+  *   rssiValueDbm = SpiritQiGetRssidBm();
+  *   pqiValue = SpiritQiGetPqi();
+  *   sqiValue = SpiritQiGetSqi();
+  *
+  *   ...
+  *
+  * @endcode
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_QI_H
@@ -226,7 +241,7 @@ typedef enum
  * @retval RSSI in dBm.
  *         This parameter is a float.
  */
-#define SpiritQiGetRssidBm()            -120.0+((float)(SpiritQiGetRssi()-20))/2
+#define SpiritQiGetRssidBm()            (-120.0+((float)(SpiritQiGetRssi()-20))/2)
 
 /**
  *@}
@@ -246,8 +261,8 @@ void SpiritQiSetSqiThreshold(SqiThreshold xSqiThr);
 SqiThreshold SpiritQiGetSqiThreshold(void);
 void SpiritQiSetRssiThreshold(uint8_t cRssiThr);
 uint8_t SpiritQiGetRssiThreshold(void);
-uint8_t SpiritQiComputeRssiThreshold(int cDbmValue);
-void SpiritQiSetRssiThresholddBm(int nDbmValue);
+uint8_t SpiritQiComputeRssiThreshold(int32_t cDbmValue);
+void SpiritQiSetRssiThresholddBm(int32_t nDbmValue);
 uint8_t SpiritQiGetPqi(void);
 uint8_t SpiritQiGetSqi(void);
 uint8_t SpiritQiGetLqi(void);
@@ -282,4 +297,4 @@ void SpiritQiSqiTimeoutMask(SpiritFunctionalState xNewState);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

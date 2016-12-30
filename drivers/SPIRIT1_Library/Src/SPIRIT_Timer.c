@@ -1,25 +1,40 @@
 /**
- * @file    SPIRIT_Timer.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT timers.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
-
+  ******************************************************************************
+  * @file    SPIRIT_Timer.c
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Configuration and management of SPIRIT timers.
+  * @details
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_Timer.h"
@@ -262,11 +277,11 @@ void SpiritTimerGetRxTimeout(float* pfTimeoutMsec, uint8_t* pcCounter , uint8_t*
   (*pcCounter) = tempRegValue[1];
     
   float nXtalFrequency = (float)SpiritRadioGetXtalFrequency();
-  if(nXtalFrequency>26000000) {
-    nXtalFrequency /= 2.0;
+  if(nXtalFrequency>DOUBLE_XTAL_THR) {
+    nXtalFrequency /= 2.0f;   /* #1035-D */
   }
-  nXtalFrequency /= 1000.0;
-  *pfTimeoutMsec = (float)((tempRegValue[0]+1)*tempRegValue[1]*(1210.0/nXtalFrequency));
+  nXtalFrequency /= 1000.0f;   /* #1035-D */
+  *pfTimeoutMsec = (float)((tempRegValue[0]+1)*tempRegValue[1]*(1210.0f/nXtalFrequency));  /* #1035-D */
   
 
 }
@@ -359,14 +374,18 @@ void SpiritTimerSetWakeUpTimerPrescaler(uint8_t cPrescaler)
 void SpiritTimerGetWakeUpTimer(float* pfWakeUpMsec, uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
   uint8_t tempRegValue[2];
-
+  /* uint32_t xtal=SpiritRadioGetXtalFrequency(); */
+  float rco_freq;
+  
+  rco_freq=(float)SpiritTimerGetRcoFrequency();
+  
   /* Reads the Wake_Up timer registers value */
   g_xStatus = SpiritSpiReadRegisters(TIMERS3_LDC_PRESCALER_BASE, 2, tempRegValue);
 
   /* Returns values */
   (*pcPrescaler)=tempRegValue[0];
   (*pcCounter)=tempRegValue[1];
-  *pfWakeUpMsec = (float)((((*pcPrescaler)+1)*((*pcCounter)+1)*(1000.0/34.7)));
+  *pfWakeUpMsec = (float)((((*pcPrescaler)+1)*((*pcCounter)+1)*(1000.0f/rco_freq))); /* #1035-D */
 
 }
 
@@ -458,17 +477,51 @@ void SpiritTimerSetWakeUpTimerReloadPrescaler(uint8_t cPrescaler)
 void SpiritTimerGetWakeUpTimerReload(float* pfWakeUpReloadMsec, uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
   uint8_t tempRegValue[2];
-
+  /* uint32_t xtal=SpiritRadioGetXtalFrequency(); */
+  float rco_freq;
+  
+  rco_freq=(float)SpiritTimerGetRcoFrequency();
+  
   /* Reads the reload Wake_Up timer registers value */
   g_xStatus = SpiritSpiReadRegisters(TIMERS1_LDC_RELOAD_PRESCALER_BASE, 2, tempRegValue);
 
   /* Returns values */
   (*pcPrescaler)=tempRegValue[0];
   (*pcCounter)=tempRegValue[1];
-  *pfWakeUpReloadMsec = (float)((((*pcPrescaler)+2)*((*pcCounter)+2)*(1000.0/34.7)));
+  *pfWakeUpReloadMsec = (float)((((*pcPrescaler)+1)*((*pcCounter)+1)*(1000.0f/rco_freq)));    /* #1035-D */
 
 }
 
+/**
+ * @brief  Computes and returns the RCO frequency. 
+ *         This frequency depends on the xtal frequency and the XTAL bit in register 0x01.
+ * @retval RCO frequency in Hz as an uint16_t.
+ */
+uint16_t SpiritTimerGetRcoFrequency(void)
+{
+  uint16_t rco_freq=34700;
+  uint32_t xtal=SpiritRadioGetXtalFrequency();
+  
+  if(xtal>30000000) xtal/=2;
+  
+  if(xtal==25000000)
+  {
+    uint8_t xtal_flag;
+    SpiritSpiReadRegisters(0x01, 1, &xtal_flag);
+    xtal_flag=(xtal_flag&0x40);
+    
+    if(xtal_flag==0)
+    {
+      rco_freq=36100;
+    }
+    else
+    {
+      rco_freq=33300;
+    }
+  }
+  
+  return rco_freq;
+}
 
 /**
  * @brief  Computes the values of the wakeup timer counter and prescaler from the user time expressed in millisecond.
@@ -483,70 +536,49 @@ void SpiritTimerGetWakeUpTimerReload(float* pfWakeUpReloadMsec, uint8_t* pcCount
  *         This parameter must be an uint8_t*.
  * @retval None
  */
-
 void SpiritTimerComputeWakeUpValues(float fDesiredMsec , uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
-  uint8_t b0, a0;
+  float rco_freq,err;
   uint32_t n;
-  int32_t err, err_min;
   
-  /* If the desired value is over the maximum limit, the counter and the
-  prescaler are settled to their maximum values, and doesn't execute the routine */
-  if(fDesiredMsec>1903.0)
+  rco_freq=((float)SpiritTimerGetRcoFrequency())/1000;
+  
+  /* N cycles in the time base of the timer: 
+     - clock of the timer is RCO frequency
+     - divide times 1000 more because we have an input in ms (variable rco_freq is already this frequency divided by 1000)
+  */
+  n=(uint32_t)(fDesiredMsec*rco_freq);
+    
+  /* check if it is possible to reach that target with prescaler and counter of spirit1 */
+  if(n/0xFF>0xFD)
   {
-    *pcCounter = 0xFF;
-    *pcPrescaler = 0xFF;
+    /* if not return the maximum possible value */
+    (*pcCounter) = 0xFF;
+    (*pcPrescaler) = 0xFF;
     return;
   }
-  else
+  
+  /* prescaler is really 2 as min value */
+  (*pcPrescaler)=(n/0xFF)+2;
+  (*pcCounter) = n / (*pcPrescaler);
+  
+  /* check if the error is minimum */
+  err=S_ABS((float)(*pcCounter)*(*pcPrescaler)/rco_freq-fDesiredMsec);
+  
+  if((*pcCounter)<=254)
   {
-    n = (uint32_t)(fDesiredMsec*34.7);
-    err_min = n;
-    /* These are the initial values for the prescaler and the counter, where the prescaler
-    is settled to the minimum value and the counter accordingly. In order to avoid a zero
-    division for the counter the prescaler is increased by one. Then because the wakeup timeout
-    is calculated as: Twu=(PRESCALER +1)*(COUNTER+1)*Tck the counter and the prescaler are decreased by one.*/
-    *pcPrescaler = a0 = (n/0xFF);
-     if(a0==0)
-      *pcCounter = b0 = 0;
-    else
-      *pcCounter = b0 = (n / *pcPrescaler)-2;
-    
-    /* Iterative cycle to minimize the error */
-    for (; ; (*pcPrescaler)++)
-    {
-      *pcCounter = ((n/(*pcPrescaler+2))-2);
-      err = (((uint32_t)(*pcPrescaler)+0) * ((uint32_t)*pcCounter)+0) - (uint32_t)n;
-      if ((uint32_t)S_ABS(err) > (uint32_t)(*pcPrescaler / 2))
-      {
-        (*pcCounter)++;
-        err = (((uint32_t)(*pcPrescaler)+0) * ((uint32_t)*pcCounter)+0) - (uint32_t)n;
-      }
-      if (S_ABS(err) < S_ABS(err_min))
-      {
-        err_min = err;
-        a0 = *pcPrescaler;
-        b0 = *pcCounter;
-        if (err == 0) 
-        {
-          break;
-        }
-      }
-      if(*pcPrescaler == 0xFF) 
-      {
-        break;
-      }
-    }
-    if(a0==0)
-      a0=1;
-    if(b0==0 || b0==1)
-      b0=2;
-    
-    *pcPrescaler = a0;
-    *pcCounter = b0-1;
+    if(S_ABS((float)((*pcCounter)+1)*(*pcPrescaler)/rco_freq-fDesiredMsec)<err)
+      (*pcCounter)=(*pcCounter)+1;
   }
-
+    
+  /* decrement prescaler and counter according to the logic of this timer in spirit1 */
+  (*pcPrescaler)--;
+  if((*pcCounter)>1)
+    (*pcCounter)--;
+  else
+    (*pcCounter)=1;
 }
+
 
 /**
  * @brief  Computes the values of the rx_timeout timer counter and prescaler from the user time expressed in millisecond.
@@ -564,72 +596,50 @@ void SpiritTimerComputeWakeUpValues(float fDesiredMsec , uint8_t* pcCounter , ui
 void SpiritTimerComputeRxTimeoutValues(float fDesiredMsec , uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
   uint32_t nXtalFrequency = SpiritRadioGetXtalFrequency();
-  if(nXtalFrequency>26000000) {
+  uint32_t n;
+  float err;
+  
+  /* if xtal is doubled divide it by 2 */
+  if(nXtalFrequency>DOUBLE_XTAL_THR) {
     nXtalFrequency >>= 1;
   }
   
-  /* If the desired value is over the maximum limit, the counter and the
-  prescaler are settled to their maximum values, and doesn't execute the routine */
-  if ((fDesiredMsec>3291.0 && nXtalFrequency==24000000) || (fDesiredMsec>3159.0 && nXtalFrequency==25000000) || (fDesiredMsec>3038.0 && nXtalFrequency==26000000))
+  /* N cycles in the time base of the timer: 
+     - clock of the timer is xtal/1210
+     - divide times 1000 more because we have an input in ms
+  */
+  n=(uint32_t)(fDesiredMsec*nXtalFrequency/1210000);
+  
+  /* check if it is possible to reach that target with prescaler and counter of spirit1 */
+  if(n/0xFF>0xFD)
   {
-    *pcCounter = 0xFF;
-    *pcPrescaler = 0xFF;
+    /* if not return the maximum possible value */
+    (*pcCounter) = 0xFF;
+    (*pcPrescaler) = 0xFF;
     return;
   }
-  else
+  
+  /* prescaler is really 2 as min value */
+  (*pcPrescaler)=(n/0xFF)+2;
+  (*pcCounter) = n / (*pcPrescaler);
+  
+  /* check if the error is minimum */
+  err=S_ABS((float)(*pcCounter)*(*pcPrescaler)*1210000/nXtalFrequency-fDesiredMsec);
+  
+  if((*pcCounter)<=254)
   {
-    float FPeriod = 1210.0 / (nXtalFrequency/1000000);
-
-    uint8_t b0, a0;
-    uint32_t n = (uint32_t)((fDesiredMsec*1000)/FPeriod);
-    int32_t err, err_min;
-    
-    err_min = n;
-    /* These are the initial values for the prescaler and the counter, where the prescaler
-    is settled to the minimum value and the counter accordingly. In order to avoid a zero
-    division for the counter the prescaler is increased by one.*/
-    
-    *pcPrescaler = a0 = (uint8_t)((n-1)/0xFF);
-    if(a0==0)
-      *pcCounter = b0 = 0;
-    else
-      *pcCounter = b0 = (uint8_t)(n / *pcPrescaler)-1;
-
-    for (; ; (*pcPrescaler)++)
-    {
-      *pcCounter = (uint8_t)(n / *pcPrescaler)-1;
-      err = (((uint32_t)(*pcPrescaler)+1) * ((uint32_t)*pcCounter)) - (uint32_t)n;
-
-      if ((uint32_t)S_ABS(err) > (uint32_t)(*pcPrescaler / 2))
-      {
-        (*pcCounter)++;
-        err = (((uint32_t)(*pcPrescaler)+1) * ((uint32_t)*pcCounter)) - (uint32_t)n;
-      }
-      if (S_ABS(err) < S_ABS(err_min))
-      {
-        err_min = err;
-        a0 = *pcPrescaler;
-        b0 = *pcCounter;
-        if (err_min == 0) 
-        {
-          break;
-        }
-      }
-      if(*pcPrescaler == (0xFF-1)) 
-      {
-        break;
-      }
-    }
-
-    if(a0==0)
-      a0=1;
-    if(b0==0)
-      b0=1;
-    
-    *pcPrescaler = a0;
-    *pcCounter = b0;
+    if(S_ABS((float)((*pcCounter)+1)*(*pcPrescaler)*1210000/nXtalFrequency-fDesiredMsec)<err)
+      (*pcCounter)=(*pcCounter)+1;
   }
+    
+  /* decrement prescaler and counter according to the logic of this timer in spirit1 */
+  (*pcPrescaler)--;
+  if((*pcCounter)>1)
+    (*pcCounter)--;
+  else
+    (*pcCounter)=1;
 }
+
 
 /**
  * @brief  Sets the RX timeout stop conditions.
@@ -687,4 +697,4 @@ void SpiritTimerReloadStrobe(void)
 
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

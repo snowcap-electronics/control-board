@@ -1,25 +1,40 @@
 /**
-* @file    SPIRIT_Management.c
-* @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
-* @version V3.0.1
-* @date    November 19, 2012
-* @brief   The management layer for SPIRIT1 library.
-* @details
-*
-* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-*
-* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
-* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
-* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
-*
-* <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
-*/  
-
+  ******************************************************************************
+  * @file    SPIRIT_Management.c
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   The management layer for SPIRIT1 library.
+  * @details
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_Management.h"
@@ -46,7 +61,7 @@ static const uint8_t s_vectcBandRegValue[4]={SYNT0_BS_6, SYNT0_BS_12, SYNT0_BS_1
 
 static uint32_t s_nDesiredFrequency;
 
-static volatile uint8_t s_cCommunicationState = COMMUNICATION_STATE_NONE;
+volatile static uint8_t s_cCommunicationState = COMMUNICATION_STATE_NONE;
 
 
 /**
@@ -74,7 +89,7 @@ static const uint8_t s_vectcBHalfFactor[4]={(HIGH_BAND_FACTOR/2), (MIDDLE_BAND_F
 void SpiritManagementSetFrequencyBase(uint32_t lFBase)
 {
   uint32_t synthWord, Fc;
-  uint8_t band=0, anaRadioRegArray[4], wcp;
+  uint8_t band, anaRadioRegArray[4], wcp;
   
   /* Check the parameter */
   s_assert_param(IS_FREQUENCY_BAND(lFBase));
@@ -92,7 +107,7 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   {
     band = LOW_BAND;
   }
-  else if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
+  else //if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
   {
     band = VERY_LOW_BAND;
   }
@@ -176,9 +191,10 @@ uint8_t SpiritManagementWaVcoCalibration(void)
   uint8_t cRestore = 0;
   uint8_t cStandby = 0;
   uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
+  uint8_t nLockwon=0;
   
   /* Enable the reference divider if the XTAL is between 48 and 52 MHz */
-  if(xtal_frequency>26000000)
+  if(xtal_frequency>DOUBLE_XTAL_THR)
   {
     if(!SpiritRadioGetRefDiv())
     {
@@ -191,7 +207,7 @@ uint8_t SpiritManagementWaVcoCalibration(void)
   nFreq = SpiritRadioGetFrequencyBase();
   
   /* Increase the VCO current */
-  uint8_t tmp = 0x19; SpiritSpiWriteRegisters(0xA1,1,&tmp);
+  uint8_t tmp = 0x25; SpiritSpiWriteRegisters(0xA1,1,&tmp);
   
   SpiritCalibrationVco(S_ENABLE);
   
@@ -202,24 +218,21 @@ uint8_t SpiritManagementWaVcoCalibration(void)
     SpiritCmdStrobeReady();
     do{
       SpiritRefreshStatus();
-      if(g_xStatus.MC_STATE == 0x13)
-      {
-        return 1;
-      }
+      
     }while(g_xStatus.MC_STATE != MC_STATE_READY); 
   }
   
   SpiritCmdStrobeLockTx();
   
+  nLockwon=0;
   do{
-
     SpiritRefreshStatus();
-    if(g_xStatus.MC_STATE == 0x13)
+    if(g_xStatus.MC_STATE == MC_STATE_LOCKWON)
     {
-      return 1;
+      if(nLockwon++==5) return 1;
     }
   }while(g_xStatus.MC_STATE != MC_STATE_LOCK);
-  
+    
   s_cVcoWordTx = SpiritCalibrationGetVcoCalData();
   
   SpiritCmdStrobeReady();
@@ -231,11 +244,12 @@ uint8_t SpiritManagementWaVcoCalibration(void)
     
   SpiritCmdStrobeLockRx();
   
+  nLockwon=0;
   do{
     SpiritRefreshStatus();
-    if(g_xStatus.MC_STATE == 0x13)
+    if(g_xStatus.MC_STATE == MC_STATE_LOCKWON)
     {
-      return 1;
+      if(nLockwon++==5) return 1;
     }
   }while(g_xStatus.MC_STATE != MC_STATE_LOCK);
   
@@ -245,10 +259,7 @@ uint8_t SpiritManagementWaVcoCalibration(void)
   
   do{
     SpiritRefreshStatus();
-    if(g_xStatus.MC_STATE == 0x13)
-    {
-      return 1;
-    }
+   
   }while(g_xStatus.MC_STATE != MC_STATE_READY);
   
   if(cStandby == 1)
@@ -264,8 +275,6 @@ uint8_t SpiritManagementWaVcoCalibration(void)
     SpiritManagementSetFrequencyBase(nFreq);
   }
   
-  /* Restore the VCO current */
-  tmp = 0x11; SpiritSpiWriteRegisters(0xA1,1,&tmp);
   
   SpiritCalibrationSetVcoCalDataTx(s_cVcoWordTx);
   SpiritCalibrationSetVcoCalDataRx(s_cVcoWordRx);
@@ -276,12 +285,9 @@ uint8_t SpiritManagementWaVcoCalibration(void)
 
 void SpiritManagementWaCmdStrobeTx(void)
 {
- //__IO uint32_t xtal_frequency;
-
   if(s_cCommunicationState != COMMUNICATION_STATE_TX)
   {
-    // xtal_frequency = SpiritRadioGetXtalFrequency();
-    SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
+    //uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
     
     /* To achive the max output power */
     if(s_nDesiredFrequency>=150000000 && s_nDesiredFrequency<=470000000)
@@ -291,14 +297,8 @@ void SpiritManagementWaCmdStrobeTx(void)
     }
     else
     {
-      if(spirit_version == SPIRIT_VERSION_3_0_D1 && s_nDesiredFrequency>=863000000 && s_nDesiredFrequency<=870000000) {
-        /* Optimal setting for Tx mode only */
-        SpiritRadioSetPACwc(LOAD_2_4_PF);
-      }
-      else {
-        /* Optimal setting for Tx mode only */
-        SpiritRadioSetPACwc(LOAD_0_PF);
-      }
+      /* Optimal setting for Tx mode only */
+      SpiritRadioSetPACwc(LOAD_0_PF);
     }
     
     uint8_t tmp = 0x11; SpiritSpiWriteRegisters(0xa9, 1, &tmp); /* Enable VCO_L buffer */
@@ -313,7 +313,7 @@ void SpiritManagementWaCmdStrobeRx(void)
 {
   if(s_cCommunicationState != COMMUNICATION_STATE_RX)
   {    
-    uint8_t tmp = 0x90; SpiritSpiWriteRegisters(PM_CONFIG1_BASE, 1, &tmp); /* Set SMPS switching frequency */    
+    uint8_t tmp = 0x98; SpiritSpiWriteRegisters(PM_CONFIG1_BASE, 1, &tmp); /* Set SMPS switching frequency */    
     SpiritRadioSetPACwc(LOAD_0_PF); /* Set the correct CWC parameter */
     
     s_cCommunicationState = COMMUNICATION_STATE_RX;
@@ -356,4 +356,4 @@ void SpiritManagementWaExtraCurrent(void)
 */
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

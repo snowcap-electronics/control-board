@@ -1,30 +1,45 @@
 /**
- * @file    SPIRIT_Types.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Header file for SPIRIT types.
- * @details
- *
- * This module provide some types definitions which will be used in
- * all the modules of this library. Here is defined also the global
- * variable @ref g_xStatus which contains the status of Spirit and
- * is updated every time an SPI transaction occurs.
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
-
+  ******************************************************************************
+  * @file    SPIRIT_Types.h
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Header file for SPIRIT types.
+  * @details
+  *
+  * This module provide some types definitions which will be used in
+  * all the modules of this library. Here is defined also the global
+  * variable @ref g_xStatus which contains the status of Spirit and
+  * is updated every time an SPI transaction occurs.
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_GENERICTYPES_H
@@ -114,7 +129,8 @@ typedef enum
   MC_STATE_SYNTH_CALIBRATION =0x4F,	/*!< SYNTH */
   MC_STATE_LOCK              =0x0F,	/*!< LOCK */
   MC_STATE_RX                =0x33,	/*!< RX */
-  MC_STATE_TX                =0x5F	/*!< TX */
+  MC_STATE_TX                =0x5F,	/*!< TX */
+  MC_STATE_LOCKWON           =0x13	/*!< LOCKWON */  
 
 } SpiritState;
 
@@ -150,7 +166,7 @@ typedef struct
    	   	   	   	     antenna */
   uint8_t : 4;			/*!< This 4 bits field are reserved and equal to 5 */
 
-}__attribute__((__packed__)) SpiritStatus;
+}SpiritStatus;
 
 
 
@@ -195,7 +211,7 @@ extern volatile SpiritStatus g_xStatus;
    */
   #define s_assert_param(expr) ((expr) ? (void)0 : s_assert_failed((uint8_t *)__FILE__, __LINE__))
   void s_assert_failed(uint8_t* file, uint32_t line);
-#elif defined SPIRIT_USE_VCOM_ASSERT && SPIRIT_USE_VCOM_ASSERT
+#elif  SPIRIT_USE_VCOM_ASSERT
   /**
    * @brief  The s_assert_param macro is used for function's parameters check.
    * @param  expr  If expr is false, it calls assert_failed function which reports
@@ -206,7 +222,7 @@ extern volatile SpiritStatus g_xStatus;
   #define s_assert_param(expr) ((expr) ? (void)0 : s_assert_failed((uint8_t *)__FILE__, __LINE__,#expr))
   void s_assert_failed(uint8_t* file, uint32_t line, char* expression);
 
-#elif defined SPIRIT_USE_FRAME_ASSERT && SPIRIT_USE_FRAME_ASSERT
+#elif SPIRIT_USE_FRAME_ASSERT
    /**
    * @brief  The s_assert_param macro is used for function's parameters check.
    * @param  expr  If expr is false, it calls assert_failed function which reports
@@ -258,4 +274,4 @@ void SpiritRefreshStatus(void);
 
 #endif
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

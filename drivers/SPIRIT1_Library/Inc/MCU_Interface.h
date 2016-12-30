@@ -1,8 +1,8 @@
 /**
  * @file    MCU_Interface.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
+ * @author  VMA division - AMS
  * @version V2.0.2
- * @date    Febrary 7, 2012
+ * @date    Febrary 7, 2015
  * @brief   Header file for low level SPIRIT SPI driver.
  * @details
  *
@@ -38,7 +38,7 @@
  * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
  * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
  *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+ * <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
  */
 
 
@@ -48,8 +48,8 @@
 
 
 /* Includes ------------------------------------------------------------------*/
-#include "SPIRIT_Config.h"   
-#include "sc_spirit1.h"
+#include "SPIRIT_Types.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -102,11 +102,24 @@ extern "C" {
 /** @defgroup SPI_Exported_Functions    SPI Exported Functions
  * @{
  */
-#if 0
+
+typedef SpiritStatus StatusBytes;
+
+void RadioSpiInit(void);
+StatusBytes RadioSpiWriteRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pcBuffer);
+StatusBytes RadioSpiReadRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pcBuffer);
+StatusBytes RadioSpiCommandStrobes(uint8_t cCommandCode);
+StatusBytes RadioSpiWriteFifo(uint8_t cNbBytes, uint8_t* pcBuffer);
+StatusBytes RadioSpiReadFifo(uint8_t cNbBytes, uint8_t* pcBuffer);
+
+void EnterShutdown(void);
+void ExitShutdown(void);
+SpiritFlagStatus CheckShutdown(void);
+
 #define SpiritEnterShutdown                                  RadioEnterShutdown
 #define SpiritExitShutdown                                   RadioExitShutdown
 #define SpiritCheckShutdown                                  (SpiritFlagStatus)RadioCheckShutdown
-#endif
+
 
 #define SpiritSpiInit                                                  RadioSpiInit
 #define SpiritSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)       RadioSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)
@@ -115,7 +128,7 @@ extern "C" {
 #define SpiritSpiWriteLinearFifo(cNbBytes, pcBuffer)                   RadioSpiWriteFifo(cNbBytes, pcBuffer)
 #define SpiritSpiReadLinearFifo(cNbBytes, pcBuffer)                    RadioSpiReadFifo(cNbBytes, pcBuffer)
 
-  /**
+/**
  * @}
  */
 
@@ -136,4 +149,4 @@ extern "C" {
 
 #endif
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

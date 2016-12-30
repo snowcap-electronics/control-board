@@ -1,112 +1,129 @@
 /**
- * @file    SPIRIT_Irq.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT IRQs.
- * @details
- *
- * On the Spirit side specific IRQs can be enabled by setting a specific bitmask.
- * The Spirit libraries allow the user to do this in two different ways:
- * <ul>
- *
- * <li>The first enables the IRQs one by one, i.e. using an SPI transaction for each
- * IRQ to enable.
- *
- * <b>Example:</b>
- * @code
- *
- *  SpiritIrqDeInit(NULL);                // this call is used to reset the IRQ mask registers
- *  SpiritIrq(RX_DATA_READY , S_ENABLE);
- *  SpiritIrq(VALID_SYNC , S_ENABLE);
- *  SpiritIrq(RX_TIMEOUT , S_ENABLE);
- *
- * @endcode
- *
- * </li>
- *
- * <li>The second strategy is to set the IRQ bitfields structure. So, during the initialization the user
- * has to fill the @ref SpiritIrqs structure setting to one the single field related to the IRQ he
- * wants to enable, and to zero the single field related to all the IRQs he wants to disable.
- *
- * <b>Example:</b>
- * @code
- *
- *  SpiritIrqs irqMask;
- *
- *  ...
- *
- *  SpiritIrqDeInit(&irqMask);                // this call is used to reset the IRQ mask registers
- *                                            // and to set to 0x00000000 the irq mask in order to disable
- *                                            // all IRQs (disabled by default on startup)
- *  irqMask.IRQ_RX_DATA_READY = 1;
- *  irqMask.IRQ_VALID_SYNC = 1;
- *  irqMask.IRQ_RX_TIMEOUT = 1;
- *
- *  ...
- * @endcode
- * </li>
- * </ul>
- *
- * The most applications will require a Spirit IRQ notification on an microcontroller EXTI line.
- * Then, the user can check which IRQ has been raised using two different ways.
- *
- * On the ISR of the EXTI line phisically linked to the Spirit pin configured for IRQ:
- *
- * <ul>
- * <li> Check <b>only one</b> Spirit IRQ (because the Spirit IRQ status register automatically blanks itself
- * after an SPI reading) into the ISR.
- *
- * <b>Example:</b>
- * @code
- *
- *  if(SpiritIrqCheckFlag(RX_DATA_READY))
- *  {
- *          // do something...
- *  }
- *
- * @endcode
- * </li>
- *
- * <li> Check more than one Spirit IRQ status by storing the entire IRQ status registers into a bitfields <i>@ref SpiritIrqs</i> structure
- * and then check the interested bits.
- *
- * <b>Example:</b>
- * @code
- *
- *  SpiritIrqGetStatus(&irqStatus);
- *
- *  if(irqStatus.IRQ_RX_DATA_READY)
- *  {
- *          // do something...
- *  }
- *  if(irqStatus.IRQ_VALID_SYNC)
- *  {
- *         // do something...
- *  }
- *  if(irqStatus.RX_TIMEOUT)
- *  {
- *         // do something...
- *  }
- *
- * @endcode
- * </li>
- * </ul>
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
- */
+  ******************************************************************************
+  * @file    SPIRIT_Irq.h
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Configuration and management of SPIRIT IRQs.
+  * 
+  * @details
+  *
+  * On the Spirit side specific IRQs can be enabled by setting a specific bitmask.
+  * The Spirit libraries allow the user to do this in two different ways:
+  * <ul>
+  *
+  * <li>The first enables the IRQs one by one, i.e. using an SPI transaction for each
+  * IRQ to enable.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  *  SpiritIrqDeInit(NULL);                // this call is used to reset the IRQ mask registers
+  *  SpiritIrq(RX_DATA_READY , S_ENABLE);
+  *  SpiritIrq(VALID_SYNC , S_ENABLE);
+  *  SpiritIrq(RX_TIMEOUT , S_ENABLE);
+  *
+  * @endcode
+  *
+  * </li>
+  *
+  * <li>The second strategy is to set the IRQ bitfields structure. So, during the initialization the user
+  * has to fill the @ref SpiritIrqs structure setting to one the single field related to the IRQ he
+  * wants to enable, and to zero the single field related to all the IRQs he wants to disable.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  *  SpiritIrqs irqMask;
+  *
+  *  ...
+  *
+  *  SpiritIrqDeInit(&irqMask);                // this call is used to reset the IRQ mask registers
+  *                                            // and to set to 0x00000000 the irq mask in order to disable
+  *                                            // all IRQs (disabled by default on startup)
+  *  irqMask.IRQ_RX_DATA_READY = 1;
+  *  irqMask.IRQ_VALID_SYNC = 1;
+  *  irqMask.IRQ_RX_TIMEOUT = 1;
+  *
+  *  ...
+  * @endcode
+  * </li>
+  * </ul>
+  *
+  * The most applications will require a Spirit IRQ notification on an microcontroller EXTI line.
+  * Then, the user can check which IRQ has been raised using two different ways.
+  *
+  * On the ISR of the EXTI line phisically linked to the Spirit pin configured for IRQ:
+  *
+  * <ul>
+  * <li> Check <b>only one</b> Spirit IRQ (because the Spirit IRQ status register automatically blanks itself
+  * after an SPI reading) into the ISR.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  *  if(SpiritIrqCheckFlag(RX_DATA_READY))
+  *  {
+  *          // do something...
+  *  }
+  *
+  * @endcode
+  * </li>
+  *
+  * <li> Check more than one Spirit IRQ status by storing the entire IRQ status registers into a bitfields <i>@ref SpiritIrqs</i> structure
+  * and then check the interested bits.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  *  SpiritIrqGetStatus(&irqStatus);
+  *
+  *  if(irqStatus.IRQ_RX_DATA_READY)
+  *  {
+  *          // do something...
+  *  }
+  *  if(irqStatus.IRQ_VALID_SYNC)
+  *  {
+  *         // do something...
+  *  }
+  *  if(irqStatus.RX_TIMEOUT)
+  *  {
+  *         // do something...
+  *  }
+  *
+  * @endcode
+  * </li>
+  * </ul>
+  *
 
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT1_IRQ_H
@@ -191,7 +208,7 @@ typedef struct
   SpiritFlagStatus  IRQ_AES_END:1;                  /*!< IRQ: AES End of operation */
   SpiritFlagStatus  :1;                             /*!< Reserved bit */
 
-} __attribute__((__packed__)) SpiritIrqs;
+} SpiritIrqs;
 
 
 /**
@@ -329,4 +346,4 @@ SpiritBool SpiritIrqCheckFlag(IrqList xFlag);
 
 #endif
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

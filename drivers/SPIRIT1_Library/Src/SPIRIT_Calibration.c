@@ -1,25 +1,39 @@
 /**
- * @file    SPIRIT_Calibration.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT VCO-RCO calibration.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
-
+  ******************************************************************************
+  * @file    SPIRIT_Calibration.c
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Configuration and management of SPIRIT VCO-RCO calibration.
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_Calibration.h"
@@ -308,99 +322,6 @@ uint8_t SpiritCalibrationGetVcoCalDataRx(void)
 
 
 /**
- * @brief  Sets the VCO calibration window.
- * @param  xRefWord value of REFWORD corresponding to the Ref_period according to the formula: CALIBRATION_WIN = 11*Ref_period/fxo.
-           This parameter can be a value of @ref VcoWin.
- * @retval None.
- */
-void SpiritCalibrationSetVcoWindow(VcoWin xRefWord)
-{
-  uint8_t tempRegValue;
-
-  /* Check the parameters */
-  s_assert_param(IS_VCO_WIN(xRefWord));
-
-  /* Reads the register value */
-  g_xStatus = SpiritSpiReadRegisters(SYNTH_CONFIG1_BASE, 1, &tempRegValue);
-
-  /* Build the values to be written */
-  tempRegValue &= 0xFC;
-  tempRegValue |= xRefWord;
-
-  /* Writes the new value of VCO calibration window */
-  g_xStatus = SpiritSpiWriteRegisters(SYNTH_CONFIG1_BASE, 1, &tempRegValue);
-
-}
-
-
-/**
- * @brief  Returns the VCO calibration window.
- * @param  None.
- * @retval VcoWin Value of REFWORD corresponding to the Ref_period according to the formula: CALIBRATION_WIN = 11*Ref_period/fxo.
- *         This parameter can be a value of @ref VcoWin.
- */
-VcoWin SpiritCalibrationGetVcoWindow(void)
-{
-  uint8_t tempRegValue1, tempRegValue2;
-  VcoWin refWord;
-
-  /* Reads the register containing the REFWORD value */
-  g_xStatus = SpiritSpiReadRegisters(SYNTH_CONFIG1_BASE, 1, &tempRegValue1);
-
-  /* Reads the Xtal configuration */
-  g_xStatus = SpiritSpiReadRegisters(ANA_FUNC_CONF0_BASE, 1, &tempRegValue2);
-
-  /* Mask the REFWORD field */
-  tempRegValue1 &= 0x03;
-
-  /* Mask the 24_26_MHz_SELECT field */
-  tempRegValue2 = ((tempRegValue2 & 0x40)>>6);
-
-  /* In case of 26 MHz crystal */
-  if(tempRegValue2)
-  {
-    switch(tempRegValue1)
-    {
-    case 0:
-      refWord = CALIB_TIME_6_77_US_26MHZ;
-      break;
-    case 1:
-      refWord = CALIB_TIME_13_54_US_26MHZ;
-      break;
-    case 2:
-      refWord = CALIB_TIME_27_08_US_26MHZ;
-      break;
-    case 3:
-      refWord = CALIB_TIME_54_15_US_26MHZ;
-      break;
-    }
-  }
-
-  /* In case of 24 MHz crystal */
-  else
-  {
-    switch(tempRegValue1)
-    {
-    case 0:
-      refWord = CALIB_TIME_7_33_US_24MHZ;
-      break;
-    case 1:
-      refWord = CALIB_TIME_14_67_US_24MHZ;
-      break;
-    case 2:
-      refWord = CALIB_TIME_29_33_US_24MHZ;
-      break;
-    case 3:
-      refWord = CALIB_TIME_58_67_US_24MHZ;
-      break;
-    }
-  }
-
-  return refWord;
-
-}
-
-/**
  * @brief  Selects a VCO.
  * @param  xVco can be VCO_H or VCO_L according to which VCO select.
  *         This parameter can be a value of @ref VcoSel.
@@ -474,4 +395,4 @@ VcoSel SpiritCalibrationGetVcoSelecttion(void)
 
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

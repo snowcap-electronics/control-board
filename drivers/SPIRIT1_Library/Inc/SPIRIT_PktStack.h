@@ -1,86 +1,103 @@
 /**
- * @file    SPIRIT_PktStack.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT STack packets.
- * @details
- *
- * This module can be used to manage the configuration of Spirit STack
- * packets, and it is quite similar to the Basic packets one since the
- * STack packets can be considered an extension of Basic.
- * The user can obtain a packet configuration filling the structure
- * <i>@ref PktStackInit</i>, defining in it some general parameters
- * for the Spirit STack packet format.
- * Another structure the user can fill is <i>@ref PktStackAddressesInit</i>
- * to define the addresses which will be used during the communication.
- * The structure <i>@ref PktStackLlpInit</i> is provided in order to configure
- * the link layer protocol features like autoack, autoretransmission
- * or piggybacking.
- * Moreover, functions to set the payload length and the destination address
- * are provided.
- *
- * <b>Example:</b>
- * @code
- *
- * PktStackInit stackInit={
- *   PKT_PREAMBLE_LENGTH_08BYTES,       // preamble length in bytes
- *   PKT_SYNC_LENGTH_4BYTES,            // sync word length in bytes
- *   0x1A2635A8,                        // sync word
- *   PKT_LENGTH_VAR,                    // variable or fixed payload length
- *   7,                                 // length field width in bits (used only for variable length)
- *   PKT_NO_CRC,                        // CRC mode
- *   PKT_CONTROL_LENGTH_0BYTES,         // control field length
- *   S_DISABLE,                         // FEC
- *   S_ENABLE                           // whitening
- * };
- *
- * PktStackAddressesInit addressInit={
- *   S_ENABLE,                          // enable/disable filtering on my address
- *   0x34,                              // my address (address of the current node)
- *   S_DISABLE,                         // enable/disable filtering on multicast address
- *   0xEE,                              // multicast address
- *   S_DISABLE,                         // enable/disable filtering on broadcast address
- *   0xFF                               // broadcast address
- * };
- *
- * PktStackLlpInit stackLLPInit ={
- *   S_DISABLE,                         // enable/disable the autoack feature
- *   S_DISABLE,                         // enable/disable the piggybacking feature
- *   PKT_DISABLE_RETX                   // set the max number of retransmissions or disable them
- * };
- * ...
- *
- * SpiritPktStackInit(&stackInit);
- * SpiritPktStackAddressesInit(&addressInit);
- * SpiritPktStackLlpInit(&stackLLPInit);
- *
- * ...
- *
- * SpiritPktStackSetPayloadLength(20);
- * SpiritPktStackSetDestinationAddress(0x44);
- *
- * ...
- *
- * @endcode
- *
- * The module provides some other functions that can be used to modify
- * or read only some configuration parameters.
- *
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+  ******************************************************************************
+  * @file    SPIRIT_PktStack.h
+  * @author  AMG - RF Application team
+  * @version 3.2.4
+  * @date    26-September-2016
+  * @brief   Configuration and management of SPIRIT STack packets.
+  * 
+  * @details
+  *
+  * This module can be used to manage the configuration of Spirit STack
+  * packets, and it is quite similar to the Basic packets one since the
+  * STack packets can be considered an extension of Basic.
+  * The user can obtain a packet configuration filling the structure
+  * <i>@ref PktStackInit</i>, defining in it some general parameters
+  * for the Spirit STack packet format.
+  * Another structure the user can fill is <i>@ref PktStackAddressesInit</i>
+  * to define the addresses which will be used during the communication.
+  * The structure <i>@ref PktStackLlpInit</i> is provided in order to configure
+  * the link layer protocol features like autoack, autoretransmission
+  * or piggybacking.
+  * Moreover, functions to set the payload length and the destination address
+  * are provided.
+  *
+  * <b>Example:</b>
+  * @code
+  *
+  * PktStackInit stackInit={
+  *   PKT_PREAMBLE_LENGTH_08BYTES,       // preamble length in bytes
+  *   PKT_SYNC_LENGTH_4BYTES,            // sync word length in bytes
+  *   0x1A2635A8,                        // sync word
+  *   PKT_LENGTH_VAR,                    // variable or fixed payload length
+  *   7,                                 // length field width in bits (used only for variable length)
+  *   PKT_NO_CRC,                        // CRC mode
+  *   PKT_CONTROL_LENGTH_0BYTES,         // control field length
+  *   S_DISABLE,                         // FEC
+  *   S_ENABLE                           // whitening
+  * };
+  *
+  * PktStackAddressesInit addressInit={
+  *   S_ENABLE,                          // enable/disable filtering on my address
+  *   0x34,                              // my address (address of the current node)
+  *   S_DISABLE,                         // enable/disable filtering on multicast address
+  *   0xEE,                              // multicast address
+  *   S_DISABLE,                         // enable/disable filtering on broadcast address
+  *   0xFF                               // broadcast address
+  * };
+  *
+  * PktStackLlpInit stackLLPInit ={
+  *   S_DISABLE,                         // enable/disable the autoack feature
+  *   S_DISABLE,                         // enable/disable the piggybacking feature
+  *   PKT_DISABLE_RETX                   // set the max number of retransmissions or disable them
+  * };
+  * ...
+  *
+  * SpiritPktStackInit(&stackInit);
+  * SpiritPktStackAddressesInit(&addressInit);
+  * SpiritPktStackLlpInit(&stackLLPInit);
+  *
+  * ...
+  *
+  * SpiritPktStackSetPayloadLength(20);
+  * SpiritPktStackSetDestinationAddress(0x44);
+  *
+  * ...
+  *
+  * @endcode
+  *
+  * The module provides some other functions that can be used to modify
+  * or read only some configuration parameters.
+  *
+  *
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT(c) 2015 STMicroelectronics</center></h2>
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_PKT_STACK_H
@@ -709,6 +726,13 @@ typedef struct
 
 
 /**
+ * @brief  Returns the TX ACK request.
+ * @param  None.
+ * @retval SpiritFunctionalState.
+ */
+#define SpiritPktStackGetGetTxAckRequest()                                       SpiritPktCommonGetTxAckRequest()
+
+/**
  * @brief  Returns the destination address of the received packet.
  * @param  None.
  * @retval uint8_t Destination address of the received packet.
@@ -801,6 +825,7 @@ void SpiritPktStackSetRxSourceMask(uint8_t cMask);
 uint8_t SpiritPktStackGetRxSourceMask(void);
 uint16_t SpiritPktStackGetReceivedPktLength(void);
 void SpiritPktStackFilterOnSourceAddress(SpiritFunctionalState xNewState);
+void SpiritPktStackSetAddressLength(void);
 
 /**
  *@}
@@ -821,4 +846,4 @@ void SpiritPktStackFilterOnSourceAddress(SpiritFunctionalState xNewState);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/
