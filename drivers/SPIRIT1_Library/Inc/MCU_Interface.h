@@ -116,10 +116,11 @@ void EnterShutdown(void);
 void ExitShutdown(void);
 SpiritFlagStatus CheckShutdown(void);
 
+#if 0
 #define SpiritEnterShutdown                                  RadioEnterShutdown
 #define SpiritExitShutdown                                   RadioExitShutdown
 #define SpiritCheckShutdown                                  (SpiritFlagStatus)RadioCheckShutdown
-
+#endif
 
 #define SpiritSpiInit                                                  RadioSpiInit
 #define SpiritSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)       RadioSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)
