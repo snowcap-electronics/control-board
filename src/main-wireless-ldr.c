@@ -42,17 +42,26 @@
 // Sleep 180 seconds between every measurement
 #define WIRELESS_LDR_SLEEP_SEC      180
 
+typedef enum {
+  LDR_PWR_SLEEP       = 0x0000,
+  LDR_PWR_RESET       = 0x0f0f,
+} LDR_PWR;
+
+
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_spirit1_msg(void);
 static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
+static void cb_spirit1_error(void);
 static void cb_adc_available(void);
-static void enable_shutdown(void);
+static void enable_shutdown(int sleep);
 
 static bool standby = false, wkup = false;
 
 int main(void)
 {
+  uint32_t *bsram = sc_pwr_get_backup_sram();
+
   standby = sc_pwr_get_standby_flag();
   wkup = sc_pwr_get_wake_up_flag();
 
@@ -63,8 +72,18 @@ int main(void)
   halInit();
   chSysInit();
 
-  sc_init(SC_MODULE_GPIO | /*SC_MODULE_LED |*/ SC_MODULE_SPI/* | SC_MODULE_SDU*/ | SC_MODULE_ADC);
-  //sc_log_output_uart(SC_UART_USB);
+  // Reset after WDG, goto sleep without WDG
+  if (bsram[1] == LDR_PWR_RESET) {
+    bsram[1] = LDR_PWR_SLEEP;
+    enable_shutdown(WIRELESS_LDR_SLEEP_SEC);
+  }
+
+  bsram[1] = LDR_PWR_RESET;
+
+  // Init WDG, 2 secs
+  sc_wdg_init(256);
+
+  sc_init(SC_MODULE_GPIO | SC_MODULE_SPI | SC_MODULE_ADC);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -78,6 +97,7 @@ int main(void)
   sc_event_register_spirit1_msg_available(cb_spirit1_msg);
   sc_event_register_spirit1_data_sent(cb_spirit1_sent);
   sc_event_register_spirit1_data_lost(cb_spirit1_lost);
+  sc_event_register_spirit1_error(cb_spirit1_error);
   sc_event_register_adc_available(cb_adc_available);
 
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
@@ -166,7 +186,7 @@ static void cb_spirit1_sent(void)
   chThdSleepMilliseconds(1000);
 #endif
 
-  enable_shutdown();
+  enable_shutdown(WIRELESS_LDR_SLEEP_SEC);
 }
 
 
@@ -178,32 +198,36 @@ static void cb_spirit1_lost(void)
 {
 #if 0
   SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
-  
+
   chThdSleepMilliseconds(1000);
 #endif
 
-  enable_shutdown();
+  enable_shutdown(WIRELESS_LDR_SLEEP_SEC);
 }
 
 
-static void enable_shutdown(void)
+
+/*
+ * Error event received from spirit driver
+ */
+static void cb_spirit1_error(void)
 {
 #if 0
-  uint32_t *bsram;
+  SC_LOG_PRINTF("d: spirit1 error\r\n");
 
-  bsram = sc_pwr_get_backup_sram();
-  if (!standby) {
-    *bsram = 0;
-  } else {
-    *bsram += 1;
-  }
-
-  SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
+  chThdSleepMilliseconds(1000);
 #endif
-  //chThdSleepMilliseconds(5000);
+
+  enable_shutdown(WIRELESS_LDR_SLEEP_SEC);
+}
+
+
+
+static void enable_shutdown(int sleep)
+{
 
   // This function will not return
-  sc_pwr_rtc_standby(WIRELESS_LDR_SLEEP_SEC);
+  sc_pwr_rtc_standby(sleep);
 }
 
 /* Emacs indentatation information
