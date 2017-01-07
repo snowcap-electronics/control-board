@@ -49,6 +49,7 @@
 #include "sc_log.h"
 #include "sc_radio.h"
 #include "sc_pwr.h"
+#include "sc_wdg.h"
 #include "sc_hid.h"
 #include "sc_i2s.h"
 #include "sc_filter.h"

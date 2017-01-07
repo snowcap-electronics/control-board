@@ -231,6 +231,7 @@ CSRC = $(STARTUPSRC) \
        src/sc_ahrs.c \
        src/sc_filter.c \
        src/sc_i2s.c \
+       src/sc_wdg.c \
        src/sha1.c \
        src/nmea.c \
        src/slre.c \
