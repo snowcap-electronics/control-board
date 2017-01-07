@@ -90,6 +90,7 @@ static sc_event_cb_audio_available cb_audio_available = NULL;
 static sc_event_cb_spirit1_msg_available cb_spirit1_msg_available = NULL;
 static sc_event_cb_spirit1_data_sent cb_spirit1_data_sent = NULL;
 static sc_event_cb_spirit1_data_lost cb_spirit1_data_lost = NULL;
+static sc_event_cb_spirit1_error cb_spirit1_error = NULL;
 static sc_event_cb_ms5611_available cb_ms5611_available = NULL;
 
 static thread_t *event_thread = NULL;
@@ -206,9 +207,9 @@ static THD_FUNCTION(eventLoopThread, arg)
         cb_spirit1_data_sent();
       }
       break;
-    case SC_EVENT_TYPE_SPIRIT1_DATA_LOST:
-      if (cb_spirit1_data_lost != NULL) {
-        cb_spirit1_data_lost();
+    case SC_EVENT_TYPE_SPIRIT1_ERROR:
+      if (cb_spirit1_error != NULL) {
+        cb_spirit1_error();
       }
       break;
     case SC_EVENT_TYPE_MS5611_AVAILABLE:
@@ -515,6 +516,16 @@ void sc_event_register_spirit1_data_sent(sc_event_cb_spirit1_data_sent func)
 void sc_event_register_spirit1_data_lost(sc_event_cb_spirit1_data_lost func)
 {
   cb_spirit1_data_lost = func;
+}
+
+
+
+/*
+ * Register callback for spirit1 error notification
+ */
+void sc_event_register_spirit1_error(sc_event_cb_spirit1_error func)
+{
+  cb_spirit1_error = func;
 }
 
 

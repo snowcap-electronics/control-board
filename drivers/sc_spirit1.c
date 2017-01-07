@@ -76,7 +76,7 @@
 #endif
 
 static uint8_t spin;
-static binary_semaphore_t spirit1_act_sem;
+static semaphore_t spirit1_act_sem;
 static binary_semaphore_t spirit1_aes_sem;
 static binary_semaphore_t spirit1_irq_sem;
 static thread_t *sc_spirit1_act_thread_ptr;
@@ -97,6 +97,7 @@ typedef enum {
   SPIRIT1_FLAG_TX_DATA_SENT    = (0x01 << 0),
   SPIRIT1_FLAG_RX_DATA_READY   = (0x01 << 1),
   SPIRIT1_FLAG_RX_TIMEOUT      = (0x01 << 2),
+  SPIRIT1_FLAG_ERROR           = (0x01 << 3),
 } SPIRIT1_FLAG;
 
 static volatile SPIRIT1_FLAG flags;
@@ -255,7 +256,8 @@ THD_FUNCTION(scSpirit1IrqThread, arg)
     SpiritIrqs irqs;
     SPIRIT1_FLAG local_flags = 0;
 
-    chBSemWait(&spirit1_irq_sem);
+    // It's ok to continue even if chBSemWait returned an error
+    chBSemWaitTimeout(&spirit1_irq_sem, MS2ST(200));
 
     if (chThdShouldTerminateX()) {
         break;
@@ -283,7 +285,7 @@ THD_FUNCTION(scSpirit1IrqThread, arg)
       chSysLock();
       flags |= local_flags;
       chSysUnlock();
-      chBSemSignal(&spirit1_act_sem);
+      chSemSignal(&spirit1_act_sem);
     }
   }
 }
@@ -294,14 +296,18 @@ static THD_WORKING_AREA(sc_spirit1_act_thread, 2048);
 THD_FUNCTION(scSpirit1ActThread, arg)
 {
   SPIRIT1_FLAG local_flags;
+
   (void)arg;
 
   chRegSetThreadName(__func__);
 
   while (!chThdShouldTerminateX()) {
 
-    if (chBSemWait(&spirit1_act_sem) != MSG_OK) {
-      continue;
+    // It's ok to continue even if chBSemWait returned an error
+    chSemWaitTimeout(&spirit1_act_sem, MS2ST(200));
+
+    if (chThdShouldTerminateX()) {
+        break;
     }
 
     // Atomically store and clear the global flags
@@ -310,25 +316,29 @@ THD_FUNCTION(scSpirit1ActThread, arg)
     flags = 0;
     chSysUnlock();
 
-    // If data sent, start listen (either for ACK or in general)
-    if (local_flags & SPIRIT1_FLAG_TX_DATA_SENT) {
-      uint16_t timeout = SPIRIT1_RETX_TIMEOUT_MS;
+    // FIFO error, restart RX
+    if (local_flags & SPIRIT1_FLAG_ERROR) {
+      msg_t error;
 
-      chMtxLock(&tx_buf.mtx);
+      // Reset the buffer states
+      chMtxLock(&rx_buf.mtx);
+      rx_buf.state = 0;
+      rx_buf.busy = false;
+      chMtxUnlock(&rx_buf.mtx);
 
-      chDbgAssert(tx_buf.busy, "TX done but TX buffer is not busy");
-
-      if (tx_buf.state & SPIRIT1_BUF_STATE_WAIT_ACK) {
-        timeout = SPIRIT1_RETX_TIMEOUT_MS;
-      } else {
-        // Not waiting for ACK, release the buffer
-        tx_buf.state = 0;
-        tx_buf.busy = 0;
-        timeout = 0;
-      }
+      chMtxUnlock(&tx_buf.mtx);
+      tx_buf.state = 0;
+      tx_buf.busy = false;
       chMtxUnlock(&tx_buf.mtx);
 
-      spirit1_start_rx(timeout);
+      // Notify main app about the error
+      error = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_ERROR);
+      sc_event_msg_post(error, SC_EVENT_MSG_POST_FROM_NORMAL);
+
+      SpiritCmdStrobeFlushRxFifo();
+      SpiritCmdStrobeFlushTxFifo();
+      spirit1_start_rx(0);
+      continue;
     }
 
     // New incoming packet ready in radio
@@ -348,15 +358,50 @@ THD_FUNCTION(scSpirit1ActThread, arg)
     if (local_flags & SPIRIT1_FLAG_RX_TIMEOUT) {
       SpiritCmdStrobeFlushRxFifo();
       spirit1_retransmit();
+
+      // Ignore the other flags
+      continue;
     }
 
-    // Check if the TX buf is ready for encryption and sending
-    chMtxLock(&tx_buf.mtx);
-    if (tx_buf.busy && tx_buf.state == 0) {
-      spirit1_aes(true, &tx_buf);
-      spirit1_start_tx();
+    if (1) {
+      bool tx = false;
+
+      // Check if the TX buf is ready for encryption and sending
+      chMtxLock(&tx_buf.mtx);
+      if (tx_buf.busy && tx_buf.state == 0) {
+        spirit1_aes(true, &tx_buf);
+        spirit1_start_tx();
+        tx = true;
+      }
+      chMtxUnlock(&tx_buf.mtx);
+
+      if (tx) {
+        // Ignore the other flags
+        continue;
+      }
     }
-    chMtxUnlock(&tx_buf.mtx);
+
+    // If data sent, start listen (either for ACK or in general)
+    if (local_flags & SPIRIT1_FLAG_TX_DATA_SENT) {
+      uint16_t timeout = 0;
+
+      chMtxLock(&tx_buf.mtx);
+
+      chDbgAssert(tx_buf.busy, "TX done but TX buffer is not busy");
+
+      if (tx_buf.state & SPIRIT1_BUF_STATE_WAIT_ACK) {
+        timeout = SPIRIT1_RETX_TIMEOUT_MS;
+      } else {
+        // Not waiting for ACK, release the buffer
+        tx_buf.state = 0;
+        tx_buf.busy = 0;
+        timeout = 0;
+      }
+      chMtxUnlock(&tx_buf.mtx);
+
+      spirit1_start_rx(timeout);
+      continue;
+    }
   }
 }
 
@@ -390,8 +435,11 @@ static void spirit1_goto_ready(void)
     chThdSleepMilliseconds(1);
     break;
   case MC_STATE_READY:
+    // WAR: Abort anyway
+    SpiritCmdStrobeSabort();
+    chThdSleepMilliseconds(1);
     // Already in the right state
-    return;
+    //return;
     break;
   default:
     chDbgAssert(0, "Unexpected radio state");
@@ -444,6 +492,7 @@ static void spirit1_retransmit(void)
   if (!tx_buf.busy) {
     chDbgAssert(0, "Starting retransmit but tx buf not busy anymore");
     chMtxUnlock(&tx_buf.mtx);
+    spirit1_start_rx(0);
     return;
   }
 
@@ -595,7 +644,7 @@ static void spirit1_send_flag(uint8_t addr, uint8_t *buf, uint8_t len, SPIRIT1_M
 
   chMtxUnlock(&tx_buf.mtx);
 
-  chBSemSignal(&spirit1_act_sem);
+  chSemSignal(&spirit1_act_sem);
 }
 
 
@@ -609,9 +658,10 @@ static void spirit1_rx_parse(void)
 
   chDbgAssert(rx_buf.busy, "Trying to parse but rx buffer empty");
 
-  // Discard package if integrity characters not found
+  // Discard package if integrity characters not found or len == 0
   if (rx_buf.buf[SPIRIT1_MSG_IDX_ID1] != SPIRIT1_INTEGRITY_ID1 ||
-      rx_buf.buf[SPIRIT1_MSG_IDX_ID2] != SPIRIT1_INTEGRITY_ID2) {
+      rx_buf.buf[SPIRIT1_MSG_IDX_ID2] != SPIRIT1_INTEGRITY_ID2 ||
+      rx_buf.buf[SPIRIT1_MSG_IDX_LEN] == 0) {
 
     uint16_t timeout = 0;
 
@@ -673,19 +723,15 @@ static void spirit1_rx_parse(void)
     spirit1_start_rx(timeout);
   } else  {
     uint8_t seq = rx_buf.buf[SPIRIT1_MSG_IDX_SEQ];
-    uint8_t len = rx_buf.buf[SPIRIT1_MSG_IDX_LEN];
     uint8_t addr = rx_buf.addr;
+    msg_t drdy;
 
-    if (len) {
-      msg_t drdy;
+    // Notify main app about new data
+    drdy = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE);
+    sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
 
-      // Notify main app about new data
-      drdy = sc_event_msg_create_type(SC_EVENT_TYPE_SPIRIT1_MSG_AVAILABLE);
-      sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
-
-      // Send ack back to the receiver
-      spirit1_send_ack(addr, seq);
-    }
+    // Send ack back to the receiver
+    spirit1_send_ack(addr, seq);
   }
 }
 
@@ -742,7 +788,7 @@ void sc_spirit1_init(uint8_t *enc_key, uint8_t my_addr)
   // Store pointer to the encryption key
   spirit1_enc_key = enc_key;
 
-  chBSemObjectInit(&spirit1_act_sem, TRUE);
+  chSemObjectInit(&spirit1_act_sem, TRUE);
   chBSemObjectInit(&spirit1_irq_sem, TRUE);
   chBSemObjectInit(&spirit1_aes_sem, TRUE);
   chMtxObjectInit(&tx_buf.mtx);
@@ -803,7 +849,6 @@ void sc_spirit1_init(uint8_t *enc_key, uint8_t my_addr)
   chThdSleepMilliseconds(1);
 
   SpiritRadioSetXtalFrequency(XTAL_FREQUENCY);
-  SpiritGeneralSetSpiritVersion(SPIRIT_VERSION);
 
   SpiritGpioInit(&gpio_conf);
 
@@ -824,8 +869,11 @@ void sc_spirit1_init(uint8_t *enc_key, uint8_t my_addr)
   /* Spirit IRQs enable */
   SpiritIrq(RX_DATA_READY, S_ENABLE);
   SpiritIrq(RX_TIMEOUT, S_ENABLE);
+  SpiritIrq(RX_FIFO_ERROR, S_ENABLE);
   SpiritIrq(TX_DATA_SENT, S_ENABLE);
+  SpiritIrq(TX_FIFO_ERROR, S_ENABLE);
   SpiritIrq(AES_END, S_ENABLE);
+  SpiritIrq(VALID_SYNC, S_ENABLE);
 
   spirit1_start_rx(0);
 
@@ -947,7 +995,7 @@ void sc_spirit1_shutdown(SPIRIT1_POWER mode)
 
   // Reset semaphores so that the threads can exit
   chBSemReset(&spirit1_irq_sem, TRUE);
-  chBSemReset(&spirit1_act_sem, TRUE);
+  chSemReset(&spirit1_act_sem, TRUE);
 
   // Wait up to 200 ms for the thread to exit
   while (i-- > 0 &&
