@@ -48,10 +48,12 @@ static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
 static void init(void);
 
-systime_t last_radio_msg;
+uint32_t last_radio_msg;
 
 int main(void)
 {
+  last_radio_msg = 0;
+
   init();
 
   // Start event loop. This will start a new thread and return
@@ -71,7 +73,6 @@ int main(void)
   chThdSleepMilliseconds(1000);
   // Loop forever waiting for callbacks
   while(1) {
-    systime_t now = chVTGetSystemTime();
 
     if (0) {
       uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
@@ -80,10 +81,10 @@ int main(void)
       chThdSleepMilliseconds(1000);
     } else {
       // FIXME: Ugly WAR: reset if nothing heard from radio in 5 minutes
-      if (ST2MS(now - last_radio_msg) > 5*60*1000) {
+      if (++last_radio_msg > 5*60) {
         sc_wdg_init(1);
       }
-      SC_LOG_PRINTF("d: ping (%d)\r\n", ST2MS(now));
+      SC_LOG_PRINTF("d: ping (%d)\r\n", ST2MS(chVTGetSystemTime()));
     }
     chThdSleepMilliseconds(1000);
   }
@@ -134,7 +135,7 @@ static void cb_spirit1_msg(void)
   uint8_t lqi;
   uint8_t rssi;
 
-  last_radio_msg = chVTGetSystemTime();
+  last_radio_msg = 0;
 
   len = sc_spirit1_read(&addr, msg, sizeof(msg));
   if (len) {
