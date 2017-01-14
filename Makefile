@@ -229,6 +229,11 @@ CSRC = $(STARTUPSRC) \
        src/sc_radio.c \
        src/sc_spirit1.c \
        src/sc_ahrs.c \
+       src/ahrs/Compass.c \
+       src/ahrs/DCM.c \
+       src/ahrs/matrix.c \
+       src/ahrs/MinIMU9AHRS.c \
+       src/ahrs/Vector.c \
        src/sc_filter.c \
        src/sc_i2s.c \
        src/sc_wdg.c \

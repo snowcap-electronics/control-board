@@ -27,6 +27,17 @@ You should have received a copy of the GNU Lesser General Public License along
 with MinIMU-9-Arduino-AHRS. If not, see <http://www.gnu.org/licenses/>.
 
 */
+#include "src/ahrs/MinIMU9AHRS.h"
+
+
+static inline float constrain(float x, float a, float b)
+{
+  if (x < a)
+	return a;
+  if (x > b)
+	return b;
+  return x;
+}
 
 /**************************************************/
 void Normalize(void)
@@ -75,7 +86,7 @@ void Drift_correction(void)
   Accel_magnitude = Accel_magnitude / GRAVITY; // Scale to gravity.
   // Dynamic weighting of accelerometer info (reliability filter)
   // Weight for accelerometer info (<0.5G = 0.0, 1G = 1.0 , >1.5G = 0.0)
-  Accel_weight = constrain(1 - 2*abs(1 - Accel_magnitude),0,1);  //  
+  Accel_weight = constrain(1 - 2*fabs(1 - Accel_magnitude),0,1);  //  
 
   Vector_Cross_Product(&errorRollPitch[0],&Accel_Vector[0],&DCM_Matrix[2][0]); //adjust the ground of reference
   Vector_Scale(&Omega_P[0],&errorRollPitch[0],Kp_ROLLPITCH*Accel_weight);
@@ -107,8 +118,10 @@ void Accel_adjust(void)
 */
 /**************************************************/
 
-void Matrix_update(void)
+void Matrix_update(float deltat)
 {
+  float G_Dt = deltat;
+
   Gyro_Vector[0]=Gyro_Scaled_X(gyro_x); //gyro x roll
   Gyro_Vector[1]=Gyro_Scaled_Y(gyro_y); //gyro y pitch
   Gyro_Vector[2]=Gyro_Scaled_Z(gyro_z); //gyro Z yaw

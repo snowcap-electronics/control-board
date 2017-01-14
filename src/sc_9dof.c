@@ -62,6 +62,7 @@ THD_FUNCTION(sc9dofThread, arg)
   drdy = sc_event_msg_create_type(SC_EVENT_TYPE_9DOF_AVAILABLE);
 
   // Init sensor(s)
+  // FIXME: function pointers so that sc_9dof wouldn't need to know which sensor is used?
 #ifdef SC_HAS_LIS302DL
   sc_lis302dl_init();
 #elif defined(SC_HAS_LSM9DS0)
@@ -76,6 +77,7 @@ THD_FUNCTION(sc9dofThread, arg)
 
     // Read data from the sensor. Assume it handles data ready signals
     // (or the appropriate sleeps) internally.
+    // FIXME: function pointers so that sc_9dof wouldn't need to know which sensor is used?
 #ifdef SC_HAS_LIS302DL
     sensors_read = sc_lis302dl_read(tmp_acc);
     (void)tmp_magn;
@@ -109,6 +111,7 @@ THD_FUNCTION(sc9dofThread, arg)
     sc_event_msg_post(drdy, SC_EVENT_MSG_POST_FROM_NORMAL);
   }
 
+  // FIXME: function pointers so that sc_9dof wouldn't need to know which sensor is used?
 #ifdef SC_HAS_LIS302DL
   sc_lis302dl_shutdown();
 #elif defined(SC_HAS_LSM9DS0)
@@ -149,6 +152,7 @@ void sc_9dof_shutdown(void)
 
   running = 0;
 
+  // FIXME: timeout?
   chThdWait(sc_9dof_thread_ptr);
   sc_9dof_thread_ptr = NULL;
 }

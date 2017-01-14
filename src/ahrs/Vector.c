@@ -27,6 +27,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with MinIMU-9-Arduino-AHRS. If not, see <http://www.gnu.org/licenses/>.
 
 */
+#include "src/ahrs/MinIMU9AHRS.h"
 
 //Computes the dot product of two vectors
 float Vector_Dot_Product(float vector1[3],float vector2[3])

@@ -53,7 +53,7 @@
 // In any case, this is the free parameter in the Madgwick filtering and fusion scheme.
 // Actual beta calculated in sc_ahrs_init()
 
-#define AHRS_LOOP_INTERVAL_ST    (MS2ST(3))
+#define AHRS_LOOP_INTERVAL_ST    (MS2ST(20))
 
 static mutex_t ahrs_mtx;
 
@@ -70,12 +70,17 @@ static sc_float latest_yaw = 0;
 static sc_float beta;
 
 #ifdef SC_ALLOW_GPL
+
+#define USE_POLOLU 1
+#define USE_MADGWICK_QUATERNION 0
+
+#if USE_POLOLU
+#include "src/ahrs/MinIMU9AHRS.h"
+#else
 // From MadgwickAHRS.[ch]
 static sc_float q[4] = {1, 0, 0, 0}; // quaternion of sensor frame relative to auxiliary frame
 static sc_float invSqrt(sc_float x);
 static void q_init(sc_float *acc, sc_float *magn);
-
-#define USE_MADGWICK_QUATERNION 1
 
 #if USE_MADGWICK_QUATERNION
 void MadgwickQuaternionUpdate(float deltat, float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz);
@@ -84,6 +89,7 @@ static bool MadgwickAHRSupdate(sc_float dt,
                                sc_float *gyro,
                                sc_float *acc,
                                sc_float *magn);
+#endif
 #endif
 
 static void reset_state(void);
@@ -104,6 +110,7 @@ THD_FUNCTION(scAhrsThread, arg)
 {
   msg_t drdy;
   systime_t last_ts = 0;
+  systime_t until_ts = 0;
 
   (void)arg;
 
@@ -111,8 +118,9 @@ THD_FUNCTION(scAhrsThread, arg)
 
   // Create data ready notification
   drdy = sc_event_msg_create_type(SC_EVENT_TYPE_AHRS_AVAILABLE);
+  until_ts = chVTGetSystemTime();
 
-  // FIXME: Use shouldexit() etc.
+    // FIXME: Use shouldexit() etc.
   while (running) {
     systime_t ts;
     sc_float acc[3];
@@ -121,9 +129,13 @@ THD_FUNCTION(scAhrsThread, arg)
     sc_float roll = 0, pitch = 0, yaw = 0;
     sc_float dt;
 
-    // We don't need to run exactly at certain interval, so sleeping
-    // the same amount of ticks on every run is ok.
-    chThdSleep(AHRS_LOOP_INTERVAL_ST);
+    ts = chVTGetSystemTime();
+
+    // Sleep until it's time to do the math again
+    until_ts += AHRS_LOOP_INTERVAL_ST;
+    if (until_ts > ts + MS2ST(1)) {
+      chThdSleepUntil(until_ts);
+    }
 
     // Copy global data for local handling. Not all of them contain necessarily new data
     chMtxLock(&ahrs_mtx);
@@ -139,12 +151,10 @@ THD_FUNCTION(scAhrsThread, arg)
       continue;
     }
 
-    ts = chVTGetSystemTime();
-
 #ifdef SC_ALLOW_GPL
 
     if (!initialised) {
-      if (0) q_init(acc, magn);
+      //if (0) q_init(acc, magn);
       last_ts = ts;
       initialised = 1;
       continue;
@@ -156,6 +166,12 @@ THD_FUNCTION(scAhrsThread, arg)
 
       dt = ST2US(chVTTimeElapsedSinceX(last_ts)) / 1000000.0f;
       last_ts = ts;
+#if USE_POLOLU
+      sc_pololu_loop(dt,
+                     acc[0], acc[1], acc[2],
+                     gyro[0], gyro[1], gyro[2],
+                     magn[0], magn[1], magn[2]);
+#else
 #if USE_MADGWICK_QUATERNION
       MadgwickQuaternionUpdate(dt,
                                acc[0], acc[1], acc[2],
@@ -168,19 +184,25 @@ THD_FUNCTION(scAhrsThread, arg)
         continue;
       }
 #endif
+#endif
     }
 #else
     (void)dt;
     chDbgAssert(0, "Only GPL licensed AHRS supported currently");
 #endif
 
+#if USE_POLOLU
+    sc_pololu_get_euler(&pitch, &roll, &yaw);
+#else
     // https://github.com/kriswiner/LSM9DS0/blob/master/Teensy3.1/LSM9DS0-MS5637/LSM9DS0_MS5637_Mini_Add_On.ino#L537
     yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
     pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
     roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+#endif
     if (!isnormal(yaw)) yaw = 0;
     if (!isnormal(pitch)) pitch = 0;
     if (!isnormal(roll)) roll = 0;
+
     // Radians to degrees
     yaw   *= 180 / M_PI;
     pitch *= 180 / M_PI;
@@ -326,6 +348,7 @@ static void parse_command_ahrs_beta(const uint8_t *param, uint8_t param_len)
 
 #ifdef SC_ALLOW_GPL
 
+#if USE_POLOLU == 0
 static bool vector_normalise(uint8_t n, sc_float *a)
 {
   sc_float recipNorm;
@@ -638,6 +661,7 @@ static sc_float invSqrt(sc_float x)
     }
   }
 }
+#endif
 
 
 
@@ -651,10 +675,12 @@ void sc_ahrs_set_beta(sc_float user_beta)
 void reset_state(void)
 {
   initialised = 0;
+#if USE_POLOLU == 0
   q[0] = 1;
   q[1] = 0;
   q[2] = 0;
   q[3] = 0;
+#endif
   latest_ts = 0;
   latest_roll = 0;
   latest_pitch = 0;
