@@ -339,9 +339,21 @@ void sc_lsm9ds1_init(void)
                 PAL_MODE_INPUT);
   palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
                 SC_LSM9DS1_I2CN_SDA_PIN,
+                PAL_MODE_RESET);
+  palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
+                SC_LSM9DS1_I2CN_SDA_PIN,
+                PAL_STM32_MODE_ALTERNATE |
+                PAL_STM32_OTYPE_OPENDRAIN |
+                PAL_STM32_OSPEED_HIGHEST |
                 PAL_MODE_ALTERNATE(SC_LSM9DS1_I2CN_SDA_AF));
   palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
                 SC_LSM9DS1_I2CN_SCL_PIN,
+                PAL_MODE_RESET);
+  palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
+                SC_LSM9DS1_I2CN_SCL_PIN,
+                PAL_STM32_MODE_ALTERNATE |
+                PAL_STM32_OTYPE_OPENDRAIN |
+                PAL_STM32_OSPEED_HIGHEST |
                 PAL_MODE_ALTERNATE(SC_LSM9DS1_I2CN_SDA_AF));
 
   // Register data ready interrupts
