@@ -55,6 +55,7 @@ static sc_filter_brown_linear_expo_state roll_smooth;
 static sc_filter_brown_linear_expo_state pitch_smooth;
 static sc_filter_brown_linear_expo_state yaw_smooth;
 static sc_filter_zero_calibrate_state filter_state_calibrate[3];
+static sc_filter_zero_calibrate_state filter_state_calibrate_acc[3];
 
 // HID data
 static hid_data gamepad_data;
@@ -145,6 +146,12 @@ static void init(void)
     sc_filter_zero_calibrate_init(&filter_state_calibrate[i], samples);
   }
 
+  // Init accelerometer calibration filter
+  for (i = 0; i < sizeof(filter_state_calibrate_acc); ++i) {
+    const uint8_t samples = 64;
+    sc_filter_zero_calibrate_init(&filter_state_calibrate_acc[i], samples);
+  }
+
   // Set button state to released
   gamepad_data.button = 0;
 }
@@ -209,13 +216,43 @@ static void cb_9dof_available(void)
   }
 #endif
 
+#if 0
+  // Apply acc zero level calibration
+  if (sensors_read & SC_SENSOR_ACC) {
+    static uint8_t initialised = 0;
+    uint8_t a;
+    for (a = 0; a < 3; ++a) {
+        acc[a] = sc_filter_zero_calibrate(&filter_state_calibrate_acc[a], acc[a]);
+    }
+    // Add the 1G to Z axis. Assumes the devices is completely level when initialising
+    // FIXME: hack: shouldn't touch the internal state
+    if (!initialised && filter_state_calibrate_acc[2].initialised) {
+      initialised = 1;
+      filter_state_calibrate_acc[2].offset -= 1;
+      acc[2] += 1;
+    }
+  }
+#endif
+
 #if 1
   if (sensors_read & SC_SENSOR_MAGN) {
     // Apply manually measured magn calibration
-#if 1 // Teensy lsm9ds1 shield
+#if 0 // Teensy lsm9ds1 shield offset
     magn[0] -= -0.13601;
     magn[1] -=  0.26026;
     magn[2] -= -0.23002;
+#endif
+
+#if 0
+#define M_X_MIN -0.570
+#define M_Y_MIN -0.544
+#define M_Z_MIN -0.494
+#define M_X_MAX +0.419
+#define M_Y_MAX +0.492
+#define M_Z_MAX +0.493
+    magn[0] = (magn[0] - M_X_MIN) / (M_X_MAX - M_X_MIN) - 0.5;
+    magn[1] = (magn[1] - M_Y_MIN) / (M_Y_MAX - M_Y_MIN) - 0.5;
+    magn[2] = (magn[2] - M_Z_MIN) / (M_Z_MAX - M_Z_MIN) - 0.5;
 #endif
 
 #if 0 // lsm9ds0 shield
@@ -230,7 +267,7 @@ static void cb_9dof_available(void)
   }
 #endif
 
-#if 1
+#if 0
   if (sensors_read & SC_SENSOR_ACC) {
     // Apply manually measured acc calibration
     acc[0] -= -0.0821;

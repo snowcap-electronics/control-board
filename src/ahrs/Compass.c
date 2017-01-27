@@ -44,7 +44,7 @@ void Compass_Heading(void)
   cos_pitch = cos(pitch);
   sin_pitch = sin(pitch);
 
-  #if 0
+  #if 1
   // adjust for LSM303 compass axis offsets/sensitivity differences by scaling to +/-0.5 range
   c_magnetom_x = (float)(magnetom_x - SENSOR_SIGN[6]*M_X_MIN) / (M_X_MAX - M_X_MIN) - SENSOR_SIGN[6]*0.5;
   c_magnetom_y = (float)(magnetom_y - SENSOR_SIGN[7]*M_Y_MIN) / (M_Y_MAX - M_Y_MIN) - SENSOR_SIGN[7]*0.5;

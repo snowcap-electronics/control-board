@@ -129,12 +129,14 @@ THD_FUNCTION(scAhrsThread, arg)
     sc_float roll = 0, pitch = 0, yaw = 0;
     sc_float dt;
 
-    ts = chVTGetSystemTime();
-
     // Sleep until it's time to do the math again
+    ts = chVTGetSystemTime();
     until_ts += AHRS_LOOP_INTERVAL_ST;
     if (until_ts > ts + MS2ST(1)) {
       chThdSleepUntil(until_ts);
+    } else {
+      // Try to catch up
+      until_ts = ts;
     }
 
     // Copy global data for local handling. Not all of them contain necessarily new data
@@ -155,7 +157,7 @@ THD_FUNCTION(scAhrsThread, arg)
 
     if (!initialised) {
       //if (0) q_init(acc, magn);
-      last_ts = ts;
+      last_ts = chVTGetSystemTime();
       initialised = 1;
       continue;
     } else {
@@ -165,7 +167,7 @@ THD_FUNCTION(scAhrsThread, arg)
       gyro[2] *= M_PI / 180.0f;
 
       dt = ST2US(chVTTimeElapsedSinceX(last_ts)) / 1000000.0f;
-      last_ts = ts;
+      last_ts = chVTGetSystemTime();
 #if USE_POLOLU
       sc_pololu_loop(dt,
                      acc[0], acc[1], acc[2],
@@ -203,14 +205,16 @@ THD_FUNCTION(scAhrsThread, arg)
     if (!isnormal(pitch)) pitch = 0;
     if (!isnormal(roll)) roll = 0;
 
+#if 0
     // Radians to degrees
     yaw   *= 180 / M_PI;
     pitch *= 180 / M_PI;
     roll  *= 180 / M_PI;
+#endif
 
     chMtxLock(&ahrs_mtx);
     // Store latest values for later use
-    latest_ts = ts;
+    latest_ts = last_ts;
     latest_yaw = yaw;
     latest_pitch = pitch;
     latest_roll = roll;
