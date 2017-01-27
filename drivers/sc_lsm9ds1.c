@@ -327,6 +327,13 @@ void sc_lsm9ds1_init(void)
   sensors_ready = 0;
   chBSemObjectInit(&lsm9ds1_drdy_sem, TRUE);
 
+  // Initialize two I2C instances (before pinmux), one for acc+magn, one for gyro
+  i2c_n = sc_i2c_init(&SC_LSM9DS1_I2CN, SC_LSM9DS1_ADDR_AG);
+  i2cn_ag = (uint8_t)i2c_n;
+
+  i2c_n = sc_i2c_init(&SC_LSM9DS1_I2CN, SC_LSM9DS1_ADDR_M);
+  i2cn_m = (uint8_t)i2c_n;
+
   // Pinmux
   palSetPadMode(SC_LSM9DS1_INT1_AG_PORT,
                 SC_LSM9DS1_INT1_AG_PIN,
@@ -337,20 +344,25 @@ void sc_lsm9ds1_init(void)
   palSetPadMode(SC_LSM9DS1_DRDY_M_PORT,
                 SC_LSM9DS1_DRDY_M_PIN,
                 PAL_MODE_INPUT);
-  palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
-                SC_LSM9DS1_I2CN_SDA_PIN,
+
+  // Reset and set AF for I2C SDA
+  // NOTE: SDA must be set before SCL or the I2C commands will timeout
+  palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
+                SC_LSM9DS1_I2CN_SCL_PIN,
                 PAL_MODE_RESET);
-  palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
-                SC_LSM9DS1_I2CN_SDA_PIN,
+  palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
+                SC_LSM9DS1_I2CN_SCL_PIN,
                 PAL_STM32_MODE_ALTERNATE |
                 PAL_STM32_OTYPE_OPENDRAIN |
                 PAL_STM32_OSPEED_HIGHEST |
                 PAL_MODE_ALTERNATE(SC_LSM9DS1_I2CN_SDA_AF));
-  palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
-                SC_LSM9DS1_I2CN_SCL_PIN,
+
+  // Reset and set AF I2C SCL
+  palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
+                SC_LSM9DS1_I2CN_SDA_PIN,
                 PAL_MODE_RESET);
-  palSetPadMode(SC_LSM9DS1_I2CN_SCL_PORT,
-                SC_LSM9DS1_I2CN_SCL_PIN,
+  palSetPadMode(SC_LSM9DS1_I2CN_SDA_PORT,
+                SC_LSM9DS1_I2CN_SDA_PIN,
                 PAL_STM32_MODE_ALTERNATE |
                 PAL_STM32_OTYPE_OPENDRAIN |
                 PAL_STM32_OSPEED_HIGHEST |
@@ -371,14 +383,6 @@ void sc_lsm9ds1_init(void)
                        SC_LSM9DS1_DRDY_M_PIN,
                        SC_EXTINT_EDGE_RISING,
                        lsm9ds1_drdy_cb);
-
-
-  // Initialize two I2C instances, one for acc+magn, one for gyro
-  i2c_n = sc_i2c_init(&SC_LSM9DS1_I2CN, SC_LSM9DS1_ADDR_AG);
-  i2cn_ag = (uint8_t)i2c_n;
-
-  i2c_n = sc_i2c_init(&SC_LSM9DS1_I2CN, SC_LSM9DS1_ADDR_M);
-  i2cn_m = (uint8_t)i2c_n;
 
   // FIXME: setXres instead of getXres?
   getAres();
@@ -517,6 +521,7 @@ uint8_t sc_lsm9ds1_read(sc_float *acc, sc_float *magn, sc_float *gyro)
   }
 
   // FIXME: Ignore first n values as per datasheet
+  // That is done in a later phase
   return sensors_done;
 }
 
