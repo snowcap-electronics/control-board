@@ -207,11 +207,11 @@ void sc_ms5611_init(uint16_t interval_ms)
   // Pinmux
   // FIXME: add a parameter to init function to skip pinmux if it's already done for LSM9DS1?
   // FIXME: then again, it's the same for both, so does't it matter to do it twice?
-  palSetPadMode(SC_MS5611_I2CN_SDA_PORT,
-                SC_MS5611_I2CN_SDA_PIN,
-                PAL_MODE_ALTERNATE(SC_MS5611_I2CN_SDA_AF));
   palSetPadMode(SC_MS5611_I2CN_SCL_PORT,
                 SC_MS5611_I2CN_SCL_PIN,
+                PAL_MODE_ALTERNATE(SC_MS5611_I2CN_SDA_AF));
+  palSetPadMode(SC_MS5611_I2CN_SDA_PORT,
+                SC_MS5611_I2CN_SDA_PIN,
                 PAL_MODE_ALTERNATE(SC_MS5611_I2CN_SDA_AF));
 
   i2c_n = sc_i2c_init(&SC_MS5611_I2CN, SC_MS5611_ADDR);
