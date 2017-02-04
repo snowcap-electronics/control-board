@@ -106,12 +106,12 @@ static THD_FUNCTION(eventLoopThread, arg)
 {
   (void) arg;
 
+  chRegSetThreadName(__func__);
+
   while (!chThdShouldTerminateX()) {
     msg_t msg;
     msg_t ret;
     SC_EVENT_TYPE type;
-
-    chRegSetThreadName(__func__);
 
     // Wait for action
     ret = chMBFetch(&event_mb, &msg, TIME_INFINITE);
