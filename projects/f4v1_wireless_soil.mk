@@ -4,6 +4,9 @@ SC_BOARD = SC_SNOWCAP_STM32F4_V1
 # Use 25 Mhz MCU clock instead of 168 Mhz to save power
 SC_DEFINES += -DSC_MCU_LOW_SPEED=1
 
+# Use 5 Mhz PWM clock
+SC_DEFINES += -DSC_PWM_CLOCK=5000000
+
 # Use Spirit1 with ST licensed code
 SC_DEFINES += -DSC_ALLOW_ST_LIBERTY_V2=1 -DSC_HAS_SPIRIT1=1
 
