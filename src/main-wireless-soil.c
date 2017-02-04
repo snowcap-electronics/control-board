@@ -1,7 +1,7 @@
 /*
  * Spirit1 based wireless soil moisture sensor
  *
- * Copyright 2015      Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2015-2017 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  * Copyright 2011-2014 Kalle Vahlman, <kalle.vahlman@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
@@ -37,34 +37,56 @@
 
 #include "sc_spirit1.h"
 #include "spirit1_key.h"
+#include "chprintf.h"
+
+#include <inttypes.h>
+
+// Sleep 180 seconds between every measurement
+#define WIRELESS_SENSOR_SLEEP_SEC      180
+
+typedef enum {
+  LDR_PWR_SLEEP       = 0x0000,
+  LDR_PWR_RESET       = 0x0f0f,
+} LDR_PWR;
+
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_spirit1_msg(void);
 static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
-
-#define ENABLE_SHUTDOWN 0
-
-#if ENABLE_SHUTDOWN
-static void enable_shutdown(void);
-#endif
+static void cb_spirit1_error(void);
+static void cb_adc_available(void);
+static void enable_shutdown(int sleep);
 
 static bool standby = false, wkup = false;
 
 int main(void)
 {
+  uint32_t *bsram = sc_pwr_get_backup_sram();
+
   standby = sc_pwr_get_standby_flag();
   wkup = sc_pwr_get_wake_up_flag();
 
   // Enable debugging even with WFI
   // This increases the power consumption by 1.5mA
-  sc_pwr_set_wfi_dbg();
+  //sc_pwr_set_wfi_dbg();
 
   halInit();
   chSysInit();
 
-  sc_init(SC_MODULE_GPIO | SC_MODULE_SPI | SC_MODULE_UART2);
-  sc_log_output_uart(SC_UART_2);
+  // Reset after WDG, goto sleep without WDG
+  if (bsram[1] == LDR_PWR_RESET) {
+    bsram[1] = LDR_PWR_SLEEP;
+    //enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+  }
+
+  bsram[1] = LDR_PWR_RESET;
+
+  // Init WDG, 2 secs
+  //sc_wdg_init(256);
+
+  sc_init(SC_MODULE_GPIO | SC_MODULE_SPI | SC_MODULE_ADC | SC_MODULE_PWM | SC_MODULE_UART3);
+  sc_log_output_uart(SC_UART_3);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -78,15 +100,23 @@ int main(void)
   sc_event_register_spirit1_msg_available(cb_spirit1_msg);
   sc_event_register_spirit1_data_sent(cb_spirit1_sent);
   sc_event_register_spirit1_data_lost(cb_spirit1_lost);
+  sc_event_register_spirit1_error(cb_spirit1_error);
+  sc_event_register_adc_available(cb_adc_available);
 
-  sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
+  //sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
 
+  //sc_pwm_set_freq(1625000);
+  sc_pwm_set_freq(500000);
+
+  sc_pwm_set_duty(1, 5000);
+
+  // Get ADC readings once
+  sc_adc_start_conversion(4, 1000, ADC_SAMPLE_480);
+
   while(1) {
-    uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
+    //sc_led_toggle(); // Conflicts with Spirit's interrupt
     chThdSleepMilliseconds(1000);
-    SC_LOG_PRINTF("sending: test\r\n");
-    sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
   }
 }
 
@@ -98,6 +128,36 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
   // FIXME: per uart
   sc_cmd_push_byte(byte);
 }
+
+
+
+static void cb_adc_available(void)
+{
+  uint16_t adc_value[4];
+  uint32_t timestamp_ms;
+  //uint8_t msg[32] = {'p', 'v', 'p', ':', ' ', '\r', '\n', '\0'};
+  uint32_t *bsram;
+  bsram = sc_pwr_get_backup_sram();
+  if (!standby) {
+    bsram[0] = 0;
+  } else {
+    bsram[0] += 1;
+  }
+
+  sc_adc_channel_get(adc_value, &timestamp_ms);
+
+  /* ADC 2 is not used for anything in this particular HW setup */
+  //snprintf((char*)msg, sizeof(msg), "pvp: %" PRIu16 ", %" PRIu16 ", %" PRIu32 "\r\n",
+  //           adc_value[0], adc_value[1], bsram[0]);
+
+  SC_LOG_PRINTF("pvp: %" PRIu16 ", %" PRIu16 ", %" PRIu16 ", %" PRIu16 ", %" PRIu32 "\r\n",
+                adc_value[0], adc_value[1], adc_value[2], adc_value[3], bsram[0]);
+  
+  //SC_LOG_PRINTF("pvp: %" PRIu16 ", %" PRIu16 "\r\n", adc_value[0], adc_value[0]);
+
+  //sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
+}
+
 
 
 /*
@@ -128,13 +188,13 @@ static void cb_spirit1_msg(void)
  */
 static void cb_spirit1_sent(void)
 {
-#if ENABLE_SHUTDOWN
-  enable_shutdown();
-#else
+#if 0
   SC_LOG_PRINTF("d: spirit1 msg sent\r\n");
 
   chThdSleepMilliseconds(1000);
 #endif
+
+  enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
 }
 
 
@@ -144,34 +204,39 @@ static void cb_spirit1_sent(void)
  */
 static void cb_spirit1_lost(void)
 {
-#if ENABLE_SHUTDOWN
-  enable_shutdown();
-#else
+#if 0
   SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
 
   chThdSleepMilliseconds(1000);
 #endif
+
+  enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
 }
 
-#if ENABLE_SHUTDOWN
-static void enable_shutdown(void)
+
+
+/*
+ * Error event received from spirit driver
+ */
+static void cb_spirit1_error(void)
 {
-  uint32_t *bsram;
+#if 0
+  SC_LOG_PRINTF("d: spirit1 error\r\n");
 
-  bsram = sc_pwr_get_backup_sram();
-  if (!standby) {
-    *bsram = 0;
-  } else {
-    *bsram += 1;
-  }
+  chThdSleepMilliseconds(1000);
+#endif
 
-  //SC_LOG_PRINTF("standby: %d, wkup: %d, bsram: %d\r\n", standby, wkup, *bsram);
-  //chThdSleepMilliseconds(5000);
+  enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+}
+
+
+
+static void enable_shutdown(int sleep)
+{
 
   // This function will not return
-  sc_pwr_rtc_standby(10);
+  sc_pwr_rtc_standby(sleep);
 }
-#endif
 
 /* Emacs indentatation information
    Local Variables:
