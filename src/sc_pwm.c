@@ -35,7 +35,15 @@
 #if HAL_USE_PWM
 
 // Use 1MHz clock
+#ifndef SC_PWM_CLOCK
 #define SC_PWM_CLOCK    1000000
+#endif
+
+
+// Default to 50 Hz (20 ms)
+#ifndef SC_PWM_DEFAULT_PERIOD
+#define SC_PWM_DEFAULT_PERIOD 20000
+#endif
 
 static void parse_command_pwm_frequency(const uint8_t *param, uint8_t param_len);
 static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len);
@@ -49,9 +57,9 @@ static const struct sc_cmd cmds[] = {
 
 
 static PWMConfig pwmcfg1 = {
-  SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
-  SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
-  NULL,              // No periodic callback.
+  SC_PWM_CLOCK,            // PWM clock frequency
+  SC_PWM_DEFAULT_PERIOD,   // Default period
+  NULL,                    // No periodic callback.
   {
 #ifdef SC_PWM1_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
@@ -240,7 +248,7 @@ void sc_pwm_deinit(void)
  * Set frequency in Hz (e.g. 50 for standard servo/ESC, 400 for fast servo/ESC)
  */
 // FIXME: Need to be able to control this per PWMDX
-void sc_pwm_set_freq(uint16_t freq)
+void sc_pwm_set_freq(uint32_t freq)
 {
   if (freq == 0) {
 	// freq 0 is invalid, do nothing
