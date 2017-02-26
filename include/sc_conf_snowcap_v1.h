@@ -70,8 +70,32 @@
 #define PWMDX2             PWMD4
 #endif
 
+// PC0: ADC123_IN10
+// PC1: ADC123_IN11
+// PC4: ADC12_IN14
+// PC5: ADC12_IN15
 #ifndef ADCDX
 #define ADCDX              ADCD1
+#define SC_ADC_1_PORT      GPIOC
+#define SC_ADC_1_PIN       0
+#define SC_ADC_1_SMPR_CFG  smpr1
+#define SC_ADC_1_SMPR      ADC_SMPR1_SMP_AN10
+#define SC_ADC_1_AN        ADC_CHANNEL_IN10
+#define SC_ADC_2_PORT      GPIOC
+#define SC_ADC_2_PIN       1
+#define SC_ADC_2_SMPR_CFG  smpr1
+#define SC_ADC_2_SMPR      ADC_SMPR1_SMP_AN11
+#define SC_ADC_2_AN        ADC_CHANNEL_IN11
+#define SC_ADC_3_PORT      GPIOC
+#define SC_ADC_3_PIN       4
+#define SC_ADC_3_SMPR_CFG  smpr1
+#define SC_ADC_3_SMPR      ADC_SMPR1_SMP_AN14
+#define SC_ADC_3_AN        ADC_CHANNEL_IN14
+#define SC_ADC_4_PORT      GPIOC
+#define SC_ADC_4_PIN       5
+#define SC_ADC_4_SMPR_CFG  smpr1
+#define SC_ADC_4_SMPR      ADC_SMPR1_SMP_AN15
+#define SC_ADC_4_AN        ADC_CHANNEL_IN15
 #endif
 
 #ifndef USBDX

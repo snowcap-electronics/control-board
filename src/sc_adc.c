@@ -42,12 +42,11 @@
 /* How many samples to read before processing */
 #define SC_ADC_BUFFER_DEPTH          (1 << SC_ADC_BUFFER_DEPTH_BITS)
 
-static void adcThread(void *UNUSED(arg));
-static uint8_t thread_run = 0;
 static uint16_t adc_latest[SC_ADC_MAX_CHANNELS] = {0};
 static systime_t adc_latest_ts = 0;
 static uint16_t interval_ms;
 static mutex_t adc_mtx;
+static thread_t *adc_thread = NULL;
 
 static ADCConversionGroup convCfg = {
   /* Circular buffer mode */
@@ -79,8 +78,8 @@ static ADCConversionGroup convCfg = {
 /*
  * Setup a adc conversion thread
  */
-static THD_WORKING_AREA(adc_thread, 1024);
-THD_FUNCTION(adcThread, arg)
+static THD_WORKING_AREA(adc_loop_thread, 1024);
+THD_FUNCTION(adcLoopThread, arg)
 {
   msg_t msg;
   systime_t last_conversion_time;
@@ -104,7 +103,7 @@ THD_FUNCTION(adcThread, arg)
 
   last_conversion_time = ST2MS(chVTGetSystemTime());
 
-  while (thread_run) {
+  while (!chThdShouldTerminateX()) {
     msg_t retval;
     int i, ch;
     int total_adc[SC_ADC_MAX_CHANNELS] = {0};
@@ -112,9 +111,7 @@ THD_FUNCTION(adcThread, arg)
     systime_t time_now;
 
     // Do ADC conversion(s) once per interval
-    if (!interval_ms) {
-      thread_run = 0;
-    } else {
+    if (interval_ms) {
       last_conversion_time += MS2ST(interval_ms);
       time_now = ST2MS(chVTGetSystemTime());
 
@@ -124,6 +121,9 @@ THD_FUNCTION(adcThread, arg)
       }
 
       chThdSleepUntil(last_conversion_time);
+      if (chThdShouldTerminateX()) {
+        break;
+      }
     }
 
     retval = adcConvert(&ADCDX, &convCfg, samples, SC_ADC_BUFFER_DEPTH);
@@ -149,6 +149,10 @@ THD_FUNCTION(adcThread, arg)
 
     // Announce that new ADC data is available
     sc_event_msg_post(msg, SC_EVENT_MSG_POST_FROM_NORMAL);
+
+    if (!interval_ms) {
+      break;
+    }
   }
 
   /* Stop ADC driver */
@@ -172,30 +176,18 @@ void sc_adc_init(void)
 
 void sc_adc_deinit(void)
 {
-  // Nothing to do here.
+  if (adc_thread) {
+    chThdTerminate(adc_thread);
+    adc_thread = NULL;
+    // FIXME: should wait for thread exit
+  }
 }
 
 
 
 void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t sample_time)
 {
-#if defined(BOARD_SNOWCAP_V1)
-#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
-  ioportmask_t mask = 0;
-  uint8_t c;
-
-  for (c = 0; c < channels; ++c) {
-    mask |= PAL_PORT_BIT(c);
-  }
-  // FIXME: the pins should be in sc_conf.h
-  palSetGroupMode(GPIOA, mask, 0, PAL_MODE_INPUT_ANALOG);
-#elif defined(BOARD_ST_NUCLEO_F401R)
-  // FIXME: the pins should be in sc_conf.h
-  palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);
-  palSetPadMode(GPIOA, 1, PAL_MODE_INPUT_ANALOG);
-  palSetPadMode(GPIOA, 6, PAL_MODE_INPUT_ANALOG);
-  palSetPadMode(GPIOA, 7, PAL_MODE_INPUT_ANALOG);
-#endif
+  chDbgAssert(adc_thread == NULL, "ADC thread already running");
 
   // Set global interval time in milliseconds
   interval_ms = interval_in_ms;
@@ -203,101 +195,54 @@ void sc_adc_start_conversion(uint8_t channels, uint16_t interval_in_ms, uint8_t 
   convCfg.num_channels = channels;
   convCfg.sqr1 = ADC_SQR1_NUM_CH(channels);
 
-  if (channels < 1 || channels > 4) {
-    chDbgAssert(0, "Invalid amount of channels");
-    return;
-  }
-
-#if defined(BOARD_SNOWCAP_V1)
-  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
-  // SC Control Board v1 maps PC0, PC1, PC4, and PC5 to AN1-4
-  //
-  // PC0: ADC123_IN10
-  // PC1: ADC123_IN11
-  // PC4: ADC12_IN14
-  // PC5: ADC12_IN15
-
   switch(channels) {
-  case 4: // Sampling time and channel for 4th pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN15(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN15);
-  case 3: // Sampling time and channel for 3rd pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN14(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN14);
-  case 2: // Sampling time and channel for 2nd pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN11(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN11);
-  case 1: // Sampling time and channel for 1st pin
-    convCfg.smpr1 |= ADC_SMPR1_SMP_AN10(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10);
+  #ifdef SC_ADC_4_PIN
+  case 4:
+    palSetPadMode(SC_ADC_4_PORT, SC_ADC_4_PIN, PAL_MODE_INPUT_ANALOG);
+    convCfg.SC_ADC_4_SMPR_CFG |= SC_ADC_4_SMPR(sample_time);
+    convCfg.sqr3 |= ADC_SQR3_SQ4_N(SC_ADC_4_AN);
+    /* fallthrough */
+  #endif
+  #ifdef SC_ADC_3_PIN
+  case 3:
+    palSetPadMode(SC_ADC_3_PORT, SC_ADC_3_PIN, PAL_MODE_INPUT_ANALOG);
+    convCfg.SC_ADC_3_SMPR_CFG |= SC_ADC_3_SMPR(sample_time);
+    convCfg.sqr3 |= ADC_SQR3_SQ3_N(SC_ADC_3_AN);
+    /* fallthrough */
+  #endif
+  #ifdef SC_ADC_2_PIN
+  case 2:
+    palSetPadMode(SC_ADC_2_PORT, SC_ADC_2_PIN, PAL_MODE_INPUT_ANALOG);
+    convCfg.SC_ADC_2_SMPR_CFG |= SC_ADC_2_SMPR(sample_time);
+    convCfg.sqr3 |= ADC_SQR3_SQ2_N(SC_ADC_2_AN);
+    /* fallthrough */
+  #endif
+  #ifdef SC_ADC_1_PIN
+  case 1:
+    palSetPadMode(SC_ADC_1_PORT, SC_ADC_1_PIN, PAL_MODE_INPUT_ANALOG);
+    convCfg.SC_ADC_1_SMPR_CFG |= SC_ADC_1_SMPR(sample_time);
+    convCfg.sqr3 |= ADC_SQR3_SQ1_N(SC_ADC_1_AN);
+    break;
+  #endif
+  default:
+    chDbgAssert(0, "Unsupported amount of channels");
     break;
   }
-#elif defined(BOARD_SNOWCAP_STM32F4_V1) || defined (BOARD_ST_STM32F4_DISCOVERY)
-  //
-  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
-  // SC STM32F4 MCU Board v1 maps PA0, PA1, PA2, and PA3 to AN1-4
-  //
-  // PA0: ADC123_IN0
-  // PA1: ADC123_IN1
-  // PA2: ADC123_IN2
-  // PA3: ADC123_IN3
-  //
 
-  switch(channels) {
-  case 4: // Sampling time and channel for 4th pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN3(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN3);
-  case 3: // Sampling time and channel for 3rd pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN2(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN2);
-  case 2: // Sampling time and channel for 2nd pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN1(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN1);
-  case 1: // Sampling time and channel for 1st pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN0(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN0);
-    break;
-  }
-#elif defined (BOARD_ST_NUCLEO_F401RE)
-  //
-  // FIXME: the following hardcoded pins should be somehow in sc_conf.h
-  // Pleco project on Nucleo F401 maps PA0, PA1, PA6, and PA7 to AN1-4
-  //
-  // PA0: ADC123_IN0
-  // PA1: ADC123_IN1
-  // PA6: ADC123_IN6
-  // PA7: ADC123_IN7
-  //
-
-  switch(channels) {
-  case 4: // Sampling time and channel for 4th pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN7(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ4_N(ADC_CHANNEL_IN7);
-  case 3: // Sampling time and channel for 3rd pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN6(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ3_N(ADC_CHANNEL_IN6);
-  case 2: // Sampling time and channel for 2nd pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN1(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ2_N(ADC_CHANNEL_IN1);
-  case 1: // Sampling time and channel for 1st pin
-    convCfg.smpr1 |= ADC_SMPR2_SMP_AN0(sample_time);
-    convCfg.sqr3  |= ADC_SQR3_SQ1_N(ADC_CHANNEL_IN0);
-    break;
-  }
-#else
-  (void)sample_time;
-  chDbgAssert(0, BOARD_NAME " is not supported in ADC yet. Please fix this logic. ");
-#endif
   /* Start a thread dedicated to ADC conversion */
-  thread_run = TRUE;
-  chThdCreateStatic(adc_thread, sizeof(adc_thread), NORMALPRIO, adcThread, NULL);
+  adc_thread = chThdCreateStatic(adc_loop_thread, sizeof(adc_loop_thread), NORMALPRIO, adcLoopThread, NULL);
 }
+
 
 
 void sc_adc_stop_conversion(void)
 {
-  thread_run = FALSE;
+  chThdTerminate(adc_thread);
+  adc_thread = NULL;
+  // FIXME: should wait for thread exit
 }
+
+
 
 void sc_adc_channel_get(uint16_t *channels, systime_t *ts)
 {

@@ -114,8 +114,32 @@
 #define SC_PWM2_4_AF       2
 #endif
 
+// PA0: ADC123_IN0
+// PA1: ADC123_IN1
+// PA2: ADC123_IN2
+// PA3: ADC123_IN3
 #ifndef ADCDX
 #define ADCDX              ADCD1
+#define SC_ADC_1_PORT      GPIOA
+#define SC_ADC_1_PIN       0
+#define SC_ADC_1_SMPR_CFG  smpr2
+#define SC_ADC_1_SMPR      ADC_SMPR2_SMP_AN0
+#define SC_ADC_1_AN        ADC_CHANNEL_IN0
+#define SC_ADC_2_PORT      GPIOA
+#define SC_ADC_2_PIN       1
+#define SC_ADC_2_SMPR_CFG  smpr2
+#define SC_ADC_2_SMPR      ADC_SMPR2_SMP_AN1
+#define SC_ADC_2_AN        ADC_CHANNEL_IN1
+#define SC_ADC_3_PORT      GPIOA
+#define SC_ADC_3_PIN       2
+#define SC_ADC_3_SMPR_CFG  smpr2
+#define SC_ADC_3_SMPR      ADC_SMPR2_SMP_AN2
+#define SC_ADC_3_AN        ADC_CHANNEL_IN2
+#define SC_ADC_4_PORT      GPIOA
+#define SC_ADC_4_PIN       3
+#define SC_ADC_4_SMPR_CFG  smpr2
+#define SC_ADC_4_SMPR      ADC_SMPR2_SMP_AN3
+#define SC_ADC_4_AN        ADC_CHANNEL_IN3
 #endif
 
 #ifndef USBDX
