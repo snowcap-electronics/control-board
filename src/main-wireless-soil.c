@@ -43,6 +43,7 @@
 
 // Sleep 180 seconds between every measurement
 #define WIRELESS_SENSOR_SLEEP_SEC      180
+#define NO_SLEEP 0
 
 typedef enum {
   LDR_PWR_SLEEP       = 0x0000,
@@ -56,9 +57,21 @@ static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
 static void cb_spirit1_error(void);
 static void cb_adc_available(void);
+#if NO_SLEEP == 0
 static void enable_shutdown(int sleep);
+#endif
 
 static bool standby = false, wkup = false;
+
+// Disable unneeded PWMs
+#undef SC_PWM1_2_PIN
+#undef SC_PWM1_3_PIN
+#undef SC_PWM1_4_PIN
+#undef SC_PWM2_1_PIN
+#undef SC_PWM2_2_PIN
+#undef SC_PWM2_3_PIN
+#undef SC_PWM2_4_PIN
+#undef PWMDX2
 
 int main(void)
 {
@@ -77,16 +90,19 @@ int main(void)
   // Reset after WDG, goto sleep without WDG
   if (bsram[1] == LDR_PWR_RESET) {
     bsram[1] = LDR_PWR_SLEEP;
-    //enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+    #if NO_SLEEP == 0
+    enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+    #endif
   }
 
   bsram[1] = LDR_PWR_RESET;
 
   // Init WDG, 2 secs
-  //sc_wdg_init(256);
+  sc_wdg_init(256);
 
-  sc_init(SC_MODULE_GPIO | SC_MODULE_SPI | SC_MODULE_ADC | SC_MODULE_PWM | SC_MODULE_UART3);
-  sc_log_output_uart(SC_UART_3);
+  // UART3 DMA stream conflicts with SPI2 RX DMA stream used by spirit1
+  sc_init(SC_MODULE_SPI | SC_MODULE_ADC | SC_MODULE_PWM /*| SC_MODULE_UART3*/);
+  //sc_log_output_uart(SC_UART_3);
 
   // Start event loop. This will start a new thread and return
   sc_event_loop_start();
@@ -103,22 +119,22 @@ int main(void)
   sc_event_register_spirit1_error(cb_spirit1_error);
   sc_event_register_adc_available(cb_adc_available);
 
-  //sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
+  sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
 
-  //sc_pwm_set_freq(1625000);
   sc_pwm_set_freq(500000);
 
   sc_pwm_set_duty(1, 5000);
 
   // Get ADC readings once
-  sc_adc_start_conversion(4, 1000, ADC_SAMPLE_480);
+  sc_adc_start_conversion(3, 0, ADC_SAMPLE_480);
 
   while(1) {
     //sc_led_toggle(); // Conflicts with Spirit's interrupt
     chThdSleepMilliseconds(1000);
   }
 }
+
 
 
 static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
@@ -133,10 +149,12 @@ static void cb_handle_byte(SC_UART UNUSED(uart), uint8_t byte)
 
 static void cb_adc_available(void)
 {
-  uint16_t adc_value[4];
+  uint16_t adc_value[3];
   uint32_t timestamp_ms;
-  //uint8_t msg[32] = {'p', 'v', 'p', ':', ' ', '\r', '\n', '\0'};
+  uint8_t msg[64] = {'\0'};
   uint32_t *bsram;
+  uint8_t len;
+
   bsram = sc_pwr_get_backup_sram();
   if (!standby) {
     bsram[0] = 0;
@@ -146,38 +164,34 @@ static void cb_adc_available(void)
 
   sc_adc_channel_get(adc_value, &timestamp_ms);
 
-  /* ADC 2 is not used for anything in this particular HW setup */
-  //snprintf((char*)msg, sizeof(msg), "pvp: %" PRIu16 ", %" PRIu16 ", %" PRIu32 "\r\n",
-  //           adc_value[0], adc_value[1], bsram[0]);
+  len = snprintf((char *)msg, sizeof(msg),
+                 "soil[0]: %" PRIu32 ", %" PRIu16 ", %" PRIu16 ", %" PRIu16 "\r\n",
+                 bsram[0], adc_value[0], adc_value[1], adc_value[2]);
 
-  SC_LOG_PRINTF("pvp: %" PRIu16 ", %" PRIu16 ", %" PRIu16 ", %" PRIu16 ", %" PRIu32 "\r\n",
-                adc_value[0], adc_value[1], adc_value[2], adc_value[3], bsram[0]);
+  SC_LOG_PRINTF((char *)msg);
   
-  //SC_LOG_PRINTF("pvp: %" PRIu16 ", %" PRIu16 "\r\n", adc_value[0], adc_value[0]);
-
-  //sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
+  sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, len);
 }
 
 
 
-/*
- * Received a message over Spirit1
- */
 static void cb_spirit1_msg(void)
 {
-  uint8_t msg[32];
+  uint8_t msg[128];
   uint8_t len;
   uint8_t addr;
   uint8_t lqi;
   uint8_t rssi;
 
   len = sc_spirit1_read(&addr, msg, sizeof(msg));
-  if (len) {
+  if (len > 1) {
     lqi = sc_spirit1_lqi();
     rssi = sc_spirit1_rssi();
-    SC_LOG_PRINTF("GOT MSG (LQI: %u, RSSI: %u): %s", lqi, rssi, msg);
+    // Remove \r\n
+    msg[len - 2] = '\0';
+    SC_LOG_PRINTF("m: %s, %u, %u\r\n", msg, lqi, rssi);
   } else {
-    SC_LOG_PRINTF("SPIRIT1 READ FAILED");
+    SC_LOG_PRINTF("e: spirit1 read failed\r\n");
   }
 }
 
@@ -188,13 +202,13 @@ static void cb_spirit1_msg(void)
  */
 static void cb_spirit1_sent(void)
 {
-#if 0
+#if NO_SLEEP
   SC_LOG_PRINTF("d: spirit1 msg sent\r\n");
 
   chThdSleepMilliseconds(1000);
-#endif
-
+#else
   enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+#endif
 }
 
 
@@ -204,13 +218,13 @@ static void cb_spirit1_sent(void)
  */
 static void cb_spirit1_lost(void)
 {
-#if 0
+#if NO_SLEEP
   SC_LOG_PRINTF("d: spirit1 msg lost1\r\n");
 
   chThdSleepMilliseconds(1000);
-#endif
-
+#else
   enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
+#endif
 }
 
 
@@ -220,24 +234,25 @@ static void cb_spirit1_lost(void)
  */
 static void cb_spirit1_error(void)
 {
-#if 0
+#if NO_SLEEP
   SC_LOG_PRINTF("d: spirit1 error\r\n");
 
   chThdSleepMilliseconds(1000);
+#else
+  enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
 #endif
 
-  enable_shutdown(WIRELESS_SENSOR_SLEEP_SEC);
 }
 
 
-
+#if NO_SLEEP == 0
 static void enable_shutdown(int sleep)
 {
 
   // This function will not return
   sc_pwr_rtc_standby(sleep);
 }
-
+#endif
 /* Emacs indentatation information
    Local Variables:
    indent-tabs-mode:nil
