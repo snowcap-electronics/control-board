@@ -899,10 +899,7 @@ void sc_spirit1_init(uint8_t *enc_key, uint8_t my_addr)
  */
 uint8_t sc_spirit1_read(uint8_t *addr, uint8_t *buf, uint8_t len)
 {
-  (void)addr;
-  (void)buf;
-  (void)len;
-
+  uint8_t bytes;
   chMtxLock(&rx_buf.mtx);
 
   if (!rx_buf.busy || rx_buf.len == 0 ||
@@ -911,15 +908,17 @@ uint8_t sc_spirit1_read(uint8_t *addr, uint8_t *buf, uint8_t len)
     return 0;
   }
 
+  bytes = rx_buf.len - SPIRIT1_MSG_IDX_PAYLOAD;
+
   // FIXME: now just silently ignoring the bytes not fitting to the buf
-  if (len > rx_buf.len - SPIRIT1_MSG_IDX_PAYLOAD) {
-    len = rx_buf.len - SPIRIT1_MSG_IDX_PAYLOAD;
+  if (len - 1 < bytes) {
+    bytes = len - 1;
   }
 
-  for (uint8_t i = 0; i < len; ++i) {
+  for (uint8_t i = 0; i < bytes; ++i) {
     buf[i] = rx_buf.buf[SPIRIT1_MSG_IDX_PAYLOAD + i];
   }
-  buf[len] = '\0';
+  buf[bytes] = '\0';
   *addr = rx_buf.addr;
 
   rx_buf.busy  = 0;
@@ -928,7 +927,7 @@ uint8_t sc_spirit1_read(uint8_t *addr, uint8_t *buf, uint8_t len)
 
   chMtxUnlock(&rx_buf.mtx);
 
-  return len;
+  return bytes;
 }
 
 
