@@ -137,12 +137,15 @@ static void cb_spirit1_msg(void)
   last_radio_msg = chVTGetSystemTime();
 
   len = sc_spirit1_read(&addr, msg, sizeof(msg));
-  if (len) {
+
+  if (len > 1) {
     lqi = sc_spirit1_lqi();
     rssi = sc_spirit1_rssi();
-    SC_LOG_PRINTF("GOT MSG (LQI: %u, RSSI: %u): %s", lqi, rssi, msg);
+    // Remove \r\n
+    msg[len - 2] = '\0';
+    SC_LOG_PRINTF("m: %s, %u, %u\r\n", msg, lqi, rssi);
   } else {
-    SC_LOG_PRINTF("SPIRIT1 READ FAILED");
+    SC_LOG_PRINTF("e: spirit1 read failed\r\n");
   }
 }
 
