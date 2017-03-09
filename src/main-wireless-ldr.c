@@ -132,24 +132,27 @@ static void cb_adc_available(void)
 {
   uint16_t adc_value[2];
   uint32_t timestamp_ms;
-  uint8_t msg[32] = {'p', 'v', 'p', ':', ' ', '\n'};
+  uint8_t msg[64] = {'\0'};
   uint32_t *bsram;
+  uint8_t len;
+
   bsram = sc_pwr_get_backup_sram();
   if (!standby) {
     bsram[0] = 0;
   } else {
     bsram[0] += 1;
   }
-  
+
   sc_adc_channel_get(adc_value, &timestamp_ms);
 
-  /* ADC 2 is not used for anything in this particular HW setup */
-  chsnprintf((char*)msg, sizeof(msg), "pvp: %d, %d, %d\r\n",
-             adc_value[0], adc_value[1], bsram[0]);
-	
-  sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
-}
+  len = snprintf((char *)msg, sizeof(msg),
+                 "pvp[0]: %" PRIu32 ", %" PRIu16 ", %" PRIu16 "\r\n",
+                 bsram[0], adc_value[0], adc_value[1]);
 
+  SC_LOG_PRINTF((char *)msg);
+
+  sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, len);
+}
 
 
 /*
@@ -164,12 +167,14 @@ static void cb_spirit1_msg(void)
   uint8_t rssi;
 
   len = sc_spirit1_read(&addr, msg, sizeof(msg));
-  if (len) {
+  if (len > 1) {
     lqi = sc_spirit1_lqi();
     rssi = sc_spirit1_rssi();
-    SC_LOG_PRINTF("GOT MSG (LQI: %u, RSSI: %u): %s", lqi, rssi, msg);
+    // Remove \r\n
+    msg[len - 2] = '\0';
+    SC_LOG_PRINTF("m: %s, %u, %u\r\n", msg, lqi, rssi);
   } else {
-    SC_LOG_PRINTF("SPIRIT1 READ FAILED");
+    SC_LOG_PRINTF("e: spirit1 read failed\r\n");
   }
 }
 
