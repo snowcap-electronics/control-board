@@ -39,6 +39,8 @@
 #include "spirit1_key.h"
 #include "chprintf.h"
 
+#include <inttypes.h>
+
 // Sleep 180 seconds between every measurement
 #define WIRELESS_LDR_SLEEP_SEC      180
 
