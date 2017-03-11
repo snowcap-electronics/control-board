@@ -162,7 +162,7 @@ static void cb_adc_available(void)
  */
 static void cb_spirit1_msg(void)
 {
-  uint8_t msg[32];
+  uint8_t msg[128];
   uint8_t len;
   uint8_t addr;
   uint8_t lqi;
