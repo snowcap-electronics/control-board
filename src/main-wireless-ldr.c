@@ -105,12 +105,12 @@ int main(void)
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
   
-  // Get ADC readings once
+  // 500ms to give ADC time to start up and we'll ignore the other readings
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
   // FIXME: Not tested
   sc_adc_start_conversion(2, 0, ADC_SAMPLE_7P5);
 #else
-  sc_adc_start_conversion(2, 0, ADC_SAMPLE_3);
+  sc_adc_start_conversion(2, 500, ADC_SAMPLE_480);
 #endif
 
   while(1) {
