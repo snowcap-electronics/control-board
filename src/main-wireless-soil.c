@@ -133,8 +133,8 @@ int main(void)
 
   sc_pwm_set_duty(1, 5000);
 
-  // Get ADC readings once
-  sc_adc_start_conversion(3, 0, ADC_SAMPLE_480);
+  // 500ms to give ADC time to start up and we'll ignore the other readings
+  sc_adc_start_conversion(3, 500, ADC_SAMPLE_480);
 
   while(1) {
     //sc_led_toggle(); // Conflicts with Spirit's interrupt
