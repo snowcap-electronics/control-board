@@ -27,6 +27,13 @@
  *
  */
 
+/*
+ * PA8 == GPIO8 == PWM
+ * PA7 == SPI1_MOSI == V_MEASURE2 == super caps
+ * PA6 == SPI1_MISO == V_MEASURE1 == solar panel
+ * PA5 == SPI1_SCK == moisture
+ */
+
 #define SC_LOG_MODULE_TAG SC_LOG_MODULE_UNSPECIFIED
 
 #include "sc.h"
@@ -122,7 +129,7 @@ int main(void)
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
 
-  sc_pwm_set_freq(500000);
+  sc_pwm_set_freq(1500000);
 
   sc_pwm_set_duty(1, 5000);
 
