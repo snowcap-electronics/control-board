@@ -48,12 +48,12 @@
 
 #include <inttypes.h>
 
-// Sleep 180 seconds between every measurement
-#define WIRELESS_SENSOR_SLEEP_SEC      180
+// Sleep 30min between every measurement
+#define WIRELESS_SENSOR_SLEEP_SEC      1800
 #define NO_SLEEP 0
 
 typedef enum {
-  LDR_PWR_SLEEP       = 0x0000,
+  LDR_PWR_SLEEP       = 0xf0f0,
   LDR_PWR_RESET       = 0x0f0f,
 } LDR_PWR;
 
