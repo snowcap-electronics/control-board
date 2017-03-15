@@ -48,7 +48,7 @@ static void cb_spirit1_sent(void);
 static void cb_spirit1_lost(void);
 static void init(void);
 
-systime_t last_radio_msg;
+uint16_t last_radio_msg = 300;
 
 int main(void)
 {
@@ -77,10 +77,10 @@ int main(void)
       uint8_t msg[] = {'t', 'e', 's', 't', '\r', '\n', '\0'};
       SC_LOG_PRINTF("sending: test\r\n");
       sc_spirit1_send(SPIRIT1_BROADCAST_ADDRESS, msg, sizeof(msg) - 1);
-      chThdSleepMilliseconds(1000);
     } else {
       // FIXME: Ugly WAR: reset if nothing heard from radio in 5 minutes
-      if (ST2MS(now - last_radio_msg) > 5*60*1000) {
+      if (--last_radio_msg == 0) {
+        SC_LOG_PRINTF("e: rx timeout, resetting\r\n");
         sc_wdg_init(1);
       }
       SC_LOG_PRINTF("d: ping (%d)\r\n", ST2MS(now));
@@ -134,7 +134,7 @@ static void cb_spirit1_msg(void)
   uint8_t lqi;
   uint8_t rssi;
 
-  last_radio_msg = chVTGetSystemTime();
+  last_radio_msg = 300;
 
   len = sc_spirit1_read(&addr, msg, sizeof(msg));
 
