@@ -55,7 +55,7 @@ int main(void)
   uint16_t glow[20] = {0,287,1114,2388,3960,5653,7270,8627,9568,9985,9830,9121,7939,6420,4738,3087,1654,606,62,0};
 
   // UART 2 for nucleo's ST-LINK's "uart to USB"
-  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED;
+  uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
 
   halInit();
   /* Initialize ChibiOS core */

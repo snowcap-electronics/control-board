@@ -42,8 +42,9 @@
 
 static uint8_t spin;
 // 4 byte header, 4 bytes per led, 4 byte end frame
-static uint8_t data[4 + SC_APA102_MAX_LEDS * 4 + 4];
-static enum sc_apa102_effect effect;
+static uint8_t data[0 + SC_APA102_MAX_LEDS * 4 + 4];
+static enum sc_apa102_effect effect = SC_APA102_EFFECT_NONE;
+static bool run_update;
 
 static thread_t *sc_apa102_spi_thread_ptr;
 
@@ -52,55 +53,41 @@ THD_FUNCTION(scApa102SpiThread, arg)
 {
   (void)arg;
   chRegSetThreadName(__func__);
-  uint8_t led = 0;
-  uint8_t round = 0;
+  uint8_t led = 1;
+
+  effect = SC_APA102_EFFECT_NONE;
 
   // Loop waiting for action
   while (!chThdShouldTerminateX()) {
 
-    // Wait up to 100ms. After a timeout, update effect leds if ongoing
     chThdSleepMilliseconds(100);
-    if (effect == SC_APA102_EFFECT_NONE) {
-      continue;
+    if (chThdShouldTerminateX()) {
+      break;
     }
 
     switch(effect) {
+    case SC_APA102_EFFECT_NONE:
+      // Nothing to update;
+      break;
       // Light all leds one at a time
     case SC_APA102_EFFECT_CIRCLE:
-      if (led - 3 >= 0) {
-        sc_apa102_set(led - 3, 0, 0, 0, 0, false);
-      }
-      if (led - 2 >= 0) {
-        sc_apa102_set(led - 2, 31,
-                      round == 0 ? 255 : 0,
-                      round == 1 ? 255 : 0,
-                      round == 2 ? 255 : 0, false);
-      }
-      if (led - 1 >= 0) {
-        sc_apa102_set(led - 1, 31,
-                      round == 1 ? 255 : 0,
-                      round == 2 ? 255 : 0,
-                      round == 0 ? 255 : 0, false);
-      }
-      if (led - 0 >= 0) {
-        sc_apa102_set(led - 0, 31,
-                      round == 2 ? 255 : 0,
-                      round == 0 ? 255 : 0,
-                      round == 1 ? 255 : 0, true);
-      }
-
-      if (++round > 2) {
-        round = 0;
-      }
-      
+#if 0
+      sc_apa102_set(led, 0, 0, 0, 0);
       if (++led >= SC_APA102_MAX_LEDS) {
         led = 0;
       }
+      sc_apa102_set(led, 31, 255, 255, 255);
+#endif
       break;
     default:
       // Do nothing
       break;
     }
+
+    // Update the led strip always, just in case the data has change
+    sc_spi_select(spin);
+    sc_spi_send(spin, data, sizeof(data));
+    sc_spi_deselect(spin);
   }
 }
 
@@ -109,11 +96,28 @@ void sc_apa102_init(void)
 {
   int8_t spi_n;
 
-  // Initialise end frame bits to 1
+  run_update = false;
+
+  // Initialise start frame bits to 0
   for (uint16_t i = 0; i < 4; ++i) {
+    data[i] = 0;
+  }
+
+  // Number of end frame bytes
+  // FIXME: make a define, use also for the size of the array
+  uint8_t end_frame_len = (uint8_t)(((SC_APA102_MAX_LEDS - 1) / 16.0) + 1);
+  end_frame_len = 4;
+  
+  // Initialise end frame bits to 1
+  for (uint16_t i = 0; i < end_frame_len; ++i) {
     data[(sizeof(data) - 1) - i] = 0xff;
   }
-    
+
+  // Initialise leds to off
+  for (uint8_t i = 0; i < SC_APA102_MAX_LEDS; ++i) {
+    sc_apa102_set(i, 0, 0, 0, 0);
+  }
+
   // Pin mux
   // FIXME: Should these be in the SPI module?
   palSetPadMode(SC_APA102_SPI_SCK_PORT,
@@ -143,7 +147,7 @@ void sc_apa102_init(void)
 #if defined(SC_MCU_LOW_SPEED) && SC_MCU_LOW_SPEED
                           SPI_CR1_BR_0); // div4, good for 25 Mhz AHB1.
 #else
-                          SPI_CR1_BR_0 | SPI_CR1_BR_1);
+  SPI_CR1_BR_2/* | SPI_CR1_BR_1*//* | SPI_CR1_CPHA*//* | SPI_CR1_CPOL*/);
 #endif
 
   spin = (uint8_t)spi_n;
@@ -161,36 +165,32 @@ void sc_apa102_init(void)
 
 void sc_apa102_effect(enum sc_apa102_effect ef)
 {
-  effect = ef;
-  if (effect == SC_APA102_EFFECT_NONE) {
-    for (uint8_t led = 1; led < SC_APA102_MAX_LEDS; ++led) {
-      sc_apa102_set(led, 0, 0, 0, 0, false);
-    }
-    sc_apa102_set(0, 0, 0, 0, 0, true);
+  // Clear all LEDs when changing the effect
+  effect = SC_APA102_EFFECT_NONE;
+  for (uint8_t led = 1; led < SC_APA102_MAX_LEDS; ++led) {
+    sc_apa102_set(led, 0, 0, 0, 0);
   }
+  effect = ef;
 }
 
 
 
-void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b, bool set)
+void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b)
 {
-  uint32_t li = 4 + led * 4;
+  uint32_t li = 0 + led * 4;
 
   if (led >= SC_APA102_MAX_LEDS) {
     SC_LOG_ASSERT(0, "led index too large");
     return;
   }
 
-  data[li + 0] = brightness & 0xe0; 
-  data[li + 1] = r;
-  data[li + 2] = g;
-  data[li + 3] = b;
-
-  if (set) {
-    sc_spi_select(spin);
-    sc_spi_send(spin, data, sizeof(data));
-    sc_spi_deselect(spin);
-  }
+  // No data locking to avoid blocking the call for too long
+  // May cause wrong colors briefly
+  data[li + 0] = 0b11100111;
+  data[li + 1] = 0;
+  data[li + 2] = 0;
+  // FIXME: setting 0xe0 here just in case the order of the bytes is the opposite.
+  data[li + 3] = 0b11100111;
 }
 
 

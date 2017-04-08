@@ -40,7 +40,7 @@ enum sc_apa102_effect {
 
 void sc_apa102_init(void);
 void sc_apa102_effect(enum sc_apa102_effect effect);
-void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b, bool set);
+void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b);
 void sc_apa102_shutdown(void);
 
 #endif
