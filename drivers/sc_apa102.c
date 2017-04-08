@@ -56,7 +56,7 @@ THD_FUNCTION(scApa102SpiThread, arg)
   uint8_t led = 1;
 
   effect = SC_APA102_EFFECT_NONE;
-
+  sc_spi_select(spin);
   // Loop waiting for action
   while (!chThdShouldTerminateX()) {
 
@@ -85,9 +85,9 @@ THD_FUNCTION(scApa102SpiThread, arg)
     }
 
     // Update the led strip always, just in case the data has change
-    sc_spi_select(spin);
+    //sc_spi_select(spin);
     sc_spi_send(spin, data, sizeof(data));
-    sc_spi_deselect(spin);
+    //sc_spi_deselect(spin);
   }
 }
 
@@ -108,9 +108,9 @@ void sc_apa102_init(void)
   uint8_t end_frame_len = (uint8_t)(((SC_APA102_MAX_LEDS - 1) / 16.0) + 1);
   end_frame_len = 4;
   
-  // Initialise end frame bits to 1
+  // Initialise end frame bits to 0
   for (uint16_t i = 0; i < end_frame_len; ++i) {
-    data[(sizeof(data) - 1) - i] = 0xff;
+    data[(sizeof(data) - 1) - i] = 0x0;
   }
 
   // Initialise leds to off
