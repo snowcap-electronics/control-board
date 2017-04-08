@@ -186,11 +186,11 @@ void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8
 
   // No data locking to avoid blocking the call for too long
   // May cause wrong colors briefly
-  data[li + 0] = 0b11100111;
-  data[li + 1] = 0;
-  data[li + 2] = 0;
+  data[li + 0] = 0b1110000;
+  data[li + 1] = 0x0;
+  data[li + 2] = 0x0;
   // FIXME: setting 0xe0 here just in case the order of the bytes is the opposite.
-  data[li + 3] = 0b11100111;
+  data[li + 3] = 0x0;
 }
 
 
