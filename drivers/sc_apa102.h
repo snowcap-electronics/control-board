@@ -36,11 +36,13 @@
 enum sc_apa102_effect {
   SC_APA102_EFFECT_NONE,
   SC_APA102_EFFECT_CIRCLE,
+  SC_APA102_EFFECT_KITT,
+  SC_APA102_EFFECT_KITT_FULL,
 };
 
 void sc_apa102_init(void);
 void sc_apa102_effect(enum sc_apa102_effect effect);
-void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b, bool set);
+void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b);
 void sc_apa102_shutdown(void);
 
 #endif
