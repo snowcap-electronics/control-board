@@ -42,7 +42,7 @@
 
 static uint8_t spin;
 // 4 byte header, 4 bytes per led, 4 byte end frame
-static uint8_t data[0 + SC_APA102_MAX_LEDS * 4 + 4];
+static uint8_t data[4 + SC_APA102_MAX_LEDS * 4 + 4];
 static enum sc_apa102_effect effect = SC_APA102_EFFECT_NONE;
 static bool run_update;
 
