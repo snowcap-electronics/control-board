@@ -177,7 +177,7 @@ void sc_apa102_effect(enum sc_apa102_effect ef)
 
 void sc_apa102_set(uint16_t led, uint8_t brightness, uint8_t r, uint8_t g, uint8_t b)
 {
-  uint32_t li = 0 + led * 4;
+  uint32_t li = 4 + led * 4;
 
   if (led >= SC_APA102_MAX_LEDS) {
     SC_LOG_ASSERT(0, "led index too large");
