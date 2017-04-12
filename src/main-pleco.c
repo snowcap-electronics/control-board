@@ -55,6 +55,8 @@ int main(void)
   uint16_t glow[20] = {0,287,1114,2388,3960,5653,7270,8627,9568,9985,9830,9121,7939,6420,4738,3087,1654,606,62,0};
 
   // UART 2 for nucleo's ST-LINK's "uart to USB"
+  // UART 1 for nucleo's normal uart
+  // UART 2 for Snowcap's F4v1
   uint32_t subsystems = SC_MODULE_UART2 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
 
   halInit();
@@ -106,6 +108,7 @@ int main(void)
 
     // Stop engines and start blinking lights for an error if no ping
     // from host for 500 ms
+    // FIXME: the time wraps and this check breaks
     now = ST2MS(chVTGetSystemTime());
     if (last_ping > 0 && now > last_ping && now - last_ping > 500) {
       stop_engines();
