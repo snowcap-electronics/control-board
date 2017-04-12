@@ -45,7 +45,7 @@ static void parse_command(void);
  * FIXME: Separate handling for SPI/UART1-3?
  */
 #ifndef SC_CMD_MAX_RECV_BUF_LEN
-#define SC_CMD_MAX_RECV_BUF_LEN      16
+#define SC_CMD_MAX_RECV_BUF_LEN      32
 #endif
 #define MIN_CMD_LEN           3        // 8 bit command, >=8 bit value, \n
 static uint8_t receive_buffer[SC_CMD_MAX_RECV_BUF_LEN];
