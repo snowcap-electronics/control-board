@@ -30,7 +30,7 @@
 #define SC_CONF_F401_NUCLEO_H
 
 #ifndef USER_LED
-#define USER_LED           GPIOA_LED_GREEN
+#define USER_LED           GPIOA_LED_GREEN /* 5 */
 #endif
 
 #ifndef USER_LED_PORT
@@ -145,10 +145,10 @@
 
 #ifndef SC_UART2_TX_PORT
 #define SC_UART2_TX_PORT   GPIOA
-#define SC_UART2_TX_PIN    GPIOA_USART_TX
+#define SC_UART2_TX_PIN    GPIOA_USART_TX /* 2 */
 #define SC_UART2_TX_AF     7
 #define SC_UART2_RX_PORT   GPIOA
-#define SC_UART2_RX_PIN    GPIOA_USART_RX
+#define SC_UART2_RX_PIN    GPIOA_USART_RX /* 3 */
 #define SC_UART2_RX_AF     7
 #endif
 
