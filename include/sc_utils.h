@@ -45,7 +45,7 @@
 
 #define SC_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
-int sc_atoi(uint8_t *str, int len);
+int sc_atoi(const uint8_t *str, int len);
 int sc_itoa(int value, uint8_t *str, int len);
 int sc_ftoa(double value, uint8_t decimals, uint8_t *str, int len);
 bool sc_str_equal(const char *a, const char *b, uint8_t n);

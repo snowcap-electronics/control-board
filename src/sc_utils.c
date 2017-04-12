@@ -32,7 +32,7 @@
 /*
  * Convert string to int. No way of returning an error.
  */
-int sc_atoi(uint8_t *str, int len)
+int sc_atoi(const uint8_t *str, int len)
 {
   int valid_len = 0;
   int i;
