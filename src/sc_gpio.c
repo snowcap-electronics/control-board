@@ -219,16 +219,27 @@ static void parse_command_gpio(const uint8_t *param, uint8_t param_len)
   uint8_t gpio;
   uint8_t value;
 
-  (void)param_len;
-
   if (!param) {
     // Invalid message
     return;
   }
 
+#if 1
+  {
+    uint8_t value_offset = 2;
+    gpio  = sc_atoi(param, param_len);
+    if (gpio > 9)  value_offset++;
+    if (gpio > 99) value_offset++;
+    value = param[value_offset];
+  }
+#else
+  (void)param_len;
+
+  // FIXME: this may to cause an overflow somewhere.
   if (sscanf((char*)param, "%hhu %c", &gpio, &value) < 2) {
     return;
   }
+#endif
 
   switch (value) {
   case '0':

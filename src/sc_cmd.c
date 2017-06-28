@@ -303,11 +303,16 @@ static void parse_command_blob(const uint8_t *param, uint8_t param_len)
 {
   uint16_t bytes;
 
+#if 1
+  bytes = sc_atoi(param, param_len);
+#else
   (void)param_len;
 
+  // FIXME: this seems to cause an overflow somewhere.
   if (sscanf((char*)param, "%hu", &bytes) < 1) {
     return;
   }
+#endif
 
   if (bytes == 0) {
     // FIXME: Should just print a warning (can't assert on user input)?

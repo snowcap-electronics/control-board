@@ -366,8 +366,13 @@ static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len)
   }
 
 #if 1
-  pwm   = sc_atoi(param, 2);
-  value = sc_atoi(&param[2], param_len - 2);
+  {
+    uint8_t value_offset = 2;
+    pwm  = sc_atoi(param, param_len);
+    if (pwm > 9)  value_offset++;
+    if (pwm > 99) value_offset++;
+    value = sc_atoi(&param[value_offset], param_len - value_offset);
+  }
 #else
   // FIXME: this seems to cause an overflow somewhere.
   if (sscanf((char*)param, "%hhu %hu", &pwm, &value) < 2) {
@@ -393,9 +398,14 @@ static void parse_command_pwm_stop(const uint8_t *param, uint8_t param_len)
     return;
   }
 
+#if 1
+  pwm = sc_atoi(param, 2);
+#else
+  // FIXME: this seems to cause an overflow somewhere.
   if (sscanf((char*)param, "%hhu", &pwm) < 1) {
     return;
   }
+#endif
 
   sc_pwm_stop(pwm);
 }
