@@ -64,7 +64,7 @@ int main(void)
   chSysInit();
 
   // Init SC framework, optionally with USB
-#if defined(SC_UART_USB)
+#if defined HAL_USE_SERIAL_USB && HAL_USE_SERIAL_USB
   subsystems |=  SC_MODULE_SDU;
   host_uart = SC_UART_USB;
 #endif
