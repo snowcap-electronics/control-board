@@ -39,6 +39,7 @@
 
 #ifdef SC_HAS_MS5611
 
+#define MS5611_PROM_SIZE       8
 #define MS5611_RESET        0x1E
 #define MS5611_CONVERT_D1   0x40
 #define MS5611_CONVERT_D2   0x50
@@ -46,7 +47,7 @@
 
 static uint8_t i2cn;
 static uint16_t ms5611_interval_ms;
-static uint16_t ms5611_prom[8];
+static uint16_t ms5611_prom[MS5611_PROM_SIZE];
 static thread_t *ms5611_thread_ptr;
 static binary_semaphore_t ms5611_wait_sem;
 static mutex_t data_mtx;
@@ -81,7 +82,7 @@ THD_FUNCTION(scMS5611Thread, arg)
   ms5611_reset();
   chThdSleepMilliseconds(100);
   ms5611_read_prom();
-  uint8_t ref_crc = ms5611_prom[7] & 0x0F;
+  uint8_t ref_crc = ms5611_prom[MS5611_PROM_SIZE - 1] & 0x0F;
   uint8_t calc_crc = ms5611_calc_crc();
   if (ref_crc != calc_crc) {
     SC_LOG_PRINTF("e: ms5611 crc failure: 0x%x vs 0x%x\r\n", ref_crc, calc_crc);
@@ -135,9 +136,7 @@ static void ms5611_reset(void)
 
 static void ms5611_read_prom(void)
 {
-  uint16_t prom[8];
-
-  for (uint8_t i = 0; i < sizeof(prom); ++i) {
+  for (uint8_t i = 0; i < MS5611_PROM_SIZE; ++i) {
     uint8_t txbuf[1] = {0xA0 | i << 1}; // prom register
     uint8_t rxbuf[2];
 
@@ -152,8 +151,8 @@ static uint8_t ms5611_calc_crc(void)
   unsigned int crc_read; // original value of the crc
 
   n_rem = 0x00;
-  crc_read = ms5611_prom[7];    //save read CRC
-  ms5611_prom[7]=(0xFF00 & (ms5611_prom[7])); // CRC byte is replaced by 0
+  crc_read = ms5611_prom[MS5611_PROM_SIZE - 1];    //save read CRC
+  ms5611_prom[MS5611_PROM_SIZE - 1]=(0xFF00 & (ms5611_prom[MS5611_PROM_SIZE - 1])); // CRC byte is replaced by 0
 
   for (uint8_t cnt = 0; cnt < 16; cnt++) {
     // choose LSB or MSB
@@ -172,7 +171,7 @@ static uint8_t ms5611_calc_crc(void)
     }
   }
   n_rem = (0x000F & (n_rem >> 12)); // final 4-bit reminder is CRC code
-  ms5611_prom[7] = crc_read; // restore the crc_read to its original place
+  ms5611_prom[MS5611_PROM_SIZE - 1] = crc_read; // restore the crc_read to its original place
   return (n_rem ^ 0x0);
 }
 
