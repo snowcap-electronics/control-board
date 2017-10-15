@@ -33,7 +33,11 @@
 #include "sc_ahrs.h"
 #include "sc_filter.h"
 
+#if !defined(BOARD_ST_STM32VL_DISCOVERY) && !defined(BOARD_ST_NUCLEO_L152RE)
 #define AHRS_USB_SDU   1
+#else
+#define AHRS_USB_SDU   0
+#endif
 #define AHRS_USB_HID   0
 
 static void cb_handle_byte(SC_UART uart, uint8_t byte);
@@ -50,14 +54,20 @@ static void cb_button_changed(void);
 
 
 // Filtering
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
 static sc_filter_brown_linear_expo_state filter_state_smooth[9];
 static sc_filter_brown_linear_expo_state roll_smooth;
 static sc_filter_brown_linear_expo_state pitch_smooth;
 static sc_filter_brown_linear_expo_state yaw_smooth;
+#endif
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
 static sc_filter_zero_calibrate_state filter_state_calibrate[3];
+#endif
 
 // HID data
+#if AHRS_USB_HID
 static hid_data gamepad_data;
+#endif
 
 int main(void)
 {
@@ -98,8 +108,14 @@ int main(void)
 static void init(void)
 {
   uint8_t use_usb = 1;
-  uint32_t subsystems = SC_MODULE_UART3 | SC_MODULE_PWM | SC_MODULE_ADC | SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_SPI;
-  uint8_t i;
+  uint32_t subsystems = SC_MODULE_GPIO | SC_MODULE_LED | SC_MODULE_I2C;
+
+#if defined(BOARD_ST_NUCLEO_L152RE)
+  subsystems |= SC_MODULE_UART2;
+  use_usb = 0;
+#else
+  subsystems |= SC_MODULE_UART3;
+#endif
 
   // F1 Discovery doesn't support USB
 #if defined(BOARD_ST_STM32VL_DISCOVERY)
@@ -126,11 +142,16 @@ static void init(void)
     sc_log_output_uart(SC_UART_USB);
   }
 #else
+#if defined(BOARD_ST_NUCLEO_L152RE)
+    sc_log_output_uart(SC_UART_2);
+#else
     sc_log_output_uart(SC_UART_3);
 #endif
+#endif
 
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
   // Init smoothing filter
-  for (i = 0; i < sizeof(filter_state_smooth); ++i) {
+  for (uint8_t i = 0; i < sizeof(filter_state_smooth); ++i) {
     const sc_float factor = 0.2;
     sc_filter_brown_linear_expo_init(&filter_state_smooth[i], factor);
   }
@@ -138,15 +159,20 @@ static void init(void)
   sc_filter_brown_linear_expo_init(&roll_smooth, 0.2);
   sc_filter_brown_linear_expo_init(&pitch_smooth, 0.2);
   sc_filter_brown_linear_expo_init(&yaw_smooth, 0.2);
+#endif
 
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
   // Init gyroscope calibration filter
-  for (i = 0; i < sizeof(filter_state_calibrate); ++i) {
+  for (uint8_t i = 0; i < sizeof(filter_state_calibrate); ++i) {
     const uint8_t samples = 64;
     sc_filter_zero_calibrate_init(&filter_state_calibrate[i], samples);
   }
+#endif
 
   // Set button state to released
+#if AHRS_USB_HID
   gamepad_data.button = 0;
+#endif
 }
 
 
@@ -179,6 +205,7 @@ static void cb_9dof_available(void)
     return;
   }
 
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
 #if 0
   // Apply smoothing filter for gyro
   if (sensors_read & SC_SENSOR_GYRO) {
@@ -198,7 +225,9 @@ static void cb_9dof_available(void)
     }
   }
 #endif
+#endif
 
+#ifdef SC_USE_FILTER_ZERO_CALIBRATE
 #if 1
   // Apply gyro zero level calibration
   if (sensors_read & SC_SENSOR_GYRO) {
@@ -207,6 +236,7 @@ static void cb_9dof_available(void)
         gyro[a] = sc_filter_zero_calibrate(&filter_state_calibrate[a], gyro[a]);
     }
   }
+#endif
 #endif
 
 #if 1
@@ -292,11 +322,13 @@ static void cb_ahrs_available(void)
 
   // Apply smoothing filter to final result
   // FIXME: broken but why?
+#ifdef SC_USE_FILTER_BROWN_LINEAR_EXPO
   if (0) {
     roll  = sc_filter_brown_linear_expo(&roll_smooth,  roll);
     pitch = sc_filter_brown_linear_expo(&pitch_smooth, pitch);
     yaw   = sc_filter_brown_linear_expo(&yaw_smooth,   yaw);
   }
+#endif
 
 #if AHRS_USB_HID
   {
