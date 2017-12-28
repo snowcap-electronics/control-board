@@ -153,12 +153,12 @@
 #endif
 
 #ifdef SC_HAS_APA102
-#define SC_APA102_SPIN           SPID1
+#define SC_APA102_SPIN           SPID2
 #define SC_APA102_SPI_SCK_PORT   GPIOB
-#define SC_APA102_SPI_SCK_PIN    3
-#define SC_APA102_SPI_PORT       GPIOA
-#define SC_APA102_SPI_MISO_PIN   6
-#define SC_APA102_SPI_MOSI_PIN   7
+#define SC_APA102_SPI_SCK_PIN    13
+#define SC_APA102_SPI_PORT       GPIOB
+#define SC_APA102_SPI_MISO_PIN   14
+#define SC_APA102_SPI_MOSI_PIN   15
 #define SC_APA102_SPI_CS_PORT    GPIOB
 #define SC_APA102_SPI_CS_PIN     6
 #define SC_APA102_SPI_AF         5
