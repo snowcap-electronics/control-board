@@ -44,10 +44,16 @@ static void cb_handle_byte(SC_UART uart, uint8_t byte);
 static void cb_adc_available(void);
 static void cb_ping(void);
 static void pleco_parse_glow(const uint8_t *param, uint8_t param_len);
+static void apa_set_status(uint8_t led, bool enable, uint8_t r, uint8_t g, uint8_t b);
 
 static systime_t last_ping = 0;
 static uint8_t glow_enable = 0;
 static SC_UART host_uart = SC_UART_2;
+
+enum {
+  STATUS_LED_MCU = 0,
+  STATUS_LED_SLAVE = 1,
+};
 
 int main(void)
 {
@@ -104,6 +110,8 @@ int main(void)
 
     if (loop_counter == 9 || loop_counter == 19) {
       SC_LOG_PRINTF("d: ping\r\n");
+      bool enable = loop_counter == 9;
+      apa_set_status(STATUS_LED_MCU, enable, 0, 255, 0);
     }
 
     // Stop engines and start blinking lights for an error if no ping
@@ -271,6 +279,19 @@ static void pleco_parse_glow(const uint8_t *param, uint8_t param_len)
     // Invalid value, ignoring command
 	return;
   }
+}
+
+
+static void apa_set_status(uint8_t led, bool enable, uint8_t r, uint8_t g, uint8_t b)
+{
+#ifdef SC_HAS_APA102
+  uint8_t brightness = enable ? 31 : 0;
+  uint8_t led1 = led;
+  uint8_t led2 = SC_APA102_MAX_LEDS - (led + 1);
+
+  sc_apa102_set(led1, brightness, r, g, b);
+  sc_apa102_set(led2, brightness, r, g, b);
+#endif
 }
 
 /* Emacs indentatation information
