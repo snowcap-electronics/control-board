@@ -48,15 +48,78 @@ static bool run_update;
 
 static thread_t *sc_apa102_spi_thread_ptr;
 
+/*
+ * Cicle effect. Lit every led one at the time in order.
+ */
+static uint8_t update_effect_circle(uint8_t led)
+{
+  sc_apa102_set(led, 0, 0, 0, 0);
+  if (++led >= SC_APA102_MAX_LEDS - 2) {
+    led = 2;
+  }
+  sc_apa102_set(led, 31, 255, 0, 0);
+  return led;
+}
+
+/*
+ * KITT effect. "full" is the full lenght of the strip, not-full is
+ * just a middle.
+ */
+static uint8_t update_effect_kitt(uint8_t led, bool full)
+{
+  static bool inc = true;
+  uint8_t min_led = SC_APA102_MAX_LEDS / 3 - 1;
+  uint8_t max_led = 2 * (SC_APA102_MAX_LEDS / 3) + 1;
+
+  if (full) {
+    min_led = 1;
+    max_led = SC_APA102_MAX_LEDS - 2;
+  } else {
+    min_led = SC_APA102_MAX_LEDS / 3 - 2;
+    max_led = 2 * (SC_APA102_MAX_LEDS / 3) + 1;
+  }
+
+  if (led < min_led) {
+    led = min_led;
+  }
+  for (uint8_t i = min_led; i < max_led; ++i) {
+    uint16_t red = 4 + i * 4 + 3;
+    // Dim a led by 1/6th
+    if (data[red] > 255/6) {
+      data[red] -= 255/6;
+    } else {
+      data[red] = 0;
+    }
+  }
+  if (inc) {
+    ++led;
+    if (led == max_led) {
+      inc = false;
+      led--;
+    }
+  } else {
+    --led;
+    if (led == min_led) {
+      inc = true;
+      led++;
+    }
+  }
+  sc_apa102_set(led, 31, 255, 0, 0);
+
+  return led;
+}
+
 static THD_WORKING_AREA(sc_apa102_spi_thread, 256);
 THD_FUNCTION(scApa102SpiThread, arg)
 {
   (void)arg;
   chRegSetThreadName(__func__);
   uint8_t led = 0;
-  bool inc = true;
 
+  // Can't select the SPI only when active as there's no slave select
+  // pin and the APA assumes the clock is low on idle.
   sc_spi_select(spin);
+
   // Loop waiting for action
   while (!chThdShouldTerminateX()) {
 
@@ -71,63 +134,13 @@ THD_FUNCTION(scApa102SpiThread, arg)
       break;
       // Light all leds one at a time
     case SC_APA102_EFFECT_CIRCLE:
-      sc_apa102_set(led, 0, 0, 0, 0);
-      if (++led >= SC_APA102_MAX_LEDS) {
-        led = 0;
-      }
-      sc_apa102_set(led, 31, 255, 0, 0);
+      led = update_effect_circle(led);
       break;
     case SC_APA102_EFFECT_KITT:
-      if (led < SC_APA102_MAX_LEDS / 3) {
-        led = SC_APA102_MAX_LEDS / 3;
-      }
-      for (uint8_t i = SC_APA102_MAX_LEDS / 3; i < 2 * (SC_APA102_MAX_LEDS / 3); ++i) {
-        uint16_t red = 4 + i * 4 + 3;
-        // Dim a led by 1/6th
-        if (data[red] > 255/6) {
-          data[red] -= 255/6;
-        } else {
-          data[red] = 0;
-        }
-      }
-      if (inc) {
-        ++led;
-        if (led == 2 * (SC_APA102_MAX_LEDS / 3)) {
-          inc = false;
-          led--;
-        }
-      } else {
-        --led;
-        if (led == SC_APA102_MAX_LEDS / 3 - 1) {
-          inc = true;
-          led++;
-        }
-      }
-      sc_apa102_set(led, 31, 255, 0, 0);
+      led = update_effect_kitt(led, false);
       break;
     case SC_APA102_EFFECT_KITT_FULL:
-      for (uint8_t i = 0; i < SC_APA102_MAX_LEDS - 1; ++i) {
-        uint16_t blue = 4 + i * 4 + 1;
-        if (data[blue] > 255/8) {
-          data[blue] -= 255/8;
-        } else {
-          data[blue] = 0;
-        }
-      }
-      if (inc) {
-        ++led;
-        if (led == SC_APA102_MAX_LEDS - 1) {
-          inc = false;
-          led--;
-        }
-      } else {
-        --led;
-        if (led == 0) {
-          inc = true;
-          led++;
-        }
-      }
-      sc_apa102_set(led, 31, 0, 0, 255);
+      led = update_effect_kitt(led, true);
       break;
     default:
       // Do nothing
@@ -135,11 +148,7 @@ THD_FUNCTION(scApa102SpiThread, arg)
     }
 
     // Update the led strip always, just in case the data has change
-    // Can't select and select the SPI as there's no slave select and
-    // the APA assumes the clock is low on idle.
-    //sc_spi_select(spin);
     sc_spi_send(spin, data, sizeof(data));
-    //sc_spi_deselect(spin);
   }
 }
 
