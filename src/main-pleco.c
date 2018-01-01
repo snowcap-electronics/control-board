@@ -109,7 +109,7 @@ int main(void)
     chThdSleepMilliseconds(100);
 
     if (loop_counter == 9 || loop_counter == 19) {
-      SC_LOG_PRINTF("d: ping\r\n");
+      sc_uart_send_msg(host_uart, (uint8_t *)"d: ping\r\n", 9);
       bool enable = loop_counter == 9;
       apa_set_status(STATUS_LED_MCU, enable, 0, 255, 0);
     }
