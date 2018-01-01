@@ -129,7 +129,7 @@ int main(void)
   sc_spirit1_init(TOP_SECRET_KEY, MY_ADDRESS);
   SC_LOG_PRINTF("spirit1 init done\r\n");
 
-  sc_pwm_set_freq(1500000);
+  sc_pwm_set_freq(1, 1500000);
 
   sc_pwm_set_duty(1, 5000);
 

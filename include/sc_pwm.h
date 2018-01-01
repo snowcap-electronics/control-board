@@ -1,7 +1,7 @@
 /***
  * PWM functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2011-2017 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,9 +31,9 @@
 
 void sc_pwm_init(void);
 void sc_pwm_deinit(void);
-void sc_pwm_set_freq(uint32_t freq);
-void sc_pwm_stop(int pwm);
-void sc_pwm_set_duty(int pwm, uint16_t duty);
+void sc_pwm_set_freq(uint8_t pwm, uint32_t freq);
+void sc_pwm_stop(uint8_t pwm);
+void sc_pwm_set_duty(uint8_t pwm, uint16_t duty);
 
 #endif
 #endif

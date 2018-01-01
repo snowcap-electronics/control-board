@@ -1,7 +1,7 @@
 /***
  * PWM functions
  *
- * Copyright 2011 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
+ * Copyright 2011-2017 Tuomas Kulve, <tuomas.kulve@snowcap.fi>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,36 +30,53 @@
 #include "sc_pwm.h"
 #include "sc_cmd.h"
 
-#include <stdio.h>        // sscanf
-
 #if HAL_USE_PWM
 
-// Use 1MHz clock
-#ifndef SC_PWM_CLOCK
-#define SC_PWM_CLOCK    1000000
+// Use 1 MHz clock
+#ifndef SC_PWM_CLOCK_PWMD1
+#define SC_PWM_CLOCK_PWMD1    1000000
+#endif
+
+#ifndef SC_PWM_CLOCK_PWMD2
+#define SC_PWM_CLOCK_PWMD2    1000000
+#endif
+
+#ifndef SC_PWM_CLOCK_PWMD3
+#define SC_PWM_CLOCK_PWMD3    1000000
 #endif
 
 
 // Default to 50 Hz (20 ms)
-#ifndef SC_PWM_DEFAULT_PERIOD
-#define SC_PWM_DEFAULT_PERIOD 20000
+#ifndef SC_PWM_DEFAULT_PERIOD_PWMD1
+#define SC_PWM_DEFAULT_PERIOD_PWMD1  (SC_PWM_CLOCK_PWMD1 / 50)
 #endif
 
+#ifndef SC_PWM_DEFAULT_PERIOD_PWMD2
+#define SC_PWM_DEFAULT_PERIOD_PWMD2  (SC_PWM_CLOCK_PWMD2 / 50)
+#endif
+
+#ifndef SC_PWM_DEFAULT_PERIOD_PWMD3
+#define SC_PWM_DEFAULT_PERIOD_PWMD3  (SC_PWM_CLOCK_PWMD3 / 50)
+#endif
+
+static bool is_valid_pwm(uint8_t pwm);
+static PWMDriver *get_pwmd(uint8_t pwm);
+static PWMConfig *get_pwmc(uint8_t pwm);
 static void parse_command_pwm_frequency(const uint8_t *param, uint8_t param_len);
 static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len);
 static void parse_command_pwm_stop(const uint8_t *param, uint8_t param_len);
 
 static const struct sc_cmd cmds[] = {
-  {"pwm_frequency", SC_CMD_HELP("Set PWM frequency (Hz) for all PWMs"), parse_command_pwm_frequency},
-  {"pwm_duty",      SC_CMD_HELP("Set PWM (0-16) duty cycle (0-10000)"), parse_command_pwm_duty},
-  {"pwm_stop",      SC_CMD_HELP("Stop PWM (0-16)"), parse_command_pwm_stop},
+  {"pwm_frequency", SC_CMD_HELP("Set PWM frequency (Hz) for given pwm (pwm freq))"), parse_command_pwm_frequency},
+  {"pwm_duty",      SC_CMD_HELP("Set PWM (1-12) duty cycle (0-10000)"), parse_command_pwm_duty},
+  {"pwm_stop",      SC_CMD_HELP("Stop PWM (1-12)"), parse_command_pwm_stop},
 };
 
 
 static PWMConfig pwmcfg1 = {
-  SC_PWM_CLOCK,            // PWM clock frequency
-  SC_PWM_DEFAULT_PERIOD,   // Default period
-  NULL,                    // No periodic callback.
+  SC_PWM_CLOCK_PWMD1,            // PWM clock frequency
+  SC_PWM_DEFAULT_PERIOD_PWMD1,   // Default period
+  NULL,                          // No periodic callback.
   {
 #ifdef SC_PWM1_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
@@ -89,9 +106,9 @@ static PWMConfig pwmcfg1 = {
 
 #ifdef PWMDX2
 static PWMConfig pwmcfg2 = {
-  SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
-  SC_PWM_CLOCK / 50, // 50 Hz (20.0 ms) initial frequency
-  NULL,              // No periodic callback.
+  SC_PWM_CLOCK_PWMD2,            // PWM clock frequency
+  SC_PWM_DEFAULT_PERIOD_PWMD2,   // Default period
+  NULL,                          // No periodic callback.
   {
 #ifdef SC_PWM2_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
@@ -122,9 +139,9 @@ static PWMConfig pwmcfg2 = {
 
 #ifdef PWMDX3
 static PWMConfig pwmcfg3 = {
-  SC_PWM_CLOCK,      // 1 MHz PWM clock frequency
-  SC_PWM_CLOCK / 10000, // 10 kHz initial frequency
-  NULL,              // No periodic callback.
+  SC_PWM_CLOCK_PWMD3,            // PWM clock frequency
+  SC_PWM_DEFAULT_PERIOD_PWMD3,   // Default period
+  NULL,                          // No periodic callback.
   {
 #ifdef SC_PWM3_1_PIN
     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
@@ -153,6 +170,97 @@ static PWMConfig pwmcfg3 = {
 };
 #endif
 
+static bool is_valid_pwm(uint8_t pwm)
+{
+
+  if (pwm == 0) {
+    return false;
+  }
+
+#ifdef PWMDX1
+  if (pwm >= 1 && pwm <= 4) {
+    return true;
+  }
+#endif
+
+#ifdef PWMDX2
+  if (pwm >= 5 && pwm <= 8) {
+    return true;
+  }
+#endif
+
+#ifdef PWMDX3
+  if (pwm >= 9 && pwm <= 12) {
+    return true;
+  }
+#endif
+
+  return false;
+}
+
+
+static PWMDriver *get_pwmd(uint8_t pwm)
+{
+  if (pwm >= 1 && pwm <= 4) {
+#ifdef PWMDX1
+    return &PWMDX1;
+#else
+    chDbgAssert(0, "PWMDX1 not defined");
+#endif
+  }
+
+  if (pwm >= 5 && pwm <= 8) {
+#ifdef PWMDX2
+    return &PWMDX2;
+#else
+    chDbgAssert(0, "PWMDX2 not defined");
+#endif
+  }
+
+  if (pwm >= 9 && pwm <= 12) {
+#ifdef PWMDX3
+    return &PWMDX3;
+#else
+    chDbgAssert(0, "PWMDX3 not defined");
+#endif
+  }
+
+  chDbgAssert(0, "Invalid pwm");
+
+  return NULL;
+}
+
+static PWMConfig *get_pwmc(uint8_t pwm)
+{
+  if (pwm >= 1 && pwm <= 4) {
+#ifdef PWMDX1
+    return &pwmcfg1;
+#else
+    chDbgAssert(0, "PWMDX1 not defined");
+#endif
+  }
+
+  if (pwm >= 5 && pwm <= 8) {
+#ifdef PWMDX2
+    return &pwmcfg2;
+#else
+    chDbgAssert(0, "PWMDX2 not defined");
+#endif
+  }
+
+  if (pwm >= 9 && pwm <= 12) {
+#ifdef PWMDX3
+    return &pwmcfg3;
+#else
+    chDbgAssert(0, "PWMDX3 not defined");
+#endif
+  }
+
+  chDbgAssert(0, "Invalid pwm");
+
+  return NULL;
+}
+
 /*
  * Initialize PWM
  */
@@ -164,6 +272,7 @@ void sc_pwm_init(void)
     sc_cmd_register(cmds[i].cmd, cmds[i].help, cmds[i].cmd_cb);
   }
 
+#ifdef PWMDX1
 #ifdef SC_PWM1_1_PIN
   palSetPadMode(SC_PWM1_1_PORT, SC_PWM1_1_PIN, PAL_MODE_ALTERNATE(SC_PWM1_1_AF));
 #endif
@@ -180,10 +289,10 @@ void sc_pwm_init(void)
   palSetPadMode(SC_PWM1_4_PORT, SC_PWM1_4_PIN, PAL_MODE_ALTERNATE(SC_PWM1_4_AF));
 #endif
 
-#ifdef PWMDX1
   pwmStart(&PWMDX1, &pwmcfg1);
 #endif
 
+#ifdef PWMDX2
 #ifdef SC_PWM2_1_PIN
   palSetPadMode(SC_PWM2_1_PORT, SC_PWM2_1_PIN, PAL_MODE_ALTERNATE(SC_PWM2_1_AF));
 #endif
@@ -200,10 +309,10 @@ void sc_pwm_init(void)
   palSetPadMode(SC_PWM2_4_PORT, SC_PWM2_4_PIN, PAL_MODE_ALTERNATE(SC_PWM2_4_AF));
 #endif
 
-#ifdef PWMDX2
   pwmStart(&PWMDX2, &pwmcfg2);
 #endif
 
+#ifdef PWMDX3
 #ifdef SC_PWM3_1_PIN
   palSetPadMode(SC_PWM3_1_PORT, SC_PWM3_1_PIN, PAL_MODE_ALTERNATE(SC_PWM3_1_AF));
 #endif
@@ -220,7 +329,6 @@ void sc_pwm_init(void)
   palSetPadMode(SC_PWM3_4_PORT, SC_PWM3_4_PIN, PAL_MODE_ALTERNATE(SC_PWM3_4_AF));
 #endif
 
-#ifdef PWMDX3
   pwmStart(&PWMDX3, &pwmcfg3);
 #endif
 }
@@ -245,20 +353,28 @@ void sc_pwm_deinit(void)
 
 
 /*
- * Set frequency in Hz (e.g. 50 for standard servo/ESC, 400 for fast servo/ESC)
+ * Set frequency (i.e. PWM period) in Hz (e.g. 50 for standard
+ * servo/ESC, 400 for fast servo/ESC)
  */
-// FIXME: Need to be able to control this per PWMDX
-void sc_pwm_set_freq(uint32_t freq)
-{
-  if (freq == 0) {
-	// freq 0 is invalid, do nothing
-	return;
-  }
-  pwmChangePeriod(&PWMDX1, SC_PWM_CLOCK / freq);
 
-#ifdef PWMDX2
-  pwmChangePeriod(&PWMDX2, SC_PWM_CLOCK / freq);
-#endif
+void sc_pwm_set_freq(uint8_t pwm, uint32_t freq)
+{
+  PWMDriver *pwmd = get_pwmd(pwm);
+  if (!pwmd) {
+    return;
+  }
+
+  PWMConfig *pwmc = get_pwmc(pwm);
+  if (!pwmc) {
+    return;
+  }
+
+  if (freq == 0) {
+    // freq 0 is invalid, do nothing
+    return;
+  }
+
+  pwmChangePeriod(pwmd, pwmc->frequency / freq);
 }
 
 
@@ -266,27 +382,15 @@ void sc_pwm_set_freq(uint32_t freq)
 /*
  * Stop PWM signal
  */
-void sc_pwm_stop(int pwm)
+void sc_pwm_stop(uint8_t pwm)
 {
-  if (pwm >= 1 && pwm <= 4) {
-	pwmDisableChannel(&PWMDX1, pwm - 1);
+  PWMDriver *pwmd = get_pwmd(pwm);
+  if (!pwmd) {
+    return;
   }
 
-  if (pwm >= 5 && pwm <= 8) {
-#ifdef PWMDX2
-	pwmDisableChannel(&PWMDX2, pwm - 5);
-#else
-	chDbgAssert(0, "PWMDX2 not defined");
-#endif
-  }
-
-  if (pwm >= 9 && pwm <= 12) {
-#ifdef PWMDX3
-	pwmDisableChannel(&PWMDX3, pwm - 9);
-#else
-	chDbgAssert(0, "PWMDX3 not defined");
-#endif
-  }
+  uint8_t channel_pwm = (pwm - 1) % 4;
+  pwmDisableChannel(pwmd, channel_pwm);
 }
 
 
@@ -294,34 +398,19 @@ void sc_pwm_stop(int pwm)
 /*
  * Set duty cycle. 0 for 0%, 10000 for 100%
  */
-void sc_pwm_set_duty(int pwm, uint16_t duty)
+void sc_pwm_set_duty(uint8_t pwm, uint16_t duty)
 {
+  PWMDriver *pwmd = get_pwmd(pwm);
+  if (!pwmd) {
+    return;
+  }
+
   if (duty > 10000) {
-	duty = 10000;
-  }
-  if (pwm >= 1 && pwm <= 4) {
-#ifdef PWMDX1
-	pwmEnableChannel(&PWMDX1, pwm - 1, PWM_PERCENTAGE_TO_WIDTH(&PWMDX1, duty));
-#else
-	chDbgAssert(0, "PWMDX1 not defined");
-#endif
+    duty = 10000;
   }
 
-  if (pwm >= 5 && pwm <= 8) {
-#ifdef PWMDX2
-	pwmEnableChannel(&PWMDX2, pwm - 5, PWM_PERCENTAGE_TO_WIDTH(&PWMDX2, duty));
-#else
-	chDbgAssert(0, "PWMDX2 not defined");
-#endif
-  }
-
-  if (pwm >= 9 && pwm <= 12) {
-#ifdef PWMDX3
-	pwmEnableChannel(&PWMDX3, pwm - 9, PWM_PERCENTAGE_TO_WIDTH(&PWMDX3, duty));
-#else
-	chDbgAssert(0, "PWMDX2 not defined");
-#endif
-  }
+  uint8_t channel_pwm = (pwm - 1) % 4;
+  pwmEnableChannel(pwmd, channel_pwm, PWM_PERCENTAGE_TO_WIDTH(pwmd, duty));
 }
 
 
@@ -331,21 +420,26 @@ void sc_pwm_set_duty(int pwm, uint16_t duty)
  */
 static void parse_command_pwm_frequency(const uint8_t *param, uint8_t param_len)
 {
+  uint8_t pwm;
   uint16_t freq;
 
-  (void)param_len;
-
-  if (!param) {
+  if (!param || param[0] < '0' || param[0] > '9') {
     // Invalid message
     return;
   }
 
-  // Parse the frequency value
-  if (sscanf((char*)param, "%hu", &freq) < 1) {
+  // Parse two parameters, pwm and freq
+  uint8_t value_offset = 2;
+  pwm  = sc_atoi(param, param_len);
+  if (pwm > 9)  value_offset++;
+  if (pwm > 99) value_offset++;
+  freq = sc_atoi(&param[value_offset], param_len - value_offset);
+
+  if (!is_valid_pwm(pwm)) {
     return;
   }
 
-  sc_pwm_set_freq(freq);
+  sc_pwm_set_freq(pwm, freq);
 }
 
 
@@ -358,27 +452,22 @@ static void parse_command_pwm_duty(const uint8_t *param, uint8_t param_len)
   uint8_t pwm;
   uint16_t value;
 
-  (void)param_len;
-
-  if (!param) {
+  if (!param || param[0] < '0' || param[0] > '9') {
     // Invalid message
     return;
   }
 
-#if 1
-  {
-    uint8_t value_offset = 2;
-    pwm  = sc_atoi(param, param_len);
-    if (pwm > 9)  value_offset++;
-    if (pwm > 99) value_offset++;
-    value = sc_atoi(&param[value_offset], param_len - value_offset);
-  }
-#else
-  // FIXME: this seems to cause an overflow somewhere.
-  if (sscanf((char*)param, "%hhu %hu", &pwm, &value) < 2) {
+  // Parse two parameters, pwm and value
+  uint8_t value_offset = 2;
+  pwm  = sc_atoi(param, param_len);
+  if (pwm > 9)  value_offset++;
+  if (pwm > 99) value_offset++;
+  value = sc_atoi(&param[value_offset], param_len - value_offset);
+
+  if (!is_valid_pwm(pwm)) {
     return;
   }
-#endif
+
   sc_pwm_set_duty(pwm, value);
 }
 
@@ -391,21 +480,16 @@ static void parse_command_pwm_stop(const uint8_t *param, uint8_t param_len)
 {
   uint8_t pwm;
 
-  (void)param_len;
-
-  if (!param) {
+  if (!param || param[0] < '0' || param[0] > '9') {
     // Invalid message
     return;
   }
 
-#if 1
-  pwm = sc_atoi(param, 2);
-#else
-  // FIXME: this seems to cause an overflow somewhere.
-  if (sscanf((char*)param, "%hhu", &pwm) < 1) {
+  pwm = sc_atoi(param, param_len);
+
+  if (!is_valid_pwm(pwm)) {
     return;
   }
-#endif
 
   sc_pwm_stop(pwm);
 }
