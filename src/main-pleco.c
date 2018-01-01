@@ -291,6 +291,12 @@ static void apa_set_status(uint8_t led, bool enable, uint8_t r, uint8_t g, uint8
 
   sc_apa102_set(led1, brightness, r, g, b);
   sc_apa102_set(led2, brightness, r, g, b);
+#else
+  (void)led;
+  (void)enable;
+  (void)r;
+  (void)g;
+  (void)b;
 #endif
 }
 
