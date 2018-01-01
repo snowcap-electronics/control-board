@@ -36,10 +36,6 @@
 
 #ifdef SC_HAS_APA102
 
-#ifndef SC_APA102_MAX_LEDS
-#define SC_APA102_MAX_LEDS 30
-#endif
-
 static uint8_t spin;
 // 4 byte header, 4 bytes per led, 4 byte end frame
 static uint8_t data[4 + SC_APA102_MAX_LEDS * 4 + 4];

@@ -33,6 +33,10 @@
 #ifndef SC_APA102_H
 #define SC_APA102_H
 
+#ifndef SC_APA102_MAX_LEDS
+#define SC_APA102_MAX_LEDS 30
+#endif
+
 enum sc_apa102_effect {
   SC_APA102_EFFECT_NONE,
   SC_APA102_EFFECT_CIRCLE,
