@@ -98,8 +98,20 @@ int main(void)
 
   // Loop forever waiting for callbacks
   while(1) {
+    uint8_t msg[32];
+    uint8_t msg_len = 0;
+    msg[msg_len++] = 't';
+    msg[msg_len++] = ':';
+    msg[msg_len++] = ' ';
+
     chThdSleepMilliseconds(1000);
-    SC_LOG_PRINTF("t: %d\r\n", ST2MS(chVTGetSystemTime()));
+
+    msg_len += sc_itoa(ST2MS(chVTGetSystemTime()), &msg[msg_len], sizeof(msg) - msg_len);
+    msg[msg_len++] = '\r';
+    msg[msg_len++] = '\n';
+    msg[msg_len++] = 0;
+    SC_LOG(msg);
+    //SC_LOG_PRINTF("t: %d\r\n", ST2MS(chVTGetSystemTime()));
   }
 
   return 0;
@@ -301,10 +313,52 @@ static void cb_9dof_available(void)
 
     // Let's print only every Nth data
     if (++data_counter == 1) {
+      uint8_t msg[256];
+      uint16_t msg_len = 0;
+
       data_counter = 0;
       sc_led_toggle();
-      SC_LOG_PRINTF("9dof: %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n",
-                    acc[0], acc[1], acc[2], magn[0], magn[1], magn[2], gyro[0], gyro[1], gyro[2]);
+
+      msg[msg_len++] = '9';
+      msg[msg_len++] = 'd';
+      msg[msg_len++] = 'o';
+      msg[msg_len++] = 'f';
+      msg[msg_len++] = ':';
+      msg[msg_len++] = ' ';
+
+      msg_len += sc_ftoa(acc[0], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(acc[1], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(acc[2], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(magn[0], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(magn[1], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(magn[2], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(gyro[0], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(gyro[1], 4, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(gyro[2], 4, &msg[msg_len], sizeof(msg) - msg_len);
+
+      msg[msg_len++] = '\r';
+      msg[msg_len++] = '\n';
+      msg[msg_len++] = 0;
+      SC_LOG(msg);
+
+      //SC_LOG_PRINTF("9dof: %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n",
+      //              acc[0], acc[1], acc[2], magn[0], magn[1], magn[2], gyro[0], gyro[1], gyro[2]);
     }
   }
 #endif
@@ -373,9 +427,34 @@ static void cb_ahrs_available(void)
 
     // Let's print only every Nth data
     if (++data_counter == 1) {
+      uint8_t msg[256];
+      uint16_t msg_len = 0;
+
       data_counter = 0;
 
-      SC_LOG_PRINTF("ahrs: %d, %f, %f, %f\r\n", ts - old_ts, roll, pitch, yaw);
+      msg[msg_len++] = 'a';
+      msg[msg_len++] = 'h';
+      msg[msg_len++] = 'r';
+      msg[msg_len++] = 's';
+      msg[msg_len++] = ':';
+      msg[msg_len++] = ' ';
+      msg_len += sc_itoa(ts - old_ts, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(roll, 2, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(pitch, 2, &msg[msg_len], sizeof(msg) - msg_len);
+      msg[msg_len++] = ',';
+      msg[msg_len++] = ' ';
+      msg_len += sc_ftoa(yaw, 2, &msg[msg_len], sizeof(msg) - msg_len);
+
+      msg[msg_len++] = '\r';
+      msg[msg_len++] = '\n';
+      msg[msg_len++] = 0;
+      SC_LOG(msg);
+
+      //SC_LOG_PRINTF("ahrs: %d, %f, %f, %f\r\n", ts - old_ts, roll, pitch, yaw);
     }
   }
   old_ts = ts;
@@ -401,7 +480,6 @@ static void cb_button_changed(void)
 #if AHRS_USB_SDU
   msg[17] = button_state + '0';
 
-  // FIXME: use SC_LOG_PRINTF
   sc_uart_send_msg(SC_UART_USB, msg, sizeof(msg));
 #endif
 }
