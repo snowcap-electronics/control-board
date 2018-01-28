@@ -360,7 +360,6 @@ void sc_lsm9ds1_init(void)
                        SC_EXTINT_EDGE_RISING,
                        lsm9ds1_drdy_cb);
 
-
   // Initialize two I2C instances, one for acc+magn, one for gyro
   i2c_n = sc_i2c_init(&SC_LSM9DS1_I2CN, SC_LSM9DS1_ADDR_AG);
   i2cn_ag = (uint8_t)i2c_n;

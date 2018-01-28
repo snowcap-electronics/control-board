@@ -253,8 +253,22 @@ static void cb_9dof_available(void)
 
 #if 1
   if (sensors_read & SC_SENSOR_MAGN) {
+
+    // Track max and min, shift the measurements to origin and scale to +-1;
+    if (1) {
+      static sc_float min[3] = {9999, 9999, 9999};
+      static sc_float max[3] = {-9999, -9999, -9999};
+
+      for (uint8_t i = 0; i < 3; ++i) {
+        if (magn[i] < min[i]) min[i] = magn[i];
+        if (magn[i] > max[i]) max[i] = magn[i];
+        sc_float origo = (max[i] + min[i]) / 2.0;
+        magn[i] = magn[i] - origo;
+      }
+    }
+
     // Apply manually measured magn calibration
-#if 1 // Teensy lsm9ds1 shield
+#if 0 // Teensy lsm9ds1 shield
     magn[0] -= -0.13601;
     magn[1] -=  0.26026;
     magn[2] -= -0.23002;
@@ -272,7 +286,7 @@ static void cb_9dof_available(void)
   }
 #endif
 
-#if 1
+#if 0
   if (sensors_read & SC_SENSOR_ACC) {
     // Apply manually measured acc calibration
     acc[0] -= -0.0821;
